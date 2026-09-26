@@ -1,0 +1,50 @@
+# Environment files and local credentials
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# JavaScript dependencies and generated builds
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+dist-ssr/
+
+# Python virtual environments and bytecode
+.venv/
+venv/
+**/.venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Logs and temporary files
+logs/
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+# Local backup copy of the backend
+/backend/main_backup.py
+
+# Local editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.suo
+*.user
+*.sln
+
