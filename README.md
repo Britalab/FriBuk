@@ -93,7 +93,7 @@ Vite inicia el frontend normalmente en `http://localhost:5173`. El cliente actua
 
 ## Capturas
 
-Se pueden añadir aquí capturas propias de las pantallas principales después de revisar que no contengan datos personales, tokens ni información privada de usuarios.
+En espera, Frontend en proceso de enchulado :D
 
 ## Estado del proyecto
 
