@@ -2,7 +2,9 @@
 // El backend valida contra los mismos identificadores (backend/profile_catalog.py);
 // si se agrega o quita algo aquí, hay que reflejarlo allí y en styles/profile-themes.css.
 
-export const MAX_EMOJI_DECORATIONS = 3;
+export const MAX_EMOJI_DECORATIONS = 10;
+// Como pegatinas en la cabecera se muestran solo los primeros.
+export const MAX_STICKERS = 3;
 export const MAX_AMBIENT_DECORATIONS = 1;
 export const DEFAULT_THEME_ID = "fribuk";
 

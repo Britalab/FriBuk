@@ -55,6 +55,9 @@
 
 .profile-emojis {
   display: inline-flex;
+  /* Con muchos emojis, pasan a otra línea en vez de desbordar. */
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 0.08em;
   margin-left: 0.3em;
   vertical-align: -0.16em;

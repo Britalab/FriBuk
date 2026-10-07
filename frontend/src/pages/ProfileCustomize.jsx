@@ -12,6 +12,7 @@ import {
   EMOJI_CATEGORIES,
   MAX_AMBIENT_DECORATIONS,
   MAX_EMOJI_DECORATIONS,
+  MAX_STICKERS,
   STICKERS_ID,
   THEMES,
   emojiUrl,
@@ -422,7 +423,7 @@ export default function ProfileCustomize() {
                     aria-pressed={stickersOn}
                     onClick={() => handleToggleDecoration(STICKERS_ID)}
                   >
-                    Mostrarlos también como pegatinas en mi cabecera
+                    Mostrar los {MAX_STICKERS} primeros como pegatinas en mi cabecera
                   </button>
                 </div>
               </div>

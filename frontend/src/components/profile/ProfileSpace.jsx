@@ -1,4 +1,5 @@
 import {
+  MAX_STICKERS,
   STICKERS_ID,
   emojiUrl,
   getEmoji,
@@ -69,7 +70,7 @@ export function ProfileStickers({ customization }) {
 
   return (
     <div className="profile-decor" aria-hidden="true">
-      {emojis.map((emoji) => (
+      {emojis.slice(0, MAX_STICKERS).map((emoji) => (
         <img
           className="profile-sticker"
           key={emoji.id}

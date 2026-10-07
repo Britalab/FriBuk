@@ -2,7 +2,7 @@
 # Debe coincidir con frontend/src/profile/catalog.js.
 
 DEFAULT_PROFILE_THEME = "fribuk"
-MAX_EMOJI_DECORATIONS = 3
+MAX_EMOJI_DECORATIONS = 10
 MAX_AMBIENT_DECORATIONS = 1
 
 # Tema -> colores de acento permitidos (los que mantienen un contraste legible).
