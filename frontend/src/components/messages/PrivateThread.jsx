@@ -164,6 +164,27 @@ export default function PrivateThread({ userId }) {
     notifyMessagesChanged();
   };
 
+  const handleDelete = async (message) => {
+    if (!window.confirm("¿Eliminar este mensaje? Se borrará para las dos personas.")) {
+      return;
+    }
+
+    try {
+      await api.delete(`/messages/private/${userId}/${message.id}`);
+      setThread((current) =>
+        current
+          ? {
+              ...current,
+              messages: current.messages.filter((item) => item.id !== message.id),
+            }
+          : current
+      );
+      notifyMessagesChanged();
+    } catch (requestError) {
+      showToast(apiErrorDetail(requestError, "No se pudo eliminar el mensaje."), "error");
+    }
+  };
+
   const handleToggleBlock = async () => {
     if (!thread || blocking) return;
 
@@ -291,7 +312,15 @@ export default function PrivateThread({ userId }) {
                     {message.is_mine && message.id === lastMine?.id && (
                       <span>{message.read_at ? "· Leído" : "· Enviado"}</span>
                     )}
-                    {!message.is_mine && (
+                    {message.is_mine ? (
+                      <button
+                        type="button"
+                        className="message-bubble-report"
+                        onClick={() => handleDelete(message)}
+                      >
+                        Eliminar
+                      </button>
+                    ) : (
                       <button
                         type="button"
                         className="message-bubble-report"

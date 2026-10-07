@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/client";
+import ModerationPanel from "../components/moderation/ModerationPanel";
 
 // Los enlaces los escribe quien envía la solicitud. Solo se convierten en
 // enlace si son http(s); cualquier otro esquema (por ejemplo "javascript:")
@@ -86,11 +87,12 @@ export default function SupportAdmin() {
             </p>
 
             <h1>
-              Solicitudes de soporte
+              Soporte y moderación
             </h1>
 
             <p className="support-admin-intro">
-              Revisa y gestiona las solicitudes enviadas por la comunidad.
+              Revisa el contenido reportado y las solicitudes enviadas por la
+              comunidad.
             </p>
           </div>
 
@@ -101,6 +103,13 @@ export default function SupportAdmin() {
             ← Volver a FriBuk
           </Link>
         </div>
+
+        {/* La moderación solo se muestra si la cuenta es de administración. */}
+        {!loading && !error && <ModerationPanel />}
+
+        {!loading && !error && (
+          <h2 className="support-admin-section-title">Solicitudes de soporte</h2>
+        )}
 
         {loading && (
           <div className="support-admin-state">

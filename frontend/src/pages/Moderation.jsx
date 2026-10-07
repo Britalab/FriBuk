@@ -168,6 +168,15 @@ export default function Moderation() {
             Una medida preventiva no implica necesariamente una determinación
             definitiva de que el usuario haya infringido una política.
           </p>
+
+          <p>
+            En particular, FriBuk puede retirar temporalmente una publicación
+            o una imagen que acumule un alto número de reportes de usuarios
+            distintos, mientras el equipo la revisa. Si la revisión concluye
+            que el contenido cumple las normas, se restaura. Quien lo publicó
+            puede ver el motivo general del retiro, pero no quiénes lo
+            reportaron.
+          </p>
         </section>
 
         <section className="legal-section">

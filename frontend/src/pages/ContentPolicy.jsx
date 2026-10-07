@@ -393,6 +393,18 @@ export default function ContentPolicy() {
             Las imágenes también deben cumplir las restricciones de contenido
             establecidas por FriBuk.
           </p>
+
+          <p>
+            Estas normas se aplican a todas las imágenes subidas a la
+            plataforma, sin excepción: las publicadas en el foro, las fotos de
+            perfil, los banners, las portadas de historias y cualquier otra
+            imagen que FriBuk permita subir.
+          </p>
+
+          <p>
+            Una imagen que incumpla estas normas puede ser retirada. Cualquier
+            usuario puede reportarla desde el lugar donde se muestra.
+          </p>
         </section>
 
         <section className="legal-section">

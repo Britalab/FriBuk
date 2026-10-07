@@ -5,7 +5,10 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import ProfileAbout from "../components/profile/ProfileAbout";
 import ProfileSpace, { ProfileEmojis, ProfileStickers } from "../components/profile/ProfileSpace";
+import ReportButton from "../components/moderation/ReportButton";
+import { RemoveButton } from "../components/moderation/AdminModerationButtons";
 import "../styles/reading-lists.css";
+import "../styles/moderation.css";
 
 function StoryCover({ story }) {
   return (
@@ -278,6 +281,42 @@ export default function PublicProfile() {
                 <span>Siguiendo</span>
               </button>
             </div>
+
+            {/* Reportar o retirar las imágenes del perfil */}
+            {!isOwnProfile && (pageData.profile.avatar_url || bannerUrl) && (
+              <div className="moderation-actions">
+                {pageData.profile.avatar_url && (
+                  <>
+                    <ReportButton
+                      targetType="avatar"
+                      targetId={userId}
+                      label="Reportar foto"
+                    />
+                    <RemoveButton
+                      targetType="avatar"
+                      targetId={userId}
+                      label="Retirar foto"
+                      onRemoved={() => setReloadKey((key) => key + 1)}
+                    />
+                  </>
+                )}
+                {bannerUrl && (
+                  <>
+                    <ReportButton
+                      targetType="profile_banner"
+                      targetId={userId}
+                      label="Reportar banner"
+                    />
+                    <RemoveButton
+                      targetType="profile_banner"
+                      targetId={userId}
+                      label="Retirar banner"
+                      onRemoved={() => setReloadKey((key) => key + 1)}
+                    />
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="public-profile-follow-area">
               {isOwnProfile ? (

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../api/client";
+import { useAuth } from "../context/AuthContext";
+import ReportButton from "../components/moderation/ReportButton";
+import { RemoveButton, RestoreButton } from "../components/moderation/AdminModerationButtons";
+import { ModerationNotice } from "../components/moderation/ModerationNotices";
 
 const PRIMARY_INTERACTIONS = [
   { value: "up", emoji: "⬆️" },
@@ -95,6 +99,7 @@ function ForumInteractionControls({
 
 export default function ForumTopic() {
   const { topicId } = useParams();
+  const { user } = useAuth();
 
   const [topic, setTopic] = useState(null);
   const [topicInteractions, setTopicInteractions] = useState(null);
@@ -180,6 +185,17 @@ export default function ForumTopic() {
     loadTopicInteractions();
     loadReplies();
   }, [topicId]);
+
+  // Tras retirar o restaurar, el tema se vuelve a pedir: lo que se ve
+  // depende de la moderación.
+  const reloadTopic = async () => {
+    try {
+      const response = await api.get(`/forum/topics/${topicId}`);
+      setTopic(response.data);
+    } catch (err) {
+      console.error("Error actualizando el tema:", err);
+    }
+  };
 
   const reloadTopicInteractions = async () => {
     try {
@@ -592,6 +608,15 @@ export default function ForumTopic() {
 
         </div>
 
+        <ModerationNotice moderation={topic.moderation}>
+          <div className="moderation-actions">
+            <RestoreButton
+              caseId={topic.moderation?.case_id}
+              onRestored={reloadTopic}
+            />
+          </div>
+        </ModerationNotice>
+
         <div className="forum-post-content">
 
           <p>{topic.content}</p>
@@ -616,6 +641,19 @@ export default function ForumTopic() {
           onPrimary={handleTopicVote}
           onReaction={handleTopicReaction}
         />
+
+        {!topic.moderation && (
+          <div className="moderation-actions">
+            {user?.id !== topic.user_id && (
+              <ReportButton targetType="forum_topic" targetId={topic.id} />
+            )}
+            <RemoveButton
+              targetType="forum_topic"
+              targetId={topic.id}
+              onRemoved={reloadTopic}
+            />
+          </div>
+        )}
 
       </article>
 
@@ -679,11 +717,31 @@ export default function ForumTopic() {
             const replyReactionCounts =
               item.interactions?.reactions || {};
 
+            // Respuesta retirada: el resto solo ve que existió.
+            if (item.moderation?.removed && !item.moderation.message) {
+              return (
+                <article key={item.id} className="forum-reply">
+                  <p className="moderation-removed-placeholder">
+                    Esta respuesta fue retirada por moderación.
+                  </p>
+                </article>
+              );
+            }
+
             return (
               <article
                 key={item.id}
                 className="forum-reply"
               >
+
+                <ModerationNotice moderation={item.moderation}>
+                  <div className="moderation-actions">
+                    <RestoreButton
+                      caseId={item.moderation?.case_id}
+                      onRestored={reloadReplies}
+                    />
+                  </div>
+                </ModerationNotice>
 
                 <div className="forum-post-user">
 
@@ -732,6 +790,19 @@ export default function ForumTopic() {
                   onPrimary={(value) => handleReplyVote(item, value)}
                   onReaction={(value) => handleReplyReaction(item, value)}
                 />
+
+                {!item.moderation && (
+                  <div className="moderation-actions">
+                    {user?.id !== item.user_id && (
+                      <ReportButton targetType="forum_reply" targetId={item.id} />
+                    )}
+                    <RemoveButton
+                      targetType="forum_reply"
+                      targetId={item.id}
+                      onRemoved={reloadReplies}
+                    />
+                  </div>
+                )}
 
               </article>
             );

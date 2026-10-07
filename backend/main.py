@@ -3340,7 +3340,10 @@ def get_forum_topics():
             .execute()
         )
 
-        return add_forum_user_data(response.data or [])
+        # Los temas retirados por moderación no aparecen en la lista.
+        return moderation.visible_forum_topics(
+            add_forum_user_data(response.data or [])
+        )
 
     except Exception as e:
 
@@ -3784,7 +3787,10 @@ def get_forum_reply_interactions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=public_error_detail(e)) from e
 @app.get("/forum/topics/{topic_id}")
-def get_forum_topic(topic_id: str):
+def get_forum_topic(
+    topic_id: str,
+    viewer=Depends(get_optional_forum_user)
+):
 
     try:
 
@@ -3803,7 +3809,10 @@ def get_forum_topic(topic_id: str):
                 detail="Tema no encontrado"
             )
 
-        return add_forum_user_data([response.data])[0]
+        # Un tema retirado solo lo ven su autor y los administradores.
+        return moderation.present_forum_topic(
+            add_forum_user_data([response.data])[0], viewer
+        )
 
     except HTTPException:
         raise
@@ -3820,7 +3829,10 @@ def get_forum_topic(topic_id: str):
             detail=public_error_detail(e)
         )
 @app.get("/forum/topics/{topic_id}/replies")
-def get_forum_replies(topic_id: str):
+def get_forum_replies(
+    topic_id: str,
+    viewer=Depends(get_optional_forum_user)
+):
 
     try:
 
@@ -3833,7 +3845,10 @@ def get_forum_replies(topic_id: str):
             .execute()
         )
 
-        return add_forum_user_data(response.data)
+        # Las respuestas retiradas se muestran sin su contenido.
+        return moderation.present_forum_replies(
+            add_forum_user_data(response.data), viewer
+        )
 
     except Exception as e:
 
@@ -3867,6 +3882,8 @@ def create_forum_reply(
                 status_code=404,
                 detail="Tema no encontrado"
             )
+
+        moderation.ensure_forum_topic_open(topic_id)
 
         if (content is None or not content.strip()) and image is None:
             raise HTTPException(
@@ -6690,3 +6707,13 @@ def delete_chapter_comment_reaction(
 from messages import router as messages_router  # noqa: E402
 
 app.include_router(messages_router)
+
+
+# ============================================================
+# MODERACIÓN DE CONTENIDO
+# ============================================================
+
+# Reportes, retiro y restauración de publicaciones e imágenes: ver moderation.py.
+import moderation  # noqa: E402
+
+app.include_router(moderation.router)

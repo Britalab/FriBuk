@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import ProfileAbout from "../components/profile/ProfileAbout";
 import ProfileInfoForm from "../components/profile/ProfileInfoForm";
 import ReadingListsPanel from "../components/profile/ReadingListsPanel";
+import { MyModerationNotices } from "../components/moderation/ModerationNotices";
 
 const EMPTY_PROFILE_INFO = { display_name: null, bio: null, website_url: null };
 
@@ -349,6 +350,8 @@ const handleDeleteStory = async (storyId, storyTitle) => {
   return (
     <main className="profile-page">
       <div className="profile-container">
+        <MyModerationNotices />
+
         <header className={`profile-header${bannerUrl ? " has-banner" : ""}`}>
           <div className="profile-banner">
             {bannerUrl && <img src={bannerUrl} alt="" />}
@@ -437,6 +440,11 @@ const handleDeleteStory = async (storyId, storyTitle) => {
             <Link to="/mensajes/ajustes" className="profile-header-action">
               <span aria-hidden="true">✉</span> Privacidad de mensajes
             </Link>
+            {user?.is_admin && (
+              <Link to="/support/admin" className="profile-header-action">
+                <span aria-hidden="true">⚙</span> Panel de administración
+              </Link>
+            )}
           </div>
           {profileMessage && (
             <p className="profile-avatar-feedback success" role="status">{profileMessage}</p>

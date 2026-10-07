@@ -15,7 +15,16 @@ import {
 
 const REFRESH_INTERVAL_MS = 30000;
 
-function AuthorPost({ post, author, isOwn, canReply, onReply, onToggleReplies, onDelete }) {
+function AuthorPost({
+  post,
+  author,
+  isOwn,
+  canReply,
+  onReply,
+  onToggleReplies,
+  onDelete,
+  onDeleteReply,
+}) {
   const [replyTo, setReplyTo] = useState(null);
   const [replying, setReplying] = useState(false);
 
@@ -87,6 +96,17 @@ function AuthorPost({ post, author, isOwn, canReply, onReply, onToggleReplies, o
                     }}
                   >
                     Responder
+                  </button>
+                )}
+
+                {/* Cada quien borra lo suyo; el autor, cualquier respuesta de su hilo. */}
+                {(reply.is_mine || isOwn) && (
+                  <button
+                    type="button"
+                    className="author-reply-action"
+                    onClick={() => onDeleteReply(post, reply)}
+                  >
+                    Eliminar
                   </button>
                 )}
               </li>
@@ -233,6 +253,20 @@ export default function AuthorChannel({ authorId }) {
     }));
   };
 
+  const handleDeleteReply = async (post, reply) => {
+    if (!window.confirm("¿Eliminar esta respuesta? No se puede deshacer.")) return;
+
+    try {
+      await api.delete(`/messages/author-replies/${reply.id}`);
+      updatePost(post.id, (current) => ({
+        ...current,
+        replies: current.replies.filter((item) => item.id !== reply.id),
+      }));
+    } catch (requestError) {
+      showToast(apiErrorDetail(requestError, "No se pudo eliminar la respuesta."), "error");
+    }
+  };
+
   const handleToggleReplies = async (post) => {
     try {
       const response = await api.patch(`/messages/author-posts/${post.id}`, {
@@ -362,6 +396,7 @@ export default function AuthorChannel({ authorId }) {
               onReply={handleReply}
               onToggleReplies={handleToggleReplies}
               onDelete={handleDelete}
+              onDeleteReply={handleDeleteReply}
             />
           ))
         )}

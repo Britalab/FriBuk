@@ -148,6 +148,31 @@ describe("PrivateThread", () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
+  it("permite eliminar un mensaje propio, pero no uno recibido", async () => {
+    mockGet({
+      "/messages/private/bob-id": privateThread({
+        messages: [
+          { id: "1", is_mine: true, content: "Me arrepentí", created_at: NOW, read_at: null },
+          { id: "2", is_mine: false, content: "De Bob", created_at: NOW, read_at: NOW },
+        ],
+      }),
+    });
+    window.confirm = vi.fn(() => true);
+
+    renderInRouter(<PrivateThread userId="bob-id" />);
+
+    await screen.findByText("Me arrepentí");
+    const deleteButtons = screen.getAllByRole("button", { name: "Eliminar" });
+    expect(deleteButtons).toHaveLength(1);
+    fireEvent.click(deleteButtons[0]);
+
+    await waitFor(() =>
+      expect(api.delete).toHaveBeenCalledWith("/messages/private/bob-id/1")
+    );
+    await waitFor(() => expect(screen.queryByText("Me arrepentí")).toBeNull());
+    expect(screen.getByText("De Bob")).not.toBeNull();
+  });
+
   it("muestra el HTML de un mensaje como texto, sin interpretarlo", async () => {
     const attack = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
     mockGet({
@@ -277,6 +302,17 @@ describe("AuthorChannel", () => {
     expect(screen.getAllByRole("button", { name: "Responder" })).toHaveLength(2);
     const bobReply = screen.getByText("Me encantó el anterior.").closest("li");
     expect(bobReply.querySelector("button")).toBeNull();
+
+    // Solo puede eliminar su propia respuesta.
+    window.confirm = vi.fn(() => true);
+    const deleteButtons = screen.getAllByRole("button", { name: "Eliminar" });
+    expect(deleteButtons).toHaveLength(1);
+    fireEvent.click(deleteButtons[0]);
+
+    await waitFor(() =>
+      expect(api.delete).toHaveBeenCalledWith("/messages/author-replies/r1")
+    );
+    await waitFor(() => expect(screen.queryByText("¡Voy a leerlo!")).toBeNull());
 
     // No hay reacciones ni selector de emojis en Mensajes.
     expect(screen.queryByText(/reaccion/i)).toBeNull();

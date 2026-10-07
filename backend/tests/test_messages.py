@@ -690,6 +690,67 @@ class MessagesTestCase(unittest.TestCase):
         self.assertFalse(channel["can_reply"])
 
     # ============================================================
+    # ELIMINAR
+    # ============================================================
+
+    def test_sender_can_delete_their_private_message(self):
+        self.send(ANA_ID, BOB_ID, "Primero")
+        self.send(ANA_ID, BOB_ID, "Me arrepentí")
+        self.send(BOB_ID, ANA_ID, "De Bob")
+        first, regret, from_bob = [
+            row["id"] for row in self.database.tables["private_messages"]
+        ]
+
+        def delete(user, other, message_id):
+            return self.client.delete(
+                f"/messages/private/{other}/{message_id}", headers=auth_header(user)
+            )
+
+        # No se borra lo que escribió la otra persona ni lo de otra conversación.
+        self.assertEqual(delete(ANA_ID, BOB_ID, from_bob).status_code, 404)
+        self.assertEqual(delete(CARO_ID, ANA_ID, regret).status_code, 404)
+        self.assertEqual(delete(CARO_ID, BOB_ID, regret).status_code, 404)
+        self.assertEqual(len(self.database.tables["private_messages"]), 3)
+
+        self.assertEqual(delete(ANA_ID, BOB_ID, regret).status_code, 200)
+        self.assertEqual(
+            [m["content"] for m in self.thread(BOB_ID, ANA_ID).json()["messages"]],
+            ["Primero", "De Bob"]
+        )
+
+        # La bandeja pasa a mostrar el último mensaje que queda.
+        self.assertEqual(delete(BOB_ID, ANA_ID, from_bob).status_code, 200)
+        inbox = self.client.get(
+            "/messages/conversations", headers=auth_header(BOB_ID)
+        ).json()["conversations"]
+        self.assertEqual(inbox[0]["last_message_preview"], "Primero")
+        self.assertEqual(delete(ANA_ID, BOB_ID, first).status_code, 200)
+        self.assertEqual(delete(ANA_ID, BOB_ID, first).status_code, 404)
+
+    def test_reply_can_be_deleted_by_its_writer_or_the_author(self):
+        self.follow(ANA_ID, AUTHOR_ID)
+        self.follow(BOB_ID, AUTHOR_ID)
+        post_id = self.publish()
+        ana_reply = self.reply(ANA_ID, post_id, "De Ana").json()["reply"]["id"]
+        bob_reply = self.reply(BOB_ID, post_id, "De Bob").json()["reply"]["id"]
+
+        def delete(user, reply_id):
+            return self.client.delete(
+                f"/messages/author-replies/{reply_id}", headers=auth_header(user)
+            )
+
+        # Un seguidor no borra la respuesta de otro.
+        self.assertEqual(delete(BOB_ID, ana_reply).status_code, 404)
+        self.assertEqual(delete(CARO_ID, ana_reply).status_code, 404)
+        self.assertEqual(len(self.database.tables["author_post_replies"]), 2)
+
+        self.assertEqual(delete(ANA_ID, ana_reply).status_code, 200)
+        # El autor puede retirar respuestas de su propio hilo.
+        self.assertEqual(delete(AUTHOR_ID, bob_reply).status_code, 200)
+        self.assertEqual(self.database.tables["author_post_replies"], [])
+        self.assertEqual(delete(ANA_ID, ana_reply).status_code, 404)
+
+    # ============================================================
     # SEGURIDAD
     # ============================================================
 

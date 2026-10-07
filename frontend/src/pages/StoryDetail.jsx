@@ -5,6 +5,9 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import AddToListMenu from "../components/profile/AddToListMenu";
 import { contentWarningLabels } from "../utils/contentWarnings";
+import ReportButton from "../components/moderation/ReportButton";
+import { RemoveButton } from "../components/moderation/AdminModerationButtons";
+import "../styles/moderation.css";
 
 export default function StoryDetail() {
   const { storyId } = useParams();
@@ -619,6 +622,24 @@ export default function StoryDetail() {
               )}
 
             </div>
+
+            {/* Reportar o retirar la portada */}
+
+            {story.cover_url && !isOwner && (
+              <div className="moderation-actions">
+                <ReportButton
+                  targetType="story_cover"
+                  targetId={storyId}
+                  label="Reportar portada"
+                />
+                <RemoveButton
+                  targetType="story_cover"
+                  targetId={storyId}
+                  label="Retirar portada"
+                  onRemoved={() => setStory((current) => ({ ...current, cover_url: null }))}
+                />
+              </div>
+            )}
 
             {/* AVISO DE CONTENIDO */}
 

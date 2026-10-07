@@ -549,6 +549,69 @@ def send_private_message(
     return {"message": serialize_private_message(created_message, user_id)}
 
 
+@router.delete("/messages/private/{other_user_id}/{message_id}")
+def delete_private_message(
+    other_user_id: str, message_id: str, current_user=Depends(get_current_user)
+):
+    # Cada quien borra solo lo que escribió; desaparece para las dos personas.
+    user_id = str(current_user.id)
+    other_id = normalize_id(other_user_id, "Usuario no encontrado")
+    normalized_message_id = normalize_id(message_id, "Mensaje no encontrado")
+
+    try:
+        conversation = find_conversation(user_id, other_id) if other_id != user_id else None
+        deleted = []
+        if conversation:
+            deleted = (
+                db()
+                .table("private_messages")
+                .delete()
+                .eq("id", normalized_message_id)
+                .eq("conversation_id", str(conversation["id"]))
+                .eq("sender_id", user_id)
+                .execute()
+            ).data or []
+
+        # Un mensaje ajeno o de otra conversación responde igual que uno inexistente.
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+
+        # La bandeja muestra el último mensaje que queda.
+        latest = (
+            db()
+            .table("private_messages")
+            .select("content, sender_id, created_at")
+            .eq("conversation_id", str(conversation["id"]))
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        ).data or []
+        (
+            db()
+            .table("private_conversations")
+            .update({
+                "last_message_preview": (
+                    preview_text(latest[0]["content"]) if latest else None
+                ),
+                "last_sender_id": str(latest[0]["sender_id"]) if latest else None,
+                "last_message_at": (
+                    latest[0]["created_at"] if latest
+                    else conversation.get("last_message_at")
+                )
+            })
+            .eq("id", str(conversation["id"]))
+            .execute()
+        )
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=400, detail=fribuk().public_error_detail(error)
+        )
+
+    return {"message": "Mensaje eliminado"}
+
+
 @router.post("/messages/private/{other_user_id}/read")
 def mark_private_thread_read(
     other_user_id: str, current_user=Depends(get_current_user)
@@ -1180,6 +1243,59 @@ def delete_author_post(post_id: str, current_user=Depends(get_current_user)):
         )
 
     return {"message": "Mensaje eliminado"}
+
+
+@router.delete("/messages/author-replies/{reply_id}")
+def delete_author_reply(reply_id: str, current_user=Depends(get_current_user)):
+    # Borra una respuesta quien la escribió o el autor del mensaje, que así
+    # puede ordenar su propio hilo.
+    user_id = str(current_user.id)
+    normalized_reply_id = normalize_id(reply_id, "Respuesta no encontrada")
+
+    try:
+        reply_response = (
+            db()
+            .table("author_post_replies")
+            .select("id, user_id, post_id")
+            .eq("id", normalized_reply_id)
+            .limit(1)
+            .execute()
+        )
+        reply = reply_response.data[0] if reply_response.data else None
+
+        allowed = bool(reply) and str(reply["user_id"]) == user_id
+        if reply and not allowed:
+            post_response = (
+                db()
+                .table("author_posts")
+                .select("author_id")
+                .eq("id", str(reply["post_id"]))
+                .limit(1)
+                .execute()
+            )
+            allowed = bool(post_response.data) and (
+                str(post_response.data[0]["author_id"]) == user_id
+            )
+
+        # Una respuesta que no se puede borrar responde igual que una inexistente.
+        if not allowed:
+            raise HTTPException(status_code=404, detail="Respuesta no encontrada")
+
+        (
+            db()
+            .table("author_post_replies")
+            .delete()
+            .eq("id", normalized_reply_id)
+            .execute()
+        )
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=400, detail=fribuk().public_error_detail(error)
+        )
+
+    return {"message": "Respuesta eliminada"}
 
 
 @router.post("/messages/author-posts/{post_id}/replies")
