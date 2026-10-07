@@ -1,6 +1,7 @@
 # FriBuk
 
 FriBuk es una plataforma web para leer y compartir historias. Reúne un feed público de obras, herramientas para que sus autores las gestionen y funciones de comunidad para lectores y escritores.
+
 <img width="607" height="792" alt="Fribuk 1" src="https://github.com/user-attachments/assets/b3ec604c-207c-4525-98c3-1c32fe33ea2f" />
 
 
