@@ -1,0 +1,788 @@
+/* =========================================================
+   Comentarios anclados al texto del capítulo (ChapterReader)
+   Usa las variables de color definidas en App.css.
+   ========================================================= */
+
+.reader-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Párrafos e indicador ---------- */
+
+.reader-text-area {
+  position: relative;
+}
+
+.reader-paragraph {
+  position: relative;
+  scroll-margin-top: 104px;
+}
+
+.reader-anchor-mark {
+  background: rgba(217, 106, 50, 0.2);
+  color: inherit;
+  border-radius: 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+[data-theme="dark"] .reader-anchor-mark {
+  background: rgba(228, 122, 66, 0.3);
+}
+
+/* En pantallas angostas va al final del párrafo. */
+.reader-comment-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.reader-comment-indicator-icon {
+  font-size: 0.82rem;
+  opacity: 0.7;
+}
+
+.reader-comment-indicator:hover,
+.reader-paragraph.is-active .reader-comment-indicator {
+  border-color: var(--border);
+  background: var(--bg-hover);
+  color: var(--burgundy);
+}
+
+.reader-comment-indicator:hover .reader-comment-indicator-icon,
+.reader-paragraph.is-active .reader-comment-indicator-icon {
+  opacity: 1;
+}
+
+.reader-comment-indicator:focus-visible,
+.reader-orphans-button:focus-visible,
+.reader-comments-close:focus-visible,
+.reader-comment-button:focus-visible,
+.reader-comment-actions button:focus-visible,
+.reader-comment-more-replies:focus-visible,
+.reader-reaction:focus-visible,
+.reader-reaction-picker button:focus-visible,
+.reader-emoji-toggle:focus-visible,
+.reader-emoji-picker button:focus-visible,
+.reader-selection-action button:focus-visible,
+.reader-selection-action a:focus-visible,
+.reader-comment-author:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+/* En escritorio va en el margen, a la altura de la última línea. */
+@media (min-width: 900px) {
+  .reader-comment-indicator {
+    position: absolute;
+    left: 100%;
+    bottom: 0.45em;
+    margin-left: 14px;
+  }
+}
+
+/* ---------- Acción "Comentar" al seleccionar texto ---------- */
+
+.reader-selection-action {
+  position: absolute;
+  z-index: 20;
+  transform: translateX(-50%);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.reader-selection-action.is-docked {
+  position: fixed;
+  z-index: 130;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+}
+
+.reader-selection-action button,
+.reader-selection-action a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  border: 1px solid var(--burgundy);
+  border-radius: 999px;
+  background: var(--burgundy);
+  color: #fff;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(41, 37, 37, 0.18);
+  touch-action: manipulation;
+}
+
+.reader-selection-action.is-docked button,
+.reader-selection-action.is-docked a {
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+}
+
+[data-theme="dark"] .reader-selection-action button,
+[data-theme="dark"] .reader-selection-action a {
+  color: #1c1919;
+}
+
+/* ---------- Pie del texto ---------- */
+
+.reader-comments-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  margin-top: 44px;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.reader-comments-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.reader-comments-hint-touch {
+  display: none;
+}
+
+/* Aviso táctil: ocupa el lugar de la acción "Comentar" hasta que se usa. */
+.reader-tap-hint {
+  position: fixed;
+  z-index: 125;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  max-width: calc(100vw - 28px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 15px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(41, 37, 37, 0.16);
+  transform: translateX(-50%);
+  animation: reader-tap-hint-in 0.25s ease both;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.reader-tap-hint p {
+  margin: 0;
+}
+
+.reader-tap-hint button {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.reader-tap-hint button:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+@keyframes reader-tap-hint-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-tap-hint {
+    animation: none;
+  }
+}
+
+/* En pantallas táctiles se comenta tocando una frase. */
+@media (hover: none), (pointer: coarse) {
+  .reader-comments-hint-mouse {
+    display: none;
+  }
+
+  .reader-comments-hint-touch {
+    display: inline;
+  }
+
+  /* Sin el destello gris del navegador al tocar el texto. */
+  .reader-text {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Con la bandeja de comentarios abierta, la acción queda justo encima. */
+@media (max-width: 1099px) {
+  .reader-page.has-comments-panel .reader-selection-action.is-docked {
+    bottom: calc(62vh + 12px);
+    bottom: calc(min(62dvh, 560px) + 12px);
+  }
+}
+
+.reader-orphans-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--burgundy);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.reader-orphans-button:hover,
+.reader-orphans-button[aria-expanded="true"] {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+/* ---------- Panel: bandeja inferior (móvil y tablet) ---------- */
+
+.reader-comments-panel {
+  position: fixed;
+  z-index: 120;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 640px;
+  height: 62vh;
+  height: min(62dvh, 560px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-shadow: 0 -6px 24px rgba(41, 37, 37, 0.14);
+  outline: none;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Deja espacio para seguir leyendo por encima de la bandeja. */
+.reader-page.has-comments-panel {
+  padding-bottom: 66vh;
+}
+
+.reader-comments-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.reader-comments-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.reader-comments-total {
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.reader-comments-close {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.reader-comments-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+.reader-comments-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 18px 22px;
+}
+
+.reader-comments-note {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.reader-comments-note a {
+  color: var(--burgundy);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* ---------- Fragmento citado ---------- */
+
+.reader-comment-group + .reader-comment-group {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.reader-comment-quote {
+  max-height: 7.2em;
+  overflow-y: auto;
+  margin: 0 0 14px;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--orange-soft);
+  color: var(--text-secondary);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.92rem;
+  font-style: italic;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Comentario ---------- */
+
+.reader-comment-thread + .reader-comment-thread {
+  margin-top: 18px;
+}
+
+.reader-comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+.reader-comment-author {
+  color: var(--burgundy);
+  font-size: 0.84rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.reader-comment-author:hover {
+  text-decoration: underline;
+}
+
+.reader-comment-content {
+  margin: 5px 0 0;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reader-comment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin-top: 6px;
+}
+
+.reader-comment-actions button,
+.reader-comment-more-replies {
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reader-comment-actions button:hover:not(:disabled),
+.reader-comment-more-replies:hover {
+  color: var(--burgundy);
+}
+
+.reader-comment-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Respuestas ---------- */
+
+.reader-comment-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 2px solid var(--border);
+}
+
+.reader-comment-more-replies {
+  align-self: flex-start;
+}
+
+/* ---------- Reacciones ---------- */
+
+.reader-reactions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.reader-reaction {
+  min-width: 34px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.reader-reaction:hover:not(:disabled),
+.reader-reaction-more[aria-expanded="true"] {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.reader-reaction.is-mine {
+  border-color: var(--burgundy);
+  background: var(--bg-soft);
+  color: var(--burgundy);
+}
+
+.reader-reaction:disabled {
+  cursor: default;
+}
+
+.reader-reaction-more {
+  letter-spacing: 0.05em;
+}
+
+.reader-reaction-picker {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(100%, 268px);
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  box-shadow: 0 6px 18px rgba(41, 37, 37, 0.14);
+}
+
+.reader-reaction-picker button {
+  aspect-ratio: 1;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.reader-reaction-picker button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.reader-reaction-picker button.is-mine {
+  border-color: var(--burgundy);
+  background: var(--bg-soft);
+}
+
+/* ---------- Formularios ---------- */
+
+.reader-comment-form {
+  margin-top: 8px;
+}
+
+.reader-comment-form textarea {
+  display: block;
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font: inherit;
+  /* 16px evita que el navegador del teléfono amplíe la página al escribir. */
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.reader-comment-form textarea::placeholder {
+  color: var(--placeholder);
+}
+
+.reader-comment-form textarea:focus {
+  border-color: var(--orange);
+}
+
+.reader-comment-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Selector para escribir emojis dentro del texto del comentario. */
+.reader-emoji-toggle {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.reader-emoji-toggle:hover,
+.reader-emoji-toggle[aria-expanded="true"] {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.reader-emoji-picker {
+  width: min(100%, 268px);
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  margin-top: 8px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-main);
+}
+
+.reader-emoji-picker button {
+  aspect-ratio: 1;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.reader-emoji-picker button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.reader-emoji-picker button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.reader-emoji-picker-note {
+  grid-column: 1 / -1;
+  margin: 4px 2px 2px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.reader-comment-counter {
+  margin-right: auto;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.reader-comment-counter .is-over {
+  color: #a34b45;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .reader-comment-counter .is-over {
+  color: #e39a94;
+}
+
+.reader-comment-button {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reader-comment-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.reader-comment-button.is-primary {
+  border-color: var(--burgundy);
+  background: var(--burgundy);
+  color: #fff;
+}
+
+.reader-comment-button.is-primary:hover:not(:disabled) {
+  border-color: var(--burgundy-dark);
+  background: var(--burgundy-dark);
+}
+
+[data-theme="dark"] .reader-comment-button.is-primary {
+  color: #1c1919;
+}
+
+.reader-comment-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.reader-comment-error {
+  margin: 8px 0 0;
+  color: #a34b45;
+  font-size: 0.8rem;
+}
+
+[data-theme="dark"] .reader-comment-error {
+  color: #e39a94;
+}
+
+/* ---------- Panel lateral (escritorio) ---------- */
+
+@media (min-width: 1100px) {
+  .reader-comments-panel {
+    top: var(--reader-panel-top, 77px);
+    left: auto;
+    width: 360px;
+    max-width: none;
+    height: auto;
+    margin: 0;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: none;
+    padding-bottom: 0;
+  }
+
+  /* El texto se desplaza para quedar visible junto al panel. */
+  .reader-page.has-comments-panel {
+    padding-right: 444px;
+    padding-bottom: 100px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-comment-indicator,
+  .reader-orphans-button,
+  .reader-reaction {
+    transition: none;
+  }
+}

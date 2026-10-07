@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SiteFooter from "../components/SiteFooter";
 
 export default function Moderation() {
   return (
@@ -434,22 +435,9 @@ export default function Moderation() {
           </p>
         </section>
 
-        <footer className="legal-footer">
-          <div className="legal-footer-brand">
-            <strong>FriBuk</strong>
-            <span>Historias que encuentran lectores.</span>
-          </div>
-
-          <div className="legal-footer-links">
-            <Link to="/terminos">Términos y Condiciones</Link>
-            <Link to="/comunidad">Normas de Comunidad</Link>
-            <Link to="/contenido">Política de Contenido</Link>
-            <Link to="/derechos-autor">Derechos de Autor</Link>
-            <Link to="/privacidad">Política de Privacidad</Link>
-          </div>
-        </footer>
-
       </div>
+
+      <SiteFooter />
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SiteFooter from "../components/SiteFooter";
 
 export default function CommunityRules() {
   return (
@@ -590,21 +591,9 @@ export default function CommunityRules() {
           </p>
         </section>
 
-        <footer className="legal-footer">
-          <div className="legal-footer-brand">FRIBUK</div>
-
-          <p>Comunidad de lectores y escritores.</p>
-
-          <p>Última actualización: septiembre de 2026</p>
-
-          <div className="legal-footer-links">
-            <Link to="/terminos">Términos y condiciones</Link>
-            <Link to="/privacidad">Privacidad</Link>
-            <Link to="/contenido">Política de contenido</Link>
-          </div>
-        </footer>
-
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

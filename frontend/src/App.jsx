@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { AuthProvider } from "./context/AuthContext";
 import ToastProvider from "./components/ToastProvider";
+import NotificationsProvider from "./components/NotificationsProvider";
 
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -20,7 +21,14 @@ import Support from "./pages/Support";
 import SupportAdmin from "./pages/SupportAdmin";
 import Profile from "./pages/Profile";
 import PublicProfile from "./pages/PublicProfile";
+import ReadingListDetail from "./pages/ReadingListDetail";
+import ProfileCustomize from "./pages/ProfileCustomize";
+import Activity from "./pages/Activity";
+import Messages from "./pages/Messages";
 import Authors from "./pages/Authors";
+import Forum from "./pages/Forum";
+import ForumTopic from "./pages/ForumTopic";
+import ForumNewTopic from "./pages/ForumNewTopic";
 
 // Páginas legales
 import Terms from "./pages/Terms";
@@ -37,6 +45,7 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
+        <NotificationsProvider>
 
         <Navbar />
 
@@ -80,7 +89,10 @@ function App() {
             path="/stories/:storyId"
             element={<StoryDetail />}
           />
-
+          <Route path="/forum" element={<Forum />} />
+          <Route path="/forum/:topicId" element={<ForumTopic />} />
+          <Route path="/forum/new" element={<ForumNewTopic />} />
+          
           <Route
             path="/stories/:storyId/chapters/:chapterId"
             element={<ChapterReader />}
@@ -103,12 +115,77 @@ function App() {
           />
 
           <Route
+            path="/listas/:listId"
+            element={<ReadingListDetail />}
+          />
+
+          <Route
             path="/perfil"
             element={
               <ProtectedRoute>
                 <Profile />
               </ProtectedRoute>
             }
+          />
+
+          <Route
+            path="/perfil/personalizar"
+            element={
+              <ProtectedRoute>
+                <ProfileCustomize />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/actividad"
+            element={
+              <ProtectedRoute>
+                <Activity />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/mensajes"
+            element={
+              <ProtectedRoute>
+                <Messages view="inbox" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/mensajes/privados/:userId"
+            element={
+              <ProtectedRoute>
+                <Messages view="private" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/mensajes/autores/:authorId"
+            element={
+              <ProtectedRoute>
+                <Messages view="author" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/mensajes/ajustes"
+            element={
+              <ProtectedRoute>
+                <Messages view="settings" />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* La dirección anterior lleva al centro de actividad. */}
+          <Route
+            path="/notificaciones"
+            element={<Navigate to="/actividad" replace />}
           />
 
           {/* Páginas legales */}
@@ -124,6 +201,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
 
+        </NotificationsProvider>
         </ToastProvider>
 
       </AuthProvider>

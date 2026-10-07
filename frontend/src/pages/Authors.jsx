@@ -1,49 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import api from "../api/client";
-
-function normalizeSearch(value) {
-  return value
-    .toLocaleLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
+import { useSearchParams } from "react-router-dom";
+import UserSearchResult from "../components/UserSearchResult";
+import { useUserSearch } from "../hooks/useUserSearch";
 
 export default function Authors() {
-  const [authors, setAuthors] = useState([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // El texto buscado vive en la URL (/autores?q=...): se puede compartir el
+  // enlace y al volver atrás se conserva la búsqueda.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.get("q") || "";
+  const { term, status, users, hasMore, error, retry } = useUserSearch(search, {
+    browse: true,
+  });
 
-  useEffect(() => {
-    let isActive = true;
+  const handleSearchChange = (event) => {
+    const value = event.target.value;
+    setSearchParams(value ? { q: value } : {}, { replace: true });
+  };
 
-    api.get("/users")
-      .then((response) => {
-        if (!isActive) return;
-        const users = Array.isArray(response.data) ? response.data : [];
-        setAuthors(users.filter((author) => author.id));
-        setError("");
-      })
-      .catch((requestError) => {
-        console.error("Error al cargar autores:", requestError);
-        if (isActive) setError("No se pudieron cargar los autores. Inténtalo nuevamente.");
-      })
-      .finally(() => {
-        if (isActive) setLoading(false);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  const filteredAuthors = useMemo(() => {
-    const query = normalizeSearch(search.trim());
-    return authors.filter((author) =>
-      normalizeSearch(author.username || "Usuario de FriBuk").includes(query)
-    );
-  }, [authors, search]);
+  const isLoading = status === "loading";
 
   return (
     <main className="authors-page">
@@ -57,37 +30,55 @@ export default function Authors() {
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={handleSearchChange}
+              maxLength={31}
               placeholder="Buscar por username..."
               aria-label="Buscar autores por username"
             />
           </label>
         </header>
 
-        {loading ? (
-          <p className="authors-state">Cargando autores...</p>
-        ) : error ? (
-          <p className="authors-state authors-error" role="alert">{error}</p>
-        ) : filteredAuthors.length === 0 ? (
-          <p className="authors-state">
-            {search ? "No encontramos autores con ese username." : "Todavía no hay autores para mostrar."}
-          </p>
-        ) : (
-          <div className="authors-list">
-            {filteredAuthors.map((author) => {
-              const username = author.username || "Usuario de FriBuk";
-              return (
-                <Link className="author-result" key={author.id} to={`/usuario/${author.id}`}>
-                  <span className="author-result-avatar" aria-hidden="true">
-                    {username.charAt(0).toUpperCase()}
-                  </span>
-                  <span className="author-result-name">@{username}</span>
-                  <span className="author-result-arrow" aria-hidden="true">→</span>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+        <div aria-live="polite">
+          {status === "short" ? (
+            <p className="authors-state">Escribe al menos 2 caracteres para buscar.</p>
+          ) : status === "error" ? (
+            <div className="authors-state authors-error" role="alert">
+              <p>{error}</p>
+              <button type="button" className="authors-retry" onClick={retry}>
+                Reintentar
+              </button>
+            </div>
+          ) : isLoading && users.length === 0 ? (
+            <p className="authors-state">
+              {term ? "Buscando..." : "Cargando autores..."}
+            </p>
+          ) : users.length === 0 ? (
+            <p className="authors-state">
+              {term
+                ? "No encontramos usuarios con ese username."
+                : "Todavía no hay autores para mostrar."}
+            </p>
+          ) : (
+            <>
+              <div className="authors-results-heading">
+                <h2>{term ? `Resultados para “${term}”` : "Autores de la comunidad"}</h2>
+                {isLoading && <p>Buscando...</p>}
+              </div>
+              <div className={`authors-list${isLoading ? " is-loading" : ""}`}>
+                {users.map((user) => (
+                  <UserSearchResult key={user.id} user={user} />
+                ))}
+              </div>
+              {hasMore && (
+                <p className="authors-more">
+                  {term
+                    ? "Hay más resultados. Escribe algo más específico para afinar la búsqueda."
+                    : "Hay más autores. Escribe un username para encontrar a alguien."}
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </main>
   );

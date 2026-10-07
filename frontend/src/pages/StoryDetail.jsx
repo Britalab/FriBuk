@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
+import AddToListMenu from "../components/profile/AddToListMenu";
+import { contentWarningLabels } from "../utils/contentWarnings";
 
 export default function StoryDetail() {
   const { storyId } = useParams();
@@ -13,12 +15,10 @@ export default function StoryDetail() {
   const [chapters, setChapters] = useState([]);
   const [voteCount, setVoteCount] = useState(0);
   const [ratingAverage, setRatingAverage] = useState(null);
+  // Punto donde el lector dejó esta historia, si ya la empezó.
+  const [readingProgress, setReadingProgress] = useState(null);
 
   const isOwner = user && story && user.id === story.author_id;
-
-  console.log("USUARIO:", user);
-  console.log("HISTORIA:", story);
-  console.log("ES PROPIETARIO:", isOwner);
 
   // =========================================
   // VOTO
@@ -79,7 +79,14 @@ export default function StoryDetail() {
           console.error("Error al consultar favorito:", err);
           setIsFavorite(false);
         });
+      api.get(`/stories/${storyId}/progress`)
+        .then((response) => setReadingProgress(response.data.progress))
+        .catch((err) => {
+          console.error("Error al consultar el progreso de lectura:", err);
+          setReadingProgress(null);
+        });
     } else {
+      setReadingProgress(null);
       setHasVoted(false);
       setIsFavorite(false);
       setFavoriteError("");
@@ -450,6 +457,28 @@ export default function StoryDetail() {
         ).toFixed(1)
       : null;
 
+  // Capítulos que un lector puede leer. La lista ya llega filtrada por el
+  // backend; el autor además recibe sus borradores, que no se cuentan. En
+  // una historia en borrador ningún capítulo está disponible para lectores.
+  const publishedChapterCount =
+    story.status === "draft"
+      ? null
+      : chapters.filter((chapter) => chapter.status === "published").length;
+
+  // Botón principal de lectura: retoma el capítulo guardado o, si la
+  // historia no se ha empezado, abre el primero publicado.
+  const continueIndex = chapters.findIndex(
+    (chapter) =>
+      chapter.id === readingProgress?.chapter_id &&
+      chapter.status === "published"
+  );
+  const readTarget =
+    story.status === "draft"
+      ? null
+      : continueIndex !== -1
+      ? chapters[continueIndex]
+      : chapters.find((chapter) => chapter.status === "published") || null;
+
   const statusLabel = getStatusLabel(story.status);
   const statusIcon = getStatusIcon(story.status);
 
@@ -538,6 +567,25 @@ export default function StoryDetail() {
               ) : (
                 <strong>{story.author_username || "Autor desconocido"}</strong>
               )}
+              {publishedChapterCount !== null && (
+                <>
+                  <span className="story-detail-author-separator" aria-hidden="true">
+                    {" · "}
+                  </span>
+                  <span className="story-detail-chapter-total">
+                    {publishedChapterCount === 0 ? (
+                      "Sin capítulos publicados"
+                    ) : (
+                      <>
+                        <strong>{publishedChapterCount}</strong>{" "}
+                        {publishedChapterCount === 1
+                          ? "capítulo publicado"
+                          : "capítulos publicados"}
+                      </>
+                    )}
+                  </span>
+                </>
+              )}
             </p>
 
             {/* ORIGEN DE LA OBRA */}
@@ -571,6 +619,18 @@ export default function StoryDetail() {
               )}
 
             </div>
+
+            {/* AVISO DE CONTENIDO */}
+
+            {story.sensitive_content && (
+              <p className="story-detail-sensitive">
+                <span className="story-detail-sensitive-label">
+                  Contenido sensible
+                </span>
+
+                {contentWarningLabels(story.content_warnings).join(" · ")}
+              </p>
+            )}
 
             {/* DESCRIPCIÓN */}
 
@@ -683,6 +743,18 @@ export default function StoryDetail() {
 
             <div className="vote-action">
 
+              {readTarget && (
+                <Link
+                  to={`/stories/${storyId}/chapters/${readTarget.id}`}
+                  className="read-button"
+                >
+                  <span aria-hidden="true">📖</span>
+                  {continueIndex !== -1
+                    ? `Continuar capítulo ${continueIndex + 1}`
+                    : "Empezar a leer"}
+                </Link>
+              )}
+
               <button
                 type="button"
                 className={
@@ -720,6 +792,10 @@ export default function StoryDetail() {
                   ? "En favoritos"
                   : "Agregar a favoritos"}
               </button>
+
+              {["published", "completed", "paused"].includes(story.status) && (
+                <AddToListMenu storyId={storyId} />
+              )}
 
               {voteError && (
                 <p className="vote-error">
@@ -946,6 +1022,10 @@ export default function StoryDetail() {
 
                     <p>
                       CAPÍTULO {index + 1}
+                      {isOwner && chapter.status === "draft" && " · BORRADOR"}
+                      {index === continueIndex && (
+                        <span className="chapter-current"> · VAS AQUÍ</span>
+                      )}
                     </p>
 
                     <h3>

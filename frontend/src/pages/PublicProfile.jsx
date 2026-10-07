@@ -3,6 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
+import ProfileAbout from "../components/profile/ProfileAbout";
+import ProfileSpace, { ProfileEmojis, ProfileStickers } from "../components/profile/ProfileSpace";
+import "../styles/reading-lists.css";
 
 function StoryCover({ story }) {
   return (
@@ -53,8 +56,7 @@ function emptyPageData(userId) {
     profile: null,
     stories: [],
     favorites: [],
-    followers: [],
-    following: [],
+    readingLists: [],
     followersCount: 0,
     followingCount: 0,
     isFollowing: false,
@@ -79,13 +81,23 @@ export default function PublicProfile() {
       api.get(`/users/${userId}/public-profile`),
       api.get(`/users/${userId}/stories`),
       api.get(`/users/${userId}/favorites`),
-      api.get(`/users/${userId}/followers`),
-      api.get(`/users/${userId}/following`),
+      api.get(`/users/${userId}/follow-stats`),
+      // Si las listas fallan, el resto del perfil se muestra igual.
+      api.get(`/users/${userId}/reading-lists`).catch((error) => {
+        console.error("Error al cargar las listas públicas:", error);
+        return null;
+      }),
     ])
-      .then(([profileResponse, storiesResponse, favoritesResponse, followersResponse, followingResponse]) => {
+      .then(([
+        profileResponse,
+        storiesResponse,
+        favoritesResponse,
+        followStatsResponse,
+        readingListsResponse,
+      ]) => {
         if (!isActive) return;
 
-        const followers = followersResponse.data.followers || [];
+        const followStats = followStatsResponse.data || {};
         setPageData({
           userId,
           loading: false,
@@ -93,15 +105,10 @@ export default function PublicProfile() {
           profile: profileResponse.data.user,
           stories: storiesResponse.data.stories || [],
           favorites: favoritesResponse.data.favorites || [],
-          followers,
-          following: followingResponse.data.following || [],
-          followersCount: followers.length,
-          followingCount: (followingResponse.data.following || []).length,
-          isFollowing: Boolean(
-            user?.id && followers.some(
-              (follower) => String(follower.follower_id) === String(user.id)
-            )
-          ),
+          readingLists: readingListsResponse?.data?.lists || [],
+          followersCount: followStats.followers || 0,
+          followingCount: followStats.following || 0,
+          isFollowing: Boolean(user?.id && followStats.is_following),
         });
       })
       .catch((error) => {
@@ -136,28 +143,15 @@ export default function PublicProfile() {
   }, [connections.type]);
 
   const openConnections = async (type) => {
-    const ids = type === "followers"
-      ? pageData.followers.map((item) => item.follower_id)
-      : pageData.following.map((item) => item.following_id);
-    const uniqueIds = [...new Set(ids.filter(Boolean).map(String))];
-
     setConnections({ type, loading: true, error: "", users: [] });
     try {
-      const results = await Promise.allSettled(
-        uniqueIds.map((id) => api.get(`/users/${id}/public-profile`))
-      );
-      const profiles = results
-        .filter((result) => result.status === "fulfilled")
-        .map((result) => result.value.data.user)
-        .filter(Boolean);
+      const response = await api.get(`/users/${userId}/${type}`);
 
       setConnections({
         type,
         loading: false,
-        error: profiles.length === 0 && uniqueIds.length > 0
-          ? "No se pudieron cargar los perfiles de esta lista."
-          : "",
-        users: profiles,
+        error: "",
+        users: Array.isArray(response.data) ? response.data : [],
       });
     } catch (error) {
       console.error("Error al cargar la lista de usuarios:", error);
@@ -174,9 +168,9 @@ export default function PublicProfile() {
     try {
       const wasFollowing = pageData.isFollowing;
       if (pageData.isFollowing) {
-        await api.delete(`/follow/${userId}`);
+        await api.delete(`/users/${userId}/follow`);
       } else {
-        await api.post("/follow", { following_id: userId });
+        await api.post(`/users/${userId}/follow`);
       }
 
       setPageData((current) => {
@@ -185,9 +179,6 @@ export default function PublicProfile() {
         return {
           ...current,
           isFollowing: nextIsFollowing,
-          followers: nextIsFollowing
-            ? [...current.followers, { follower_id: user.id }]
-            : current.followers.filter((follower) => String(follower.follower_id) !== String(user.id)),
           followersCount: Math.max(
             0,
             current.followersCount + (nextIsFollowing ? 1 : -1)
@@ -236,10 +227,19 @@ export default function PublicProfile() {
 
   const username = pageData.profile.username || "Usuario de FriBuk";
 
+  const customization = pageData.profile.customization;
+  const bannerUrl = pageData.profile.banner_url;
+
   return (
-    <main className="public-profile-page">
+    <ProfileSpace as="main" className="public-profile-page" customization={customization}>
       <div className="public-profile-container">
-        <header className="public-profile-header">
+        <header className={`public-profile-header${bannerUrl ? " has-banner" : ""}`}>
+          <ProfileStickers customization={customization} />
+          {bannerUrl && (
+            <div className="public-profile-banner">
+              <img src={bannerUrl} alt="" />
+            </div>
+          )}
           <div className="public-profile-avatar">
               {pageData.profile.avatar_url ? (
                 <img src={pageData.profile.avatar_url} alt={`Avatar de ${username}`} />
@@ -249,7 +249,24 @@ export default function PublicProfile() {
           </div>
           <div className="public-profile-identity">
             <p className="public-profile-eyebrow">PERFIL DE AUTOR · FRIBUK</p>
-            <h1>@{username}</h1>
+            {pageData.profile.display_name ? (
+              <>
+                <h1>
+                  {pageData.profile.display_name}
+                  <ProfileEmojis customization={customization} />
+                </h1>
+                <p className="public-profile-username">@{username}</p>
+              </>
+            ) : (
+              <h1>
+                @{username}
+                <ProfileEmojis customization={customization} />
+              </h1>
+            )}
+            <ProfileAbout
+              bio={pageData.profile.bio}
+              websiteUrl={pageData.profile.website_url}
+            />
 
             <div className="public-profile-stats" aria-label="Estadísticas del autor">
               <button type="button" onClick={() => openConnections("followers")} aria-label={`${pageData.followersCount} seguidores`}>
@@ -264,8 +281,11 @@ export default function PublicProfile() {
 
             <div className="public-profile-follow-area">
               {isOwnProfile ? (
-                <p className="public-profile-own-note">Este es tu perfil público.</p>
+                <p className="public-profile-own-note">
+                  Este es tu perfil público. <Link to="/perfil">Administrar mi perfil</Link>
+                </p>
               ) : user ? (
+                <>
                 <button
                   type="button"
                   className={`public-profile-follow-button${pageData.isFollowing ? " is-following" : ""}`}
@@ -279,6 +299,13 @@ export default function PublicProfile() {
                     ? "Siguiendo"
                     : "Seguir"}
                 </button>
+                <Link
+                  to={`/mensajes/privados/${userId}`}
+                  className="public-profile-follow-button is-following"
+                >
+                  Enviar mensaje
+                </Link>
+                </>
               ) : (
                 <Link to="/login" className="public-profile-follow-button">
                   Inicia sesión para seguir
@@ -306,6 +333,39 @@ export default function PublicProfile() {
             <div className="public-profile-story-list">
               {pageData.stories.map((story) => (
                 <StoryCard key={story.id} story={story} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="public-profile-section">
+          <div className="public-profile-section-heading">
+            <div>
+              <p className="public-profile-eyebrow">COLECCIONES</p>
+              <h2>Listas de lectura</h2>
+            </div>
+            <span className="public-profile-section-count">{pageData.readingLists.length}</span>
+          </div>
+          {pageData.readingLists.length === 0 ? (
+            <div className="public-profile-empty-state">
+              <span aria-hidden="true">❖</span>
+              <h3>Aún no hay listas públicas</h3>
+              <p>Las listas de lectura que este autor haga públicas aparecerán aquí.</p>
+            </div>
+          ) : (
+            <div className="reading-list-grid">
+              {pageData.readingLists.map((list) => (
+                <Link className="reading-list-card" key={list.id} to={`/listas/${list.id}`}>
+                  <div className="reading-list-card-top">
+                    <h3>{list.name}</h3>
+                  </div>
+                  {list.description && (
+                    <p className="reading-list-card-description">{list.description}</p>
+                  )}
+                  <p className="reading-list-card-count">
+                    {list.story_count || 0} {list.story_count === 1 ? "historia" : "historias"}
+                  </p>
+                </Link>
               ))}
             </div>
           )}
@@ -396,6 +456,6 @@ export default function PublicProfile() {
           </section>
         </div>
       )}
-    </main>
+    </ProfileSpace>
   );
 }

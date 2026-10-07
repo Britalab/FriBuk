@@ -2,6 +2,21 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/client";
 
+// Los enlaces los escribe quien envía la solicitud. Solo se convierten en
+// enlace si son http(s); cualquier otro esquema (por ejemplo "javascript:")
+// se muestra como texto para que no pueda ejecutarse al hacer clic.
+function SafeLink({ url }) {
+  if (!/^https?:\/\//i.test(url || "")) {
+    return <span>{url}</span>;
+  }
+
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      {url}
+    </a>
+  );
+}
+
 export default function SupportAdmin() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -164,39 +179,21 @@ export default function SupportAdmin() {
                   {ticket.fribuk_url && (
                     <p className="support-ticket-detail">
                       <strong>FriBuk:</strong>{" "}
-                      <a
-                        href={ticket.fribuk_url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {ticket.fribuk_url}
-                      </a>
+                      <SafeLink url={ticket.fribuk_url} />
                     </p>
                   )}
 
                   {ticket.external_url && (
                     <p className="support-ticket-detail">
                       <strong>Enlace externo:</strong>{" "}
-                      <a
-                        href={ticket.external_url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {ticket.external_url}
-                      </a>
+                      <SafeLink url={ticket.external_url} />
                     </p>
                   )}
 
                   {ticket.reported_url && (
                     <p className="support-ticket-detail">
                       <strong>Contenido reportado:</strong>{" "}
-                      <a
-                        href={ticket.reported_url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {ticket.reported_url}
-                      </a>
+                      <SafeLink url={ticket.reported_url} />
                     </p>
                   )}
 

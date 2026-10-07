@@ -9,9 +9,10 @@ FriBuk es una plataforma web para leer y compartir historias. Reúne un feed pú
 - Páginas de historia y lectura de capítulos.
 - Creación y edición de historias y capítulos; las historias y capítulos admiten estados de publicación según los flujos implementados.
 - Recomendaciones, comentarios y valoraciones de historias.
+- Comentarios de lectores anclados a un fragmento del texto de un capítulo, con respuestas y reacciones.
 - Favoritos y perfiles privados para gestionar historias propias y favoritos.
 - Perfiles públicos con historias publicadas, favoritos públicos y seguimiento entre usuarios.
-- Carga de portadas y avatares en Supabase Storage.
+- Carga de portadas, avatares y banners de perfil en Supabase Storage.
 - Formulario de soporte y panel administrativo para revisar solicitudes.
 - Páginas de privacidad, términos, normas comunitarias, política de contenido, derechos de autor y moderación.
 
@@ -22,7 +23,7 @@ El proyecto está dividido en dos aplicaciones dentro del mismo repositorio:
 - **Frontend:** React, React Router, Vite y Axios.
 - **Backend:** FastAPI y Pydantic.
 - **Autenticación y datos:** Supabase Auth y Supabase Database. El backend usa el cliente público para validar sesiones y un cliente administrativo para las operaciones que requieren acceso de servicio.
-- **Archivos:** Supabase Storage para portadas y avatares.
+- **Archivos:** Supabase Storage para portadas, avatares y banners de perfil.
 
 El frontend llama a la API FastAPI. Cuando hay una sesión, Axios adjunta el token de acceso como `Bearer` en las solicitudes. El backend valida ese token con Supabase Auth y determina el usuario autenticado desde la sesión.
 
@@ -32,6 +33,9 @@ El frontend llama a la API FastAPI. Cuando hay una sesión, Axios adjunta el tok
 FriBuk/
 ├── backend/
 │   ├── main.py
+│   ├── chapter_anchors.py
+│   ├── sql/
+│   ├── tests/
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/
@@ -71,6 +75,14 @@ FriBuk/
    ```
 
 La API queda disponible localmente en `http://127.0.0.1:8000`. FastAPI publica la documentación interactiva en `/docs`.
+
+Los comentarios de capítulos necesitan las tablas de `backend/sql/chapter_comments.sql`, que se crean ejecutando ese archivo una vez en el SQL Editor de Supabase.
+
+Las pruebas del backend no usan la base de datos real. Se ejecutan desde la carpeta `backend`:
+
+```powershell
+python -m unittest discover -s tests
+```
 
 ### Frontend
 

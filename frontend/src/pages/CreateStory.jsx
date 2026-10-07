@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../hooks/useToast";
+import ContentWarningFields from "../components/story/ContentWarningFields";
 
 export default function CreateStory() {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ export default function CreateStory() {
   const [workType, setWorkType] = useState("original");
   const [originalWork, setOriginalWork] = useState("");
   const [originalAuthor, setOriginalAuthor] = useState("");
+  const [sensitiveContent, setSensitiveContent] = useState(false);
+  const [contentWarnings, setContentWarnings] = useState([]);
 
   const [tagInput, setTagInput] = useState("");
 
@@ -130,6 +133,8 @@ export default function CreateStory() {
         work_type: workType,
         original_work: originalWork.trim() || null,
         original_author: originalAuthor.trim() || null,
+        sensitive_content: sensitiveContent,
+        content_warnings: sensitiveContent ? contentWarnings : [],
       });
 
       const createdStory = response.data.story;
@@ -189,6 +194,7 @@ export default function CreateStory() {
 
               <select
                 id="workType"
+                className="form-select"
                 value={workType}
                 onChange={(event) => {
                   setWorkType(event.target.value);
@@ -427,6 +433,26 @@ export default function CreateStory() {
                 </div>
               </div>
             </div>
+          </section>
+
+          <section className="story-form-section">
+            <div className="story-form-section-heading">
+              <span className="story-form-icon">◐</span>
+
+              <div>
+                <h2>Contenido sensible</h2>
+                <p>
+                  Avisa a tus lectores si la historia trata temas delicados.
+                </p>
+              </div>
+            </div>
+
+            <ContentWarningFields
+              sensitive={sensitiveContent}
+              warnings={contentWarnings}
+              onSensitiveChange={setSensitiveContent}
+              onWarningsChange={setContentWarnings}
+            />
           </section>
 
           <section className="story-form-section">

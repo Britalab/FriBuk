@@ -12,30 +12,35 @@ export default function CreateChapter() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
-  const [loading, setLoading] = useState(false);
+  // Acción en curso: null, "draft" (guardar borrador) o "published" (publicar).
+  const [savingAs, setSavingAs] = useState(null);
+  const loading = savingAs !== null;
   const [error, setError] = useState("");
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
+  const validateChapter = () => {
     setError("");
 
     if (!chapterNumber || Number(chapterNumber) < 1) {
       setError("El número del capítulo debe ser mayor que 0.");
-      return;
+      return false;
     }
 
     if (!title.trim()) {
       setError("El título del capítulo es obligatorio.");
-      return;
+      return false;
     }
 
     if (!content.trim()) {
       setError("El contenido del capítulo es obligatorio.");
-      return;
+      return false;
     }
 
-    setLoading(true);
+    return true;
+  };
+
+  // Crea el capítulo con el estado elegido por el autor.
+  const createChapter = async (status) => {
+    setSavingAs(status);
 
     try {
       await api.post("/chapters", {
@@ -43,18 +48,50 @@ export default function CreateChapter() {
         chapter_number: Number(chapterNumber),
         title: title.trim(),
         content: content.trim(),
-        status: "draft",
+        status,
       });
 
-      showToast("Borrador del capítulo guardado correctamente.");
+      showToast(
+        status === "published"
+          ? "Capítulo publicado correctamente. Ya es visible para los lectores."
+          : "Borrador del capítulo guardado correctamente."
+      );
       navigate(`/stories/${storyId}`);
     } catch (err) {
       console.error("Error al crear el capítulo:", err);
 
-      showToast(err.response?.data?.detail || "No se pudo guardar el capítulo. Intenta nuevamente.", "error");
+      showToast(
+        err.response?.data?.detail ||
+          (status === "published"
+            ? "No se pudo publicar el capítulo. Intenta nuevamente."
+            : "No se pudo guardar el capítulo. Intenta nuevamente."),
+        "error"
+      );
     } finally {
-      setLoading(false);
+      setSavingAs(null);
     }
+  };
+
+  // Guardar borrador: el comportamiento de siempre.
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    if (loading || !validateChapter()) return;
+
+    createChapter("draft");
+  };
+
+  // Publicar: acción explícita y con confirmación, porque no se puede deshacer.
+  const handlePublish = () => {
+    if (loading || !validateChapter()) return;
+
+    const confirmed = window.confirm(
+      "¿Publicar este capítulo? Será visible para los lectores y no podrá volver a borrador."
+    );
+
+    if (!confirmed) return;
+
+    createChapter("published");
   };
 
   return (
@@ -197,9 +234,20 @@ export default function CreateChapter() {
               className="story-editor-submit"
               disabled={loading}
             >
-              {loading
-                ? "Guardando capítulo..."
-                : "Guardar capítulo"}
+              {savingAs === "draft"
+                ? "Guardando borrador..."
+                : "Guardar borrador"}
+            </button>
+
+            <button
+              type="button"
+              className="story-editor-submit"
+              onClick={handlePublish}
+              disabled={loading}
+            >
+              {savingAs === "published"
+                ? "Publicando..."
+                : "Publicar capítulo"}
             </button>
           </div>
 

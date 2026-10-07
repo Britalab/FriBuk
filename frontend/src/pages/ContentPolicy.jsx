@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SiteFooter from "../components/SiteFooter";
 
 export default function ContentPolicy() {
   return (
@@ -547,25 +548,9 @@ export default function ContentPolicy() {
           </p>
         </section>
 
-        <footer className="legal-footer">
-          <div className="legal-footer-brand">FRIBUK</div>
-
-          <p>
-            Plataforma de publicación y lectura de historias.
-          </p>
-
-          <p>
-            Última actualización: septiembre de 2026
-          </p>
-
-          <div className="legal-footer-links">
-            <Link to="/terminos">Términos y condiciones</Link>
-            <Link to="/comunidad">Normas de comunidad</Link>
-            <Link to="/derechos-autor">Derechos de autor</Link>
-          </div>
-        </footer>
-
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../hooks/useToast";
+import ContentWarningFields from "../components/story/ContentWarningFields";
 
 export default function EditStory() {
   const { storyId } = useParams();
@@ -22,6 +23,8 @@ export default function EditStory() {
   const [workType, setWorkType] = useState("original");
   const [originalWork, setOriginalWork] = useState("");
   const [originalAuthor, setOriginalAuthor] = useState("");
+  const [sensitiveContent, setSensitiveContent] = useState(false);
+  const [contentWarnings, setContentWarnings] = useState([]);
 
   useEffect(() => {
     if (!coverPreview.startsWith("blob:")) return undefined;
@@ -43,6 +46,8 @@ export default function EditStory() {
         setWorkType(story.work_type || "original");
         setOriginalWork(story.original_work || "");
         setOriginalAuthor(story.original_author || "");
+        setSensitiveContent(Boolean(story.sensitive_content));
+        setContentWarnings(story.content_warnings || []);
       } catch (err) {
         console.error("Error al cargar la historia:", err);
 
@@ -114,6 +119,8 @@ export default function EditStory() {
       work_type: workType,
       original_work: originalWork.trim() || null,
       original_author: originalAuthor.trim() || null,
+      sensitive_content: sensitiveContent,
+      content_warnings: sensitiveContent ? contentWarnings : [],
     });
 
       showToast(status === "published"
@@ -310,6 +317,13 @@ export default function EditStory() {
           </p>
         </>
       )}
+
+      <ContentWarningFields
+        sensitive={sensitiveContent}
+        warnings={contentWarnings}
+        onSensitiveChange={setSensitiveContent}
+        onWarningsChange={setContentWarnings}
+      />
 
       <div className="form-group">
         <label htmlFor="status">

@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import NotificationBell from "./NotificationBell";
+import { useMessagesSummary } from "../hooks/useMessagesSummary";
+import { formatUnreadCount, rememberMessagesReturnPath } from "../utils/messages";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const unreadMessages = useMessagesSummary();
+  const location = useLocation();
+
+  // Para que "cerrar" en Mensajes vuelva a donde estaba la persona.
+  useEffect(() => {
+    rememberMessagesReturnPath(location.pathname + location.search);
+  }, [location]);
 
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("fribuk-theme") === "dark";
@@ -39,25 +49,28 @@ export default function Navbar() {
             FriBuk
           </span>
         </Link>
+      
+          {/* Navegación principal */}
+          <div className="navbar-links">
 
-        {/* Navegación principal */}
-        <div className="navbar-links">
-
-          <Link to="/autores" className="navbar-authors">
-            Buscar autores
-          </Link>
-
-          {user && (
-            <Link
-              to="/create-story"
-              className="navbar-create-story"
-            >
-              Crear historia ✏️
+            <Link to="/autores" className="navbar-authors">
+              Buscar autores
             </Link>
-          )}
 
-        </div>
+            <Link to="/forum" className="navbar-forum">
+              Foro 💬
+            </Link>
 
+            {user && (
+              <Link
+                to="/create-story"
+                className="navbar-create-story"
+              >
+                Crear historia ✏️
+              </Link>
+            )}
+
+          </div>
         {/* Usuario */}
         <div className="navbar-user">
 
@@ -81,6 +94,26 @@ export default function Navbar() {
 
           {user ? (
             <>
+              <Link
+                to="/mensajes"
+                className="navbar-messages"
+                aria-label={
+                  unreadMessages > 0
+                    ? `Mensajes, ${unreadMessages} sin leer`
+                    : "Mensajes"
+                }
+                title="Mensajes"
+              >
+                <span aria-hidden="true">✉</span>
+                {unreadMessages > 0 && (
+                  <span className="navbar-messages-badge" aria-hidden="true">
+                    {formatUnreadCount(unreadMessages)}
+                  </span>
+                )}
+              </Link>
+
+              <NotificationBell />
+
               <Link
                 to="/perfil"
                 className="navbar-profile"

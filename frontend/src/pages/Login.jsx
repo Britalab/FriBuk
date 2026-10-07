@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -19,7 +20,9 @@ export default function Login() {
       await login(email, password);
       navigate("/");
     } catch (err) {
-      setError("Correo o contraseña incorrectos");
+      setError(
+        err.response?.data?.detail || "Correo o contraseña incorrectos"
+      );
     }
   };
 
@@ -74,9 +77,9 @@ export default function Login() {
                 Contraseña
               </label>
 
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
+                autoComplete="current-password"
                 placeholder="Ingresa tu contraseña"
                 value={password}
                 onChange={(e) =>

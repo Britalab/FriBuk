@@ -1,23 +1,32 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 
 export default function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState("");
+  const [registered, setRegistered] = useState(false);
 
   const { register } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
+    if (!acceptedTerms) {
+      setError(
+        "Debes aceptar los Términos y Condiciones y la Política de Privacidad para crear tu cuenta."
+      );
+      return;
+    }
+
     try {
-      await register(username, email, password);
-      navigate("/login");
+      await register(username, email, password, acceptedTerms);
+      setRegistered(true);
     } catch (err) {
       setError(err.response?.data?.detail || "Error al registrarse");
     }
@@ -41,6 +50,18 @@ export default function Register() {
             </p>
           </header>
 
+          {registered ? (
+            <div className="auth-notice" role="status">
+              <p>
+                <strong>¡Tu cuenta fue creada!</strong>
+              </p>
+              <p>
+                Te enviamos un correo a <strong>{email}</strong>. Debes
+                confirmar tu correo electrónico antes de iniciar sesión.
+              </p>
+              <p>Si no lo ves, revisa tu carpeta de spam.</p>
+            </div>
+          ) : (
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="auth-form-group">
               <label htmlFor="username">Usuario</label>
@@ -71,15 +92,38 @@ export default function Register() {
             <div className="auth-form-group">
               <label htmlFor="password">Contraseña</label>
 
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
+                autoComplete="new-password"
                 placeholder="Crea una contraseña"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
+
+            <label className="auth-terms" htmlFor="accepted-terms">
+              <input
+                id="accepted-terms"
+                type="checkbox"
+                className="auth-terms-checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                required
+              />
+
+              <span className="auth-terms-text">
+                He leído y acepto los{" "}
+                <Link to="/terminos" target="_blank" rel="noopener noreferrer">
+                  Términos y Condiciones
+                </Link>{" "}
+                y la{" "}
+                <Link to="/privacidad" target="_blank" rel="noopener noreferrer">
+                  Política de Privacidad
+                </Link>
+                .
+              </span>
+            </label>
 
             {error && (
               <div className="auth-error">
@@ -88,10 +132,15 @@ export default function Register() {
               </div>
             )}
 
-            <button type="submit" className="auth-submit">
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={!acceptedTerms}
+            >
               Crear mi cuenta
             </button>
           </form>
+          )}
 
           <footer className="auth-footer">
             <p>¿Ya tienes una cuenta?</p>

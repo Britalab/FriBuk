@@ -30,8 +30,13 @@ export function AuthProvider({ children }) {
     return response.data;
   };
 
-  const register = async (username, email, password) => {
-    const response = await api.post("/users", { username, email, password });
+  const register = async (username, email, password, acceptedTerms) => {
+    const response = await api.post("/users", {
+      username,
+      email,
+      password,
+      accepted_terms: acceptedTerms === true
+    });
     return response.data;
   };
 

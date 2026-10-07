@@ -12,8 +12,11 @@ export default function EditChapter() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
+  const [status, setStatus] = useState("draft");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -28,6 +31,7 @@ export default function EditChapter() {
         setChapterNumber(chapter.chapter_number || "");
         setTitle(chapter.title || "");
         setContent(chapter.content || "");
+        setStatus(chapter.status || "draft");
       } catch (err) {
         console.error(
           "Error al cargar el capítulo:",
@@ -46,31 +50,72 @@ export default function EditChapter() {
     loadChapter();
   }, [chapterId]);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
+  const validateChapter = () => {
     setError("");
 
     if (!chapterNumber || Number(chapterNumber) < 1) {
       setError(
         "El número del capítulo debe ser mayor que 0."
       );
-      return;
+      return false;
     }
 
     if (!title.trim()) {
       setError(
         "El título del capítulo es obligatorio."
       );
-      return;
+      return false;
     }
 
     if (!content.trim()) {
       setError(
         "El contenido del capítulo es obligatorio."
       );
-      return;
+      return false;
     }
+
+    return true;
+  };
+
+  // Publicar es una acción explícita del autor: guarda el texto actual y
+  // cambia el capítulo de borrador a publicado. No se puede deshacer.
+  const handlePublish = async () => {
+    if (publishing || saving || !validateChapter()) return;
+
+    const confirmed = window.confirm(
+      "¿Publicar este capítulo? Será visible para los lectores y no podrá volver a borrador."
+    );
+
+    if (!confirmed) return;
+
+    setPublishing(true);
+
+    try {
+      const response = await api.put(`/chapters/${chapterId}`, {
+        chapter_number: Number(chapterNumber),
+        title: title.trim(),
+        content: content.trim(),
+        status: "published",
+      });
+
+      setStatus(response.data.chapter?.status || "published");
+      showToast("Capítulo publicado correctamente. Ya es visible para los lectores.");
+    } catch (err) {
+      console.error(
+        "Error al publicar el capítulo:",
+        err
+      );
+
+      showToast(err.response?.data?.detail || "No se pudo publicar el capítulo. Intenta nuevamente.", "error");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!validateChapter()) return;
 
     setSaving(true);
 
@@ -137,6 +182,17 @@ export default function EditChapter() {
           <p>
             Modifica el contenido de tu capítulo y guarda
             los cambios cuando estés listo.
+          </p>
+
+          <p>
+            <span className={`story-detail-status status-${status}`}>
+              <span aria-hidden="true">
+                {status === "published" ? "●" : "○"}
+              </span>
+              {status === "published"
+                ? "Publicado · visible para los lectores"
+                : "Borrador · solo tú puedes verlo"}
+            </span>
           </p>
         </header>
 
@@ -253,12 +309,25 @@ export default function EditChapter() {
             <button
               type="submit"
               className="story-editor-submit"
-              disabled={saving}
+              disabled={saving || publishing}
             >
               {saving
                 ? "Guardando cambios..."
                 : "Guardar cambios"}
             </button>
+
+            {status === "draft" && (
+              <button
+                type="button"
+                className="story-editor-submit"
+                onClick={handlePublish}
+                disabled={saving || publishing}
+              >
+                {publishing
+                  ? "Publicando..."
+                  : "Publicar capítulo"}
+              </button>
+            )}
           </div>
 
         </form>

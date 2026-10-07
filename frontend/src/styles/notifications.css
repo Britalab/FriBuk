@@ -1,0 +1,492 @@
+/* =========================================================
+   Notificaciones: campana del Navbar, panel y página completa.
+   Usa las variables de color de App.css (modo claro y oscuro).
+   ========================================================= */
+
+/* ---------- Campana ---------- */
+
+.notification-bell {
+  position: relative;
+  display: inline-flex;
+}
+
+.notification-bell-button {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 17px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.notification-bell-button:hover {
+  background: var(--bg-hover);
+  transform: scale(1.05);
+}
+
+.notification-bell-button:focus-visible,
+.notification-link:focus-visible,
+.notification-remove:focus-visible,
+.notification-panel-header button:focus-visible,
+.notification-panel-footer:focus-visible,
+.notification-state button:focus-visible,
+.notifications-button:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.notification-bell-badge {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border: 2px solid var(--bg-card);
+  border-radius: 999px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Panel ---------- */
+
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: -8px;
+  z-index: 120;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 110px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: 0 18px 44px rgba(40, 30, 25, 0.18);
+  text-align: left;
+}
+
+.notification-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notification-panel-header h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.notification-panel-header button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--burgundy);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notification-panel-header button:hover {
+  text-decoration: underline;
+}
+
+.notification-panel .notification-list {
+  overflow-y: auto;
+}
+
+.notification-panel-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--burgundy);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.notification-panel-footer:hover {
+  background: var(--bg-hover);
+}
+
+.notification-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 30px 20px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.notification-state p {
+  margin: 0;
+}
+
+.notification-state > span {
+  font-size: 1.5rem;
+  opacity: 0.6;
+}
+
+.notification-state button {
+  padding: 7px 12px;
+  border: 1px solid var(--burgundy);
+  border-radius: 9px;
+  background: var(--burgundy);
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notification-error {
+  margin: 0;
+  padding: 10px 16px;
+  color: #a34b45;
+  font-size: 0.82rem;
+}
+
+/* ---------- Elementos de la lista ---------- */
+
+.notification-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notification-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.notification-item + .notification-item {
+  border-top: 1px solid var(--border);
+}
+
+.notification-item.is-unread {
+  background: var(--bg-soft);
+}
+
+.notification-link {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+  color: var(--text-main);
+  transition: background-color 0.16s ease;
+}
+
+.notification-link:hover {
+  background: var(--bg-hover);
+}
+
+.notification-avatar {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-main);
+  font-size: 1rem;
+}
+
+.notification-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.notification-body {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 3px;
+}
+
+.notification-text {
+  color: var(--text-main);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.notification-text strong {
+  color: var(--burgundy);
+  font-weight: 750;
+}
+
+.notification-excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.notification-time {
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+/* El estado "sin leer" no depende solo del color: también se dice en texto. */
+.notification-unread-label {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+.notification-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: var(--orange);
+}
+
+.notification-remove {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notification-remove + .notification-remove {
+  margin-left: -6px;
+}
+
+.notification-mark-read {
+  font-size: 0.95rem;
+}
+
+.notification-remove:hover {
+  border-color: var(--border);
+  background: var(--bg-hover);
+  color: var(--burgundy);
+}
+
+/* ---------- Página completa ---------- */
+
+.notifications-page {
+  min-height: calc(100vh - 76px);
+  padding: 46px 24px 80px;
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+.notifications-container {
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+
+.notifications-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 20px;
+  margin-bottom: 20px;
+}
+
+.notifications-eyebrow {
+  margin: 0 0 7px;
+  color: var(--orange);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.notifications-header h1 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+
+.notifications-header p:last-child {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.notifications-button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--burgundy);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.notifications-button:hover:not(:disabled) {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.notifications-button.is-primary {
+  border-color: var(--burgundy);
+  background: var(--burgundy);
+  color: #fff;
+}
+
+.notifications-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.notifications-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+}
+
+.notifications-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 44px 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.notifications-state > span {
+  font-size: 1.9rem;
+  opacity: 0.6;
+}
+
+.notifications-state h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 1.15rem;
+}
+
+.notifications-state p {
+  max-width: 460px;
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ---------- Centro de actividad ---------- */
+
+.activity-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 18px;
+}
+
+.activity-summary {
+  margin: 0;
+  color: var(--burgundy);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.activity-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notifications-button:disabled {
+  cursor: not-allowed;
+}
+
+.activity-group + .activity-group {
+  margin-top: 22px;
+}
+
+.activity-group-title {
+  margin: 0 0 9px;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.notifications-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+  /* En móvil la campana lleva a la página: iguala al botón de perfil. */
+  .notification-bell-button {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+  }
+
+  .notifications-page {
+    padding: 30px 14px 60px;
+  }
+
+  .notification-link {
+    padding: 12px 12px;
+  }
+
+  .notification-remove {
+    margin-right: 6px;
+  }
+
+  .activity-toolbar-actions {
+    width: 100%;
+  }
+
+  .activity-toolbar-actions .notifications-button {
+    flex: 1 1 auto;
+  }
+}

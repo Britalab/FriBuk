@@ -1,0 +1,674 @@
+/* =========================================================
+   ProfileCustomize.jsx: editor de «Mi espacio»
+   La página usa siempre los colores normales de FriBuk; solo la
+   vista previa (y las muestras) llevan el tema elegido.
+   ========================================================= */
+
+.customize-page {
+  min-height: calc(100vh - 76px);
+  padding: 46px 24px 0;
+  background: var(--bg-main);
+  color: var(--text-main);
+}
+
+.customize-container {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+}
+
+.customize-header {
+  max-width: 640px;
+  margin-bottom: 26px;
+}
+
+.customize-eyebrow {
+  margin: 0 0 7px;
+  color: var(--orange);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.customize-header h1 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+
+.customize-header p:last-child {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.customize-state {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 40px 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.customize-state p {
+  margin: 0;
+}
+
+.customize-state a {
+  color: var(--burgundy);
+  font-weight: 700;
+}
+
+.customize-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+  align-items: start;
+  gap: 24px;
+}
+
+.customize-options {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
+/* ---------- Pasos ---------- */
+
+.customize-step {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg-card);
+}
+
+.customize-step > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.customize-step > summary::-webkit-details-marker {
+  display: none;
+}
+
+.customize-step > summary::after {
+  content: "▾";
+  color: var(--text-secondary);
+  transition: transform 0.18s ease;
+}
+
+.customize-step:not([open]) > summary::after {
+  transform: rotate(-90deg);
+}
+
+.customize-step > summary:focus-visible,
+.customize-button:focus-visible,
+.customize-theme-card:focus-visible,
+.customize-decor-chip:focus-visible,
+.customize-accent:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.customize-step > :not(summary) {
+  margin-right: 18px;
+  margin-left: 18px;
+}
+
+.customize-step > :last-child:not(summary) {
+  margin-bottom: 18px;
+}
+
+.customize-step-number {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--burgundy);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.customize-step-title {
+  color: var(--text-main);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.customize-step-value {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customize-hint {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+/* ---------- Botones ---------- */
+
+.customize-button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--burgundy);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.customize-button:hover:not(:disabled) {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.customize-button.is-primary {
+  border-color: var(--burgundy);
+  background: var(--burgundy);
+  color: #fff;
+}
+
+.customize-button.is-primary:hover:not(:disabled) {
+  border-color: var(--burgundy-dark);
+  background: var(--burgundy-dark);
+}
+
+[data-theme="dark"] .customize-button.is-primary:hover:not(:disabled) {
+  color: var(--bg-main);
+}
+
+.customize-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Temas ---------- */
+
+.customize-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+}
+
+.customize-theme-card {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  padding: 7px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.customize-theme-card:hover {
+  border-color: var(--orange-soft);
+  transform: translateY(-1px);
+}
+
+.customize-theme-card[aria-pressed="true"] {
+  border-color: var(--orange);
+  background: var(--bg-soft);
+}
+
+/* La muestra lleva el tema: sus colores salen de las variables del tema. */
+.customize-theme-swatch {
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-main);
+}
+
+.customize-theme-swatch-card {
+  width: 74%;
+  display: grid;
+  gap: 4px;
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-card);
+}
+
+.customize-theme-swatch-title,
+.customize-theme-swatch-text,
+.customize-theme-swatch-accent {
+  height: 5px;
+  border-radius: 99px;
+}
+
+.customize-theme-swatch-title {
+  width: 70%;
+  background: var(--burgundy);
+}
+
+.customize-theme-swatch-text {
+  width: 100%;
+  background: var(--text-secondary);
+}
+
+.customize-theme-swatch-accent {
+  width: 40%;
+  background: var(--orange);
+}
+
+.customize-theme-name {
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Decoraciones ---------- */
+
+.customize-decor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.customize-search {
+  min-width: 180px;
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+}
+
+.customize-search:focus-within {
+  border-color: var(--orange);
+}
+
+.customize-search input {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 9px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.customize-decor-group + .customize-decor-group {
+  margin-top: 14px;
+}
+
+.customize-decor-group h3 {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customize-decor-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.customize-decor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.customize-decor-chip svg,
+.customize-decor-ambient {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  color: var(--burgundy);
+}
+
+.customize-decor-ambient {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 3px,
+    var(--orange-soft) 3px 4px
+  );
+}
+
+.customize-decor-chip small {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+}
+
+.customize-decor-chip:hover:not(:disabled) {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.customize-decor-chip[aria-pressed="true"] {
+  border-color: var(--orange);
+  background: var(--bg-soft);
+  font-weight: 700;
+}
+
+.customize-decor-chip:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+/* ---------- Emojis ---------- */
+
+.customize-emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 6px;
+}
+
+.customize-emoji {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--bg-main);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.customize-emoji img {
+  width: 100%;
+  max-width: 40px;
+  display: block;
+}
+
+.customize-emoji:hover:not(:disabled) {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+  transform: scale(1.06);
+}
+
+.customize-emoji[aria-pressed="true"] {
+  border-color: var(--orange);
+  background: var(--bg-soft);
+  box-shadow: 0 0 0 2px var(--orange-soft);
+}
+
+.customize-emoji:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.customize-emoji:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+/* ---------- Colores de acento ---------- */
+
+.customize-accent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.customize-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.customize-accent:hover {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.customize-accent[aria-pressed="true"] {
+  border-color: var(--text-main);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--text-main);
+}
+
+/* El punto lleva el tema y el acento: se ve tal como quedará en el perfil. */
+.customize-accent-dot {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: 3px solid var(--bg-card);
+  border-radius: 999px;
+  background: var(--orange);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+/* ---------- Vista previa ---------- */
+
+.customize-preview {
+  position: sticky;
+  top: 92px;
+  min-width: 0;
+}
+
+.customize-preview-label {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.customize-preview-page {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+/* La vista previa es estrecha: se compacta la cabecera del perfil real. */
+.customize-preview-page .public-profile-header {
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  border-radius: 18px;
+  --header-pad-y: 18px;
+  --header-pad-x: 18px;
+  --banner-gap: 16px;
+  --avatar-overlap: 30px;
+}
+
+.customize-preview-page .public-profile-header.has-banner .public-profile-avatar {
+  border-width: 3px;
+}
+
+.customize-preview-page .public-profile-avatar {
+  width: 76px;
+  border-radius: 18px;
+  font-size: 1.9rem;
+}
+
+.customize-preview-page .public-profile-identity h1 {
+  font-size: 1.5rem;
+}
+
+.customize-preview-page .public-profile-stats {
+  margin-top: 14px;
+}
+
+.customize-preview-page .public-profile-stats > button {
+  min-width: 0;
+  padding: 6px 10px;
+}
+
+.customize-preview-page .public-profile-follow-area {
+  margin-top: 14px;
+}
+
+.customize-preview-page .public-profile-section {
+  padding-top: 20px;
+}
+
+.customize-preview-page .public-profile-section-heading h2 {
+  font-size: 1.25rem;
+}
+
+.customize-preview-page .public-profile-story-card {
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+}
+
+.customize-preview-page .public-profile-story-cover {
+  width: 70px;
+}
+
+/* Pegatinas en la cabecera compacta: la tercera pasa bajo el avatar para
+   no quedar detrás del nombre. */
+.customize-preview-page .profile-sticker:nth-child(1) {
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+}
+
+.customize-preview-page .profile-sticker:nth-child(2) {
+  top: auto;
+  right: 14px;
+  bottom: 10px;
+  left: auto;
+  width: 32px;
+  height: 32px;
+}
+
+.customize-preview-page .profile-sticker:nth-child(3) {
+  top: 112px;
+  right: auto;
+  left: 28px;
+  width: 30px;
+  height: 30px;
+}
+
+/* ---------- Barra de acciones ---------- */
+
+.customize-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 18px;
+  margin-top: 24px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  background: var(--bg-card);
+  box-shadow: 0 -10px 28px rgba(40, 30, 25, 0.08);
+}
+
+.customize-actions-status p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.customize-actions-status .customize-error {
+  color: #a34b45;
+  font-weight: 700;
+}
+
+.customize-actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+@media (max-width: 960px) {
+  .customize-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* En pantallas estrechas la vista previa va primero y deja de ser fija. */
+  .customize-preview {
+    position: static;
+    order: -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .customize-page {
+    padding: 30px 14px 0;
+  }
+
+  .customize-step-value {
+    display: none;
+  }
+
+  .customize-actions-buttons {
+    width: 100%;
+  }
+
+  .customize-actions-buttons .customize-button {
+    flex: 1 1 auto;
+  }
+}
