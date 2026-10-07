@@ -20,6 +20,8 @@ from typing import Literal
 from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 from collections import deque
+import base64
+import json
 import threading
 import time
 from urllib.parse import urlparse
@@ -206,6 +208,15 @@ class LoginRequest(BaseModel):
 
 class SessionRefreshRequest(BaseModel):
     refresh_token: str
+
+
+class PasswordRecoveryRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordUpdateRequest(BaseModel):
+    access_token: str
+    password: str
     
 class StoryCreate(BaseModel):
     title: str
@@ -1642,6 +1653,170 @@ def refresh_session(body: SessionRefreshRequest):
         )
 
     return {**session, "token_type": "bearer"}
+
+
+# ============================================================
+# RECUPERAR LA CONTRASEÑA
+# ============================================================
+
+# 1. La persona pide el enlace con su correo. 2. Supabase le envía un
+# correo con un enlace a la página "restablecer" del sitio. 3. Desde esa
+# página elige una contraseña nueva, que solo se acepta con el token de
+# recuperación que venía en el enlace.
+
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 72
+PASSWORD_RESET_PATH = "/restablecer"
+PASSWORD_RECOVERY_MESSAGE = (
+    "Si ese correo tiene una cuenta en FriBuk, te enviamos un enlace para "
+    "elegir una contraseña nueva. Revisa también la carpeta de spam."
+)
+
+# Límites en memoria: (solicitudes permitidas, ventana en segundos).
+PASSWORD_RECOVERY_RATE_LIMITS = {"ip": (5, 3600), "email": (3, 3600)}
+PASSWORD_RECOVERY_MAX_TRACKED_KEYS = 20000
+
+password_recovery_requests: dict[tuple[str, str], deque] = {}
+password_recovery_requests_lock = threading.Lock()
+
+
+def limit_password_recovery(client_ip: str, email: str) -> None:
+    now = time.monotonic()
+
+    with password_recovery_requests_lock:
+        if len(password_recovery_requests) > PASSWORD_RECOVERY_MAX_TRACKED_KEYS:
+            password_recovery_requests.clear()
+
+        tracked = []
+        for kind, key in (("ip", client_ip), ("email", email)):
+            limit, window = PASSWORD_RECOVERY_RATE_LIMITS[kind]
+            timestamps = password_recovery_requests.setdefault((kind, key), deque())
+            while timestamps and now - timestamps[0] > window:
+                timestamps.popleft()
+            if len(timestamps) >= limit:
+                raise HTTPException(
+                    status_code=429,
+                    detail=(
+                        "Pediste el enlace demasiadas veces. "
+                        "Espera un rato e inténtalo nuevamente."
+                    )
+                )
+            tracked.append(timestamps)
+
+        for timestamps in tracked:
+            timestamps.append(now)
+
+
+def password_reset_url(origin: str | None) -> str:
+    # El enlace vuelve al mismo sitio desde el que se pidió, siempre que sea
+    # uno de los orígenes permitidos; nunca a una dirección arbitraria.
+    allowed = [item for item in CORS_ALLOWED_ORIGINS if item]
+    normalized = (origin or "").strip().rstrip("/")
+    base = normalized if normalized in allowed else next(
+        (item for item in allowed if "localhost" not in item), allowed[0]
+    )
+    return base + PASSWORD_RESET_PATH
+
+
+def request_password_recovery(email: str, redirect_to: str) -> None:
+    # Llamada directa a Supabase Auth, sin pasar por el cliente compartido.
+    # Supabase responde igual exista o no la cuenta.
+    response = httpx.post(
+        f"{SUPABASE_URL.strip().rstrip('/')}/auth/v1/recover",
+        params={"redirect_to": redirect_to},
+        headers={"apikey": SUPABASE_ANON_KEY},
+        json={"email": email},
+        timeout=10
+    )
+    response.raise_for_status()
+
+
+@app.post("/auth/password-recovery")
+def start_password_recovery(body: PasswordRecoveryRequest, request: Request):
+    email = body.email.strip().lower()
+    client_ip = request.client.host if request.client else "desconocido"
+    limit_password_recovery(client_ip, email)
+
+    try:
+        request_password_recovery(
+            email, password_reset_url(request.headers.get("origin"))
+        )
+    except Exception as e:
+        # No se revela si falló ni si la cuenta existe.
+        print("No se pudo pedir la recuperación de contraseña:", repr(e))
+
+    return {"message": PASSWORD_RECOVERY_MESSAGE}
+
+
+def token_authentication_methods(access_token: str) -> set[str]:
+    # Lee del token cómo se obtuvo la sesión. Solo se usa después de que
+    # Supabase confirmó que el token es auténtico.
+    try:
+        payload = access_token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        claims = json.loads(base64.urlsafe_b64decode(payload))
+        return {
+            str(entry.get("method"))
+            for entry in claims.get("amr") or []
+            if isinstance(entry, dict)
+        }
+    except Exception:
+        return set()
+
+
+@app.post("/auth/password-update")
+def update_password_with_recovery(body: PasswordUpdateRequest):
+    expired = HTTPException(
+        status_code=401,
+        detail="El enlace ya no es válido. Pide uno nuevo para cambiar tu contraseña."
+    )
+
+    password = body.password or ""
+    if len(password) < PASSWORD_MIN_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"La contraseña debe tener al menos {PASSWORD_MIN_LENGTH} caracteres"
+        )
+    if len(password.encode("utf-8")) > PASSWORD_MAX_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail="La contraseña es demasiado larga"
+        )
+
+    access_token = (body.access_token or "").strip()
+    if not access_token:
+        raise expired
+
+    try:
+        response_user = supabase_public.auth.get_user(access_token)
+        recovery_user = response_user.user if response_user else None
+    except Exception:
+        recovery_user = None
+
+    if not recovery_user:
+        raise expired
+
+    # Una sesión normal no alcanza: tiene que venir del enlace de
+    # recuperación. Así, quien solo tenga una sesión abierta no puede
+    # cambiar la contraseña sin conocer la actual.
+    if "recovery" not in token_authentication_methods(access_token):
+        raise HTTPException(
+            status_code=403,
+            detail="Para cambiar la contraseña usa el enlace que te enviamos por correo."
+        )
+
+    try:
+        supabase_admin.auth.admin.update_user_by_id(
+            str(recovery_user.id), {"password": password}
+        )
+    except Exception as e:
+        print("No se pudo cambiar la contraseña:", repr(e))
+        raise HTTPException(
+            status_code=400,
+            detail="No se pudo cambiar la contraseña. Prueba con una distinta."
+        )
+
+    return {"message": "Tu contraseña se cambió. Ya puedes iniciar sesión."}
 
 
 @app.get("/me")

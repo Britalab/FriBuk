@@ -9,6 +9,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Feed from "./pages/Feed";
 import StoryDetail from "./pages/StoryDetail";
 import ChapterReader from "./pages/ChapterReader";
@@ -57,6 +59,10 @@ function App() {
           <Route path="/login" element={<Login />} />
 
           <Route path="/register" element={<Register />} />
+
+          <Route path="/recuperar" element={<ForgotPassword />} />
+
+          <Route path="/restablecer" element={<ResetPassword />} />
 
           <Route
             path="/create-story"

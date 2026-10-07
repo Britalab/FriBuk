@@ -5890,6 +5890,39 @@ button {
   box-shadow: 0 0 0 3px rgba(114, 47, 63, 0.10);
 }
 
+/* Recuperar la contraseña */
+
+.auth-forgot {
+  justify-self: center;
+  align-self: center;
+  color: var(--burgundy);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.auth-forgot:hover {
+  color: var(--orange);
+  text-decoration: underline;
+}
+
+.auth-forgot:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.auth-success {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--orange-soft);
+  border-radius: 11px;
+  background: var(--bg-soft);
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 /* Contraseña con botón para mostrarla u ocultarla */
 
 .password-input {

@@ -102,6 +102,10 @@ export default function Login() {
             >
               Entrar
             </button>
+
+            <Link to="/recuperar" className="auth-forgot">
+              ¿Olvidaste tu contraseña?
+            </Link>
           </form>
 
           <div className="auth-footer">
