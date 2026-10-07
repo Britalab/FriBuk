@@ -137,6 +137,7 @@ Variables de entorno del backend:
 | `CORS_ALLOWED_ORIGINS` | `https://www.fribuk.com` (varios orígenes se separan con comas) |
 | `RESEND_API_KEY` | Clave de Resend para el correo de bienvenida |
 | `EMAIL_FROM` | Remitente, con un dominio verificado en Resend |
+| `ADMIN_ALERT_EMAIL` | Opcional. Destino de los avisos a la administración; sin ella van al correo de cada cuenta admin |
 
 ### Frontend en Cloudflare Pages
 

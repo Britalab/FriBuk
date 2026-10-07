@@ -8,6 +8,7 @@ from postgrest.exceptions import APIError
 from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr
 from email_service import send_welcome_email
+import admin_alerts
 from chapter_anchors import build_anchor, locate_anchor
 from profile_catalog import (
     DEFAULT_PROFILE_THEME,
@@ -2431,6 +2432,11 @@ def create_support_request(
         )
 
         created_request = response.data[0]
+
+        # Aviso por correo a la administración.
+        admin_alerts.alert_support_request(
+            created_request.get("category"), created_request.get("message")
+        )
 
         # 4. Responder
         return {

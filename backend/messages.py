@@ -23,6 +23,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+import admin_alerts
+
 router = APIRouter()
 security = HTTPBearer()
 
@@ -714,6 +716,8 @@ def report_private_conversation(
             })
             .execute()
         )
+        # Aviso por correo a la administración.
+        admin_alerts.alert_support_request(REPORT_CATEGORY, " · ".join(details))
     except HTTPException:
         raise
     except Exception as error:

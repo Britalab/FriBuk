@@ -60,15 +60,21 @@ class MessagesTestCase(unittest.TestCase):
             for user_id in (ANA_ID, BOB_ID, CARO_ID, AUTHOR_ID)
         }
 
-        self.originals = (main.supabase_admin, main.supabase_public)
+        self.originals = (
+            main.supabase_admin, main.supabase_public, main.run_notification_task
+        )
         main.supabase_admin = self.database
         main.supabase_public = SimpleNamespace(auth=FakeAuth(users))
+        # Sin tareas en segundo plano: las pruebas nunca envían avisos reales.
+        main.run_notification_task = lambda *args, **kwargs: None
         messages.message_requests.clear()
 
         self.client = TestClient(main.app)
 
     def tearDown(self):
-        main.supabase_admin, main.supabase_public = self.originals
+        (
+            main.supabase_admin, main.supabase_public, main.run_notification_task
+        ) = self.originals
 
     # ---------- utilidades ----------
 

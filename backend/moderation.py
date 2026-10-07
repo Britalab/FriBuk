@@ -25,6 +25,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+import admin_alerts
+
 router = APIRouter()
 security = HTTPBearer()
 
@@ -783,9 +785,17 @@ def report_content(report: ContentReportCreate, current_user=Depends(get_current
             "status": "open"
         })
 
+        # Aviso por correo a la administración: el retiro automático o, si
+        # no lo hubo, el reporte nuevo.
         if countable_reporters(case, reports) >= AUTO_REMOVE_THRESHOLD:
-            remove_content(
+            case = remove_content(
                 case, AUTOMATIC_REMOVAL_REASON, actor_id=None, automatic=True
+            )
+            admin_alerts.alert_automatic_removal(case, TARGET_LABELS[target_type])
+        else:
+            admin_alerts.alert_new_report(
+                case, TARGET_LABELS[target_type],
+                REPORT_REASONS[report.reason], details
             )
     except HTTPException:
         raise

@@ -246,3 +246,42 @@ def send_welcome_email(email: str, username: str):
     except Exception as e:
         print(f"Error enviando correo de bienvenida: {e}")
         return False
+
+
+def send_admin_alert(recipients: list[str], subject: str, lines: list[str], panel_url: str):
+    # Aviso interno para la administración. Las líneas pueden incluir texto
+    # escrito por usuarios: se escapa todo para que no pueda insertar HTML
+    # ni enlaces en el correo.
+    body = "".join(
+        f'<p style="margin:0 0 10px;">{html.escape(line)}</p>' for line in lines
+    )
+
+    try:
+        resend.Emails.send({
+            "from": os.getenv("EMAIL_FROM"),
+            "to": recipients,
+            "subject": f"[FriBuk] {subject}",
+            "html": f"""
+            <!DOCTYPE html>
+            <html lang="es">
+              <body style="font-family: Arial, sans-serif; color: #292525; line-height: 1.5;">
+                <h2 style="margin: 0 0 14px; color: #722f3f;">{html.escape(subject)}</h2>
+                {body}
+                <p style="margin: 18px 0 0;">
+                  <a href="{html.escape(panel_url)}" style="color: #722f3f; font-weight: bold;">
+                    Abrir el panel de administración
+                  </a>
+                </p>
+                <p style="margin: 18px 0 0; color: #756e69; font-size: 13px;">
+                  Aviso automático de FriBuk para la administración.
+                </p>
+              </body>
+            </html>
+            """
+        })
+
+        return True
+
+    except Exception as e:
+        print(f"Error enviando aviso a la administración: {e}")
+        return False
