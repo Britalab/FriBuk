@@ -1,6 +1,8 @@
 # FriBuk
 
 FriBuk es una plataforma web para leer y compartir historias. Reúne un feed público de obras, herramientas para que sus autores las gestionen y funciones de comunidad para lectores y escritores.
+<img width="607" height="792" alt="Fribuk 1" src="https://github.com/user-attachments/assets/b3ec604c-207c-4525-98c3-1c32fe33ea2f" />
+
 
 ## Funcionalidades
 
@@ -158,8 +160,15 @@ No hace falta un archivo de redirecciones: Cloudflare Pages sirve la aplicación
 - Las solicitudes autenticadas envían el token de acceso en el encabezado `Authorization`.
 
 ## Capturas
+<img width="607" height="826" alt="Fribuk 7" src="https://github.com/user-attachments/assets/2be0f595-e7c8-4691-8594-c018f410c238" />
+<img width="597" height="787" alt="Fribuk 6" src="https://github.com/user-attachments/assets/f78c7b89-26c3-46d7-a80c-eaa6359eb2b8" />
+<img width="592" height="782" alt="Fribuk 5" src="https://github.com/user-attachments/assets/8c786ff3-67e6-4585-946a-cd2256866354" />
+<img width="606" height="807" alt="Fribuk 4" src="https://github.com/user-attachments/assets/fe504bb0-21bc-4e78-8975-be631729c6c8" />
+<img width="602" height="792" alt="Fribuk 3" src="https://github.com/user-attachments/assets/2c66402d-f694-4017-b77e-ec84b17be685" />
+<img width="607" height="816" alt="Fribuk 2" src="https://github.com/user-attachments/assets/7d318184-4cc6-4bee-9a41-05220eaa55d8" />
+<img width="607" height="792" alt="Fribuk 1" src="https://github.com/user-attachments/assets/e93da0b1-dbc3-4027-8c7a-b17cae688371" />
 
-En espera, Frontend en proceso de enchulado :D
+
 
 ## Estado del proyecto
 
