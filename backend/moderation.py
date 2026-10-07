@@ -562,6 +562,29 @@ def removed_cases(target_type: str, target_ids) -> dict[str, dict]:
     return {str(row["target_id"]): row for row in response.data or []}
 
 
+def cases_in_review(target_type: str, target_ids) -> bool:
+    # Verdadero si alguno de esos contenidos tiene reportes pendientes o
+    # está retirado: su autor no puede borrarlo hasta que se revise.
+    ids = [str(target_id) for target_id in target_ids if target_id]
+    if not ids:
+        return False
+
+    try:
+        response = (
+            db()
+            .table("moderation_cases")
+            .select("id, status")
+            .eq("target_type", target_type)
+            .in_("target_id", ids)
+            .execute()
+        )
+    except Exception as error:
+        print("No se pudo consultar la moderación:", repr(error))
+        return False
+
+    return any(row.get("status") in ("open", "removed") for row in response.data or [])
+
+
 def viewer_is_admin(viewer) -> bool:
     return bool(viewer) and fribuk().is_admin_user(str(viewer.id))
 

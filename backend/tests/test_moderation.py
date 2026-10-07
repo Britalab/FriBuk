@@ -822,6 +822,121 @@ class ModerationTestCase(unittest.TestCase):
         self.assertTrue(self.client.get("/site/home-banner").json()["banner_url"])
 
     # ============================================================
+    # ELIMINAR PUBLICACIONES PROPIAS DEL FORO
+    # ============================================================
+
+    def delete(self, path, user_id):
+        return self.client.delete(path, headers=auth_header(user_id))
+
+    def test_owner_can_remove_only_the_image_of_their_post(self):
+        path = f"/forum/topics/{TOPIC_ID}/image"
+
+        self.assertIn(self.client.delete(path).status_code, (401, 403))
+        self.assertEqual(self.delete(path, OUTSIDER_ID).status_code, 404)
+        self.assertEqual(self.delete(path, ADMIN_ID).status_code, 404)
+        self.assertEqual(
+            self.database.storage.paths("forum-images"), [TOPIC_IMAGE_PATH]
+        )
+
+        removed = self.delete(path, OWNER_ID)
+        self.assertEqual(removed.status_code, 200, removed.text)
+
+        # El tema sigue publicado con su texto, ya sin imagen ni archivo.
+        topic = self.topic().json()
+        self.assertIsNone(topic["image_url"])
+        self.assertEqual(topic["content"], "Contenido del tema")
+        self.assertEqual(self.database.storage.paths("forum-images"), [])
+        self.assertEqual(self.delete(path, OWNER_ID).status_code, 400)
+
+    def test_image_only_reply_must_be_deleted_whole(self):
+        reply = self.database.tables["forum_replies"][0]
+        reply["content"] = ""
+        reply["image_url"] = TOPIC_IMAGE_URL
+
+        only_image = self.delete(f"/forum/replies/{REPLY_ID}/image", OWNER_ID)
+        self.assertEqual(only_image.status_code, 400)
+        self.assertEqual(reply["image_url"], TOPIC_IMAGE_URL)
+
+        deleted = self.delete(f"/forum/replies/{REPLY_ID}", OWNER_ID)
+        self.assertEqual(deleted.status_code, 200, deleted.text)
+        self.assertEqual(self.database.storage.paths("forum-images"), [])
+
+    def test_owner_can_delete_their_reply_but_not_someone_elses(self):
+        self.database.tables["forum_interactions"].extend([
+            {"id": "i1", "reply_id": REPLY_ID, "topic_id": None, "user_id": OUTSIDER_ID},
+            {"id": "i2", "reply_id": OTHER_REPLY_ID, "topic_id": None, "user_id": OWNER_ID}
+        ])
+
+        self.assertEqual(
+            self.delete(f"/forum/replies/{OTHER_REPLY_ID}", OWNER_ID).status_code, 404
+        )
+        self.assertEqual(
+            self.delete(f"/forum/replies/{REPLY_ID}", OUTSIDER_ID).status_code, 404
+        )
+        self.assertEqual(len(self.database.tables["forum_replies"]), 2)
+
+        deleted = self.delete(f"/forum/replies/{REPLY_ID}", OWNER_ID)
+        self.assertEqual(deleted.status_code, 200, deleted.text)
+
+        self.assertEqual(
+            [reply["id"] for reply in self.database.tables["forum_replies"]],
+            [OTHER_REPLY_ID]
+        )
+        self.assertEqual(
+            [item["id"] for item in self.database.tables["forum_interactions"]], ["i2"]
+        )
+        self.assertEqual(
+            self.delete(f"/forum/replies/{REPLY_ID}", OWNER_ID).status_code, 404
+        )
+
+    def test_owner_can_delete_their_topic_with_its_replies(self):
+        self.assertEqual(
+            self.delete(f"/forum/topics/{TOPIC_ID}", OUTSIDER_ID).status_code, 404
+        )
+        self.assertEqual(len(self.database.tables["forum_topics"]), 1)
+
+        deleted = self.delete(f"/forum/topics/{TOPIC_ID}", OWNER_ID)
+        self.assertEqual(deleted.status_code, 200, deleted.text)
+
+        self.assertEqual(self.database.tables["forum_topics"], [])
+        self.assertEqual(self.database.tables["forum_replies"], [])
+        self.assertEqual(self.database.storage.paths("forum-images"), [])
+        self.assertEqual(self.topic().status_code, 404)
+
+    def test_reported_or_removed_posts_cannot_be_deleted_by_their_owner(self):
+        self.report(REPORTER_IDS[0])
+
+        # Con un reporte pendiente, la evidencia se conserva.
+        for path in (f"/forum/topics/{TOPIC_ID}", f"/forum/topics/{TOPIC_ID}/image"):
+            self.assertEqual(self.delete(path, OWNER_ID).status_code, 409)
+
+        self.remove(reason="sexual")
+        self.assertEqual(
+            self.delete(f"/forum/topics/{TOPIC_ID}", OWNER_ID).status_code, 409
+        )
+        self.assertEqual(len(self.database.tables["forum_topics"]), 1)
+
+        # Una respuesta reportada también impide borrar el tema que la contiene.
+        self.restore(self.case()["id"])
+        self.client.post(
+            f"/moderation/cases/{self.case()['id']}/review",
+            json={}, headers=auth_header(ADMIN_ID)
+        )
+        self.report(REPORTER_IDS[1], "forum_reply", OTHER_REPLY_ID)
+        self.assertEqual(
+            self.delete(f"/forum/topics/{TOPIC_ID}", OWNER_ID).status_code, 409
+        )
+
+        # Ya revisado y sin reportes pendientes, se puede eliminar.
+        self.client.post(
+            f"/moderation/cases/{self.case('forum_reply', OTHER_REPLY_ID)['id']}/review",
+            json={}, headers=auth_header(ADMIN_ID)
+        )
+        self.assertEqual(
+            self.delete(f"/forum/topics/{TOPIC_ID}", OWNER_ID).status_code, 200
+        )
+
+    # ============================================================
     # PRIVACIDAD Y SEGURIDAD
     # ============================================================
 

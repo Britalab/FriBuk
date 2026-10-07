@@ -3857,6 +3857,202 @@ def get_forum_replies(
             detail=public_error_detail(e)
         )
         
+# ------------------------------------------------------------
+# Eliminar publicaciones propias del foro
+# ------------------------------------------------------------
+# Quien publicó puede borrar su tema, su respuesta o solo su imagen (por
+# ejemplo, si se equivocó de archivo). No es moderación: el retiro por
+# infracción lo hace un administrador y conserva el contenido.
+
+def get_own_forum_post(table_name: str, post_id: str, user_id: str, label: str) -> dict:
+    normalized_id = normalize_uuid_or_404(post_id, f"{label} no encontrado")
+    response = (
+        supabase_admin
+        .table(table_name)
+        .select("*")
+        .eq("id", normalized_id)
+        .eq("user_id", user_id)
+        .limit(1)
+        .execute()
+    )
+    # La publicación de otra persona responde igual que una inexistente.
+    if not response.data:
+        raise HTTPException(status_code=404, detail=f"{label} no encontrado")
+
+    return response.data[0]
+
+
+def ensure_forum_posts_not_in_review(target_type: str, post_ids: list[str]) -> None:
+    # Lo reportado o retirado se conserva hasta que la moderación lo revise.
+    if moderation.cases_in_review(target_type, post_ids):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Esta publicación está en revisión por moderación y no se "
+                "puede eliminar por ahora."
+            )
+        )
+
+
+def delete_forum_post_image(post: dict) -> None:
+    storage_path = moderation.storage_path_from_url(
+        post.get("image_url"), FORUM_IMAGE_BUCKET
+    )
+    if storage_path:
+        delete_forum_image(storage_path)
+
+
+@app.delete("/forum/topics/{topic_id}")
+def delete_forum_topic(topic_id: str, current_user=Depends(get_current_user)):
+    try:
+        topic = get_own_forum_post(
+            "forum_topics", topic_id, str(current_user.id), "Tema"
+        )
+        replies = (
+            supabase_admin
+            .table("forum_replies")
+            .select("id, image_url")
+            .eq("topic_id", str(topic["id"]))
+            .execute()
+        ).data or []
+        reply_ids = [str(reply["id"]) for reply in replies]
+
+        ensure_forum_posts_not_in_review("forum_topic", [str(topic["id"])])
+        ensure_forum_posts_not_in_review("forum_reply", reply_ids)
+
+        # Un tema se elimina con todas sus respuestas.
+        if reply_ids:
+            (
+                supabase_admin
+                .table("forum_interactions")
+                .delete()
+                .in_("reply_id", reply_ids)
+                .execute()
+            )
+            (
+                supabase_admin
+                .table("forum_replies")
+                .delete()
+                .eq("topic_id", str(topic["id"]))
+                .execute()
+            )
+        (
+            supabase_admin
+            .table("forum_interactions")
+            .delete()
+            .eq("topic_id", str(topic["id"]))
+            .execute()
+        )
+        (
+            supabase_admin
+            .table("forum_topics")
+            .delete()
+            .eq("id", str(topic["id"]))
+            .eq("user_id", str(current_user.id))
+            .execute()
+        )
+
+        for post in [topic, *replies]:
+            delete_forum_post_image(post)
+
+        return {"message": "Tema eliminado"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=public_error_detail(e))
+
+
+@app.delete("/forum/replies/{reply_id}")
+def delete_forum_reply(reply_id: str, current_user=Depends(get_current_user)):
+    try:
+        reply = get_own_forum_post(
+            "forum_replies", reply_id, str(current_user.id), "Respuesta"
+        )
+        ensure_forum_posts_not_in_review("forum_reply", [str(reply["id"])])
+
+        (
+            supabase_admin
+            .table("forum_interactions")
+            .delete()
+            .eq("reply_id", str(reply["id"]))
+            .execute()
+        )
+        (
+            supabase_admin
+            .table("forum_replies")
+            .delete()
+            .eq("id", str(reply["id"]))
+            .eq("user_id", str(current_user.id))
+            .execute()
+        )
+        delete_forum_post_image(reply)
+
+        return {"message": "Respuesta eliminada"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=public_error_detail(e))
+
+
+def remove_own_forum_image(
+    table_name: str, target_type: str, post_id: str, user_id: str, label: str
+) -> dict:
+    post = get_own_forum_post(table_name, post_id, user_id, label)
+
+    if not post.get("image_url"):
+        raise HTTPException(
+            status_code=400, detail="Esta publicación no tiene imagen."
+        )
+    # Sin texto no queda nada que mostrar: se elimina la publicación entera.
+    if not (post.get("content") or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Esta publicación solo tiene la imagen. "
+                "Elimínala completa si ya no la quieres."
+            )
+        )
+    ensure_forum_posts_not_in_review(target_type, [str(post["id"])])
+
+    (
+        supabase_admin
+        .table(table_name)
+        .update({"image_url": None})
+        .eq("id", str(post["id"]))
+        .eq("user_id", user_id)
+        .execute()
+    )
+    delete_forum_post_image(post)
+
+    return {"message": "Imagen eliminada", "image_url": None}
+
+
+@app.delete("/forum/topics/{topic_id}/image")
+def delete_forum_topic_image(topic_id: str, current_user=Depends(get_current_user)):
+    try:
+        return remove_own_forum_image(
+            "forum_topics", "forum_topic", topic_id, str(current_user.id), "Tema"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=public_error_detail(e))
+
+
+@app.delete("/forum/replies/{reply_id}/image")
+def delete_forum_reply_image(reply_id: str, current_user=Depends(get_current_user)):
+    try:
+        return remove_own_forum_image(
+            "forum_replies", "forum_reply", reply_id, str(current_user.id), "Respuesta"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=public_error_detail(e))
+
+
 @app.post("/forum/topics/{topic_id}/replies")
 def create_forum_reply(
     topic_id: str,

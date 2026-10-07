@@ -7863,14 +7863,18 @@ button {
 
 .forum-post-content > .forum-post-image,
 .forum-reply-content > .forum-post-image {
+  /* Tamaño natural de la imagen, con un tope de 600 px de ancho (o del
+     ancho disponible si es menor) y de 700 px de alto. Nunca se amplía
+     una imagen pequeña y, al llegar a cualquiera de los dos topes, se
+     reduce entera manteniendo su proporción: no se deforma ni se recorta. */
   display: block;
-  width: 100%;
-  max-width: 100%;
+  width: auto;
+  max-width: min(100%, 600px);
   height: auto;
-  max-height: 420px;
+  max-height: 700px;
+  object-fit: contain;
   margin-top: 18px;
   border-radius: 12px;
-  object-fit: contain;
 }
 
 /* INTERACCIONES */

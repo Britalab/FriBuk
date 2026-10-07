@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../hooks/useToast";
 import ReportButton from "../components/moderation/ReportButton";
 import { RemoveButton, RestoreButton } from "../components/moderation/AdminModerationButtons";
 import { ModerationNotice } from "../components/moderation/ModerationNotices";
@@ -100,6 +101,8 @@ function ForumInteractionControls({
 export default function ForumTopic() {
   const { topicId } = useParams();
   const { user } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [topic, setTopic] = useState(null);
   const [topicInteractions, setTopicInteractions] = useState(null);
@@ -194,6 +197,24 @@ export default function ForumTopic() {
       setTopic(response.data);
     } catch (err) {
       console.error("Error actualizando el tema:", err);
+    }
+  };
+
+  // Eliminar lo propio (por ejemplo, si la imagen era la equivocada). No
+  // es moderación: el backend solo deja borrar a quien publicó.
+  const deleteOwnPost = async (path, question, successMessage, onDone) => {
+    if (!window.confirm(question)) return;
+
+    try {
+      await api.delete(path);
+      showToast(successMessage);
+      await onDone();
+    } catch (err) {
+      console.error("Error eliminando la publicación:", err);
+      showToast(
+        err.response?.data?.detail || "No se pudo eliminar. Inténtalo nuevamente.",
+        "error"
+      );
     }
   };
 
@@ -647,6 +668,40 @@ export default function ForumTopic() {
             {user?.id !== topic.user_id && (
               <ReportButton targetType="forum_topic" targetId={topic.id} />
             )}
+            {user && user.id === topic.user_id && (
+              <>
+                {topic.image_url && topic.content?.trim() && (
+                  <button
+                    type="button"
+                    className="moderation-report-button"
+                    onClick={() =>
+                      deleteOwnPost(
+                        `/forum/topics/${topic.id}/image`,
+                        "¿Quitar la imagen de este tema? El texto se mantiene.",
+                        "Imagen eliminada.",
+                        reloadTopic
+                      )
+                    }
+                  >
+                    Quitar imagen
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="moderation-report-button"
+                  onClick={() =>
+                    deleteOwnPost(
+                      `/forum/topics/${topic.id}`,
+                      "¿Eliminar este tema con todas sus respuestas? No se puede deshacer.",
+                      "Tema eliminado.",
+                      () => navigate("/forum")
+                    )
+                  }
+                >
+                  Eliminar tema
+                </button>
+              </>
+            )}
             <RemoveButton
               targetType="forum_topic"
               targetId={topic.id}
@@ -795,6 +850,40 @@ export default function ForumTopic() {
                   <div className="moderation-actions">
                     {user?.id !== item.user_id && (
                       <ReportButton targetType="forum_reply" targetId={item.id} />
+                    )}
+                    {user && user.id === item.user_id && (
+                      <>
+                        {item.image_url && item.content?.trim() && (
+                          <button
+                            type="button"
+                            className="moderation-report-button"
+                            onClick={() =>
+                              deleteOwnPost(
+                                `/forum/replies/${item.id}/image`,
+                                "¿Quitar la imagen de esta respuesta? El texto se mantiene.",
+                                "Imagen eliminada.",
+                                reloadReplies
+                              )
+                            }
+                          >
+                            Quitar imagen
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="moderation-report-button"
+                          onClick={() =>
+                            deleteOwnPost(
+                              `/forum/replies/${item.id}`,
+                              "¿Eliminar esta respuesta? No se puede deshacer.",
+                              "Respuesta eliminada.",
+                              reloadReplies
+                            )
+                          }
+                        >
+                          Eliminar
+                        </button>
+                      </>
                     )}
                     <RemoveButton
                       targetType="forum_reply"
