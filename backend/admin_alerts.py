@@ -5,6 +5,10 @@
 # solicitud de soporte. El detalle sigue estando en el panel de
 # administración; el correo solo avisa y lleva al panel.
 #
+# También avisa a quien envió un reporte o una solicitud cuando el equipo
+# ya la revisó. Ese correo no dice qué se decidió ni admite respuestas: sale
+# de una dirección que no recibe correo, para que no se convierta en un chat.
+#
 # Los avisos salen en segundo plano y nunca hacen fallar ni retrasan la
 # acción que los origina.
 
@@ -13,7 +17,7 @@ import threading
 import time
 from collections import deque
 
-from email_service import send_admin_alert
+from email_service import send_admin_alert, send_report_reviewed
 
 ADMIN_PANEL_PATH = "/support/admin"
 
@@ -23,6 +27,20 @@ ALERT_RATE_LIMIT = (30, 3600)
 # Los destinatarios se consultan cada tanto, no en cada aviso.
 RECIPIENTS_TTL_SECONDS = 300
 ALERT_TEXT_LENGTH = 400
+
+HELP_CENTER_PATH = "/support"
+# Tope de correos por hora a quienes reportaron.
+REVIEWED_RATE_LIMIT = (60, 3600)
+# Cómo se nombra cada tipo de contenido en el correo a quien lo reportó.
+REPORTED_CONTENT_TEXT = {
+    "forum_topic": "un tema del foro",
+    "forum_reply": "una respuesta del foro",
+    "avatar": "una foto de perfil",
+    "profile_banner": "un banner de perfil",
+    "story_cover": "la portada de una historia"
+}
+
+reviewed_timestamps: deque = deque()
 
 alert_timestamps: deque = deque()
 alert_lock = threading.Lock()
@@ -199,3 +217,76 @@ def alert_automatic_removal(case: dict, target_label: str) -> None:
 
 def alert_support_request(category: str | None, message: str | None) -> None:
     schedule(deliver_support_request, category, message)
+
+
+# ============================================================
+# AVISOS A QUIEN REPORTÓ
+# ============================================================
+
+def site_url(path: str) -> str:
+    origins = fribuk().CORS_ALLOWED_ORIGINS
+    base = next((item for item in origins if "localhost" not in item), origins[0])
+    return base + path
+
+
+def within_reviewed_limit() -> bool:
+    limit, window = REVIEWED_RATE_LIMIT
+    now = time.monotonic()
+
+    with alert_lock:
+        while reviewed_timestamps and now - reviewed_timestamps[0] > window:
+            reviewed_timestamps.popleft()
+        if len(reviewed_timestamps) >= limit:
+            return False
+        reviewed_timestamps.append(now)
+        return True
+
+
+def account_email(user_id) -> str | None:
+    try:
+        auth_user = fribuk().supabase_admin.auth.admin.get_user_by_id(
+            str(user_id)
+        ).user
+        return auth_user.email if auth_user else None
+    except Exception as error:
+        print("No se pudo leer el correo de una cuenta:", repr(error))
+        return None
+
+
+def deliver_reviewed(user_ids, what: str) -> None:
+    for user_id in dict.fromkeys(str(item) for item in user_ids if item):
+        if not within_reviewed_limit():
+            print("Aviso de reporte revisado omitido por el tope por hora.")
+            return
+
+        email = account_email(user_id)
+        if email:
+            send_report_reviewed(email, what, site_url(HELP_CENTER_PATH))
+
+
+def deliver_content_reports_reviewed(case_id: str, target_type: str, since) -> None:
+    # Avisa a quienes reportaron después de `since`: los anteriores ya
+    # recibieron su aviso en una revisión previa.
+    reports = (
+        fribuk().supabase_admin
+        .table("content_reports")
+        .select("reporter_id, created_at")
+        .eq("case_id", case_id)
+        .execute()
+    ).data or []
+
+    reporters = [
+        report["reporter_id"] for report in reports
+        if not since or str(report.get("created_at") or "") > str(since)
+    ]
+    content = REPORTED_CONTENT_TEXT.get(target_type, "un contenido")
+    deliver_reviewed(reporters, f"el reporte que enviaste sobre {content}")
+
+
+def notify_content_reports_reviewed(case_id: str, target_type: str, since) -> None:
+    schedule(deliver_content_reports_reviewed, case_id, target_type, since)
+
+
+def deliver_support_reviewed(user_id, category: str | None) -> None:
+    kind = excerpt(category)
+    deliver_reviewed([user_id], f"tu solicitud «{kind}»" if kind else "tu solicitud")

@@ -206,6 +206,146 @@ class AdminAlertsTestCase(unittest.TestCase):
         self.assertIn("Reporte de mensaje privado", text)
         self.assertIn("Me está insultando", text)
 
+    # ---------- aviso a quien reportó ----------
+
+    def use_reviewed_spy(self):
+        self.reviewed = []
+        self.original_reviewed = admin_alerts.send_report_reviewed
+        admin_alerts.send_report_reviewed = (
+            lambda email, what, help_url: self.reviewed.append((email, what, help_url))
+        )
+        admin_alerts.reviewed_timestamps.clear()
+        self.addCleanup(
+            setattr, admin_alerts, "send_report_reviewed", self.original_reviewed
+        )
+
+    def admin_post(self, path, body=None):
+        return self.client.post(path, json=body or {}, headers=auth_header(ADMIN_ID))
+
+    def case_id(self):
+        return self.database.tables["moderation_cases"][0]["id"]
+
+    def test_reporters_get_an_email_when_the_admin_removes_the_content(self):
+        self.use_reviewed_spy()
+        self.report(REPORTER_IDS[0])
+        self.report(REPORTER_IDS[1])
+        self.assertEqual(self.reviewed, [])
+
+        removed = self.admin_post("/moderation/remove", {
+            "target_type": "forum_topic", "target_id": TOPIC_ID, "reason": "sexual"
+        })
+        self.assertEqual(removed.status_code, 200, removed.text)
+
+        self.assertEqual(
+            sorted(email for email, _what, _url in self.reviewed),
+            ["l0@example.com", "l1@example.com"]
+        )
+        _email, what, help_url = self.reviewed[0]
+        self.assertEqual(what, "el reporte que enviaste sobre un tema del foro")
+        self.assertEqual(help_url, "https://www.fribuk.com/support")
+
+        # Restaurar después no les repite el aviso.
+        self.admin_post(f"/moderation/cases/{self.case_id()}/restore")
+        self.assertEqual(len(self.reviewed), 2)
+
+    def test_reporters_get_an_email_when_reports_are_marked_reviewed(self):
+        self.use_reviewed_spy()
+        self.report(REPORTER_IDS[0])
+        self.admin_post(f"/moderation/cases/{self.case_id()}/review")
+        self.assertEqual([email for email, *_ in self.reviewed], ["l0@example.com"])
+
+        # Un reporte posterior avisa solo a quien lo envió.
+        self.report(REPORTER_IDS[1])
+        self.admin_post(f"/moderation/cases/{self.case_id()}/review")
+        self.assertEqual(
+            [email for email, *_ in self.reviewed],
+            ["l0@example.com", "l1@example.com"]
+        )
+
+    def test_automatic_removal_waits_for_the_admin_review(self):
+        self.use_reviewed_spy()
+        for user_id in REPORTER_IDS[:5]:
+            self.report(user_id)
+
+        # El retiro automático todavía no es una revisión.
+        self.assertEqual(self.reviewed, [])
+
+        self.admin_post(f"/moderation/cases/{self.case_id()}/restore")
+        self.assertEqual(len(self.reviewed), 5)
+
+    def test_owner_and_strangers_are_not_emailed(self):
+        self.use_reviewed_spy()
+        self.report(REPORTER_IDS[0])
+        self.admin_post(f"/moderation/cases/{self.case_id()}/review")
+
+        emails = [email for email, *_ in self.reviewed]
+        self.assertNotIn("autora@example.com", emails)
+        self.assertNotIn("admin@example.com", emails)
+
+    def test_resolving_a_support_request_emails_the_requester_once(self):
+        self.use_reviewed_spy()
+        ticket_id = str(uuid.uuid4())
+        self.database.tables["support_requests"].append({
+            "id": ticket_id, "user_id": OWNER_ID, "category": "Problema técnico",
+            "message": "No puedo subir mi portada", "status": "pending"
+        })
+        self.database.tables["notifications"] = []
+
+        # La base de datos real fecha cada notificación al crearla.
+        original_new_row = self.database.new_row
+
+        def new_row(table_name, payload):
+            row = original_new_row(table_name, payload)
+            if table_name == "notifications":
+                row.setdefault("created_at", self.database.clock.isoformat())
+            return row
+
+        self.database.new_row = new_row
+
+        def set_status(status):
+            return self.client.patch(
+                f"/support/admin/{ticket_id}/status",
+                json={"status": status}, headers=auth_header(ADMIN_ID)
+            )
+
+        self.assertEqual(set_status("in_review").status_code, 200)
+        self.assertEqual(self.reviewed, [])
+
+        self.assertEqual(set_status("resolved").status_code, 200)
+        self.assertEqual(
+            self.reviewed,
+            [(
+                "autora@example.com", "tu solicitud «Problema técnico»",
+                "https://www.fribuk.com/support"
+            )]
+        )
+
+        # Guardar otra vez el mismo estado no repite el correo.
+        set_status("resolved")
+        self.assertEqual(len(self.reviewed), 1)
+
+    def test_reviewed_email_does_not_invite_replies_and_escapes_text(self):
+        captured = {}
+        original_send = email_service.resend.Emails.send
+        email_service.resend.Emails.send = lambda payload: captured.update(payload)
+
+        try:
+            sent = email_service.send_report_reviewed(
+                "lectora@example.com", f"tu solicitud «{XSS_TEXT}»",
+                "https://www.fribuk.com/support"
+            )
+        finally:
+            email_service.resend.Emails.send = original_send
+
+        self.assertTrue(sent)
+        self.assertEqual(captured["to"], ["lectora@example.com"])
+        self.assertEqual(captured["subject"], "Revisamos tu reporte en FriBuk")
+        self.assertIn("no recibe mensajes", captured["html"])
+        self.assertIn("https://www.fribuk.com/support", captured["html"])
+        self.assertNotIn("<script>", captured["html"])
+        # No se indica una dirección a la que responder.
+        self.assertNotIn("reply_to", captured)
+
     # ---------- destinatarios y límites ----------
 
     def test_alert_address_can_be_overridden(self):

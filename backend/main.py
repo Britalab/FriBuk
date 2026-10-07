@@ -6020,6 +6020,12 @@ def notify_support_status(support_request: dict, admin_user_id: str | None) -> N
         data={"status": status, "category": support_request.get("category")}
     )
 
+    # Al resolverla, además se le avisa por correo que ya fue revisada.
+    if status == "resolved":
+        admin_alerts.deliver_support_reviewed(
+            recipient_user_id, support_request.get("category")
+        )
+
 
 def notify_chapter_published(chapter: dict, previous_status: str | None) -> None:
     # Solo cuando el capítulo queda publicado: crear o editar un borrador,

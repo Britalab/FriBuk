@@ -1029,8 +1029,15 @@ def remove_reported_content(
         else:
             case = create_case(target_type, target_id, target)
 
+        reviewed_since = case.get("counting_since")
         case = remove_content(
             case, removal.reason, str(admin_user["id"]), automatic=False, note=note
+        )
+        # Quienes reportaron reciben un correo: su reporte ya fue revisado.
+        # La marca evita repetirles el aviso si después se restaura.
+        case = update_case(case, {"counting_since": now_iso()})
+        admin_alerts.notify_content_reports_reviewed(
+            str(case["id"]), target_type, reviewed_since
         )
         return {"message": "Contenido retirado", "case": serialize_cases([case])[0]}
     except HTTPException:
@@ -1054,6 +1061,7 @@ def restore_removed_content(
                 status_code=400, detail="Este contenido no está retirado."
             )
 
+        reviewed_since = case.get("counting_since")
         timestamp = now_iso()
         case = update_case(case, {
             "status": "restored",
@@ -1065,6 +1073,9 @@ def restore_removed_content(
             "counting_since": timestamp
         })
         record_action(str(case["id"]), "restored", str(admin_user["id"]), note=note)
+        admin_alerts.notify_content_reports_reviewed(
+            str(case["id"]), case["target_type"], reviewed_since
+        )
         return {"message": "Contenido restaurado", "case": serialize_cases([case])[0]}
     except HTTPException:
         raise
@@ -1088,11 +1099,15 @@ def mark_case_reviewed(
                 status_code=400, detail="Este caso no tiene reportes pendientes."
             )
 
+        reviewed_since = case.get("counting_since")
         case = update_case(case, {
             "status": "reviewed",
             "counting_since": now_iso()
         })
         record_action(str(case["id"]), "reviewed", str(admin_user["id"]), note=note)
+        admin_alerts.notify_content_reports_reviewed(
+            str(case["id"]), case["target_type"], reviewed_since
+        )
         return {"message": "Caso revisado", "case": serialize_cases([case])[0]}
     except HTTPException:
         raise

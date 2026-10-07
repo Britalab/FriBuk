@@ -285,3 +285,42 @@ def send_admin_alert(recipients: list[str], subject: str, lines: list[str], pane
     except Exception as e:
         print(f"Error enviando aviso a la administración: {e}")
         return False
+
+
+def send_report_reviewed(email: str, what: str, help_url: str):
+    # Aviso a quien envió un reporte o una solicitud: el equipo ya lo revisó.
+    # No dice qué se decidió. El remitente no recibe correo, así que una
+    # respuesta rebota en vez de abrir una conversación.
+    try:
+        resend.Emails.send({
+            "from": os.getenv("EMAIL_FROM"),
+            "to": [email],
+            "subject": "Revisamos tu reporte en FriBuk",
+            "html": f"""
+            <!DOCTYPE html>
+            <html lang="es">
+              <body style="font-family: Arial, sans-serif; color: #292525; line-height: 1.55;">
+                <h2 style="margin: 0 0 14px; color: #722f3f;">Revisamos tu reporte</h2>
+                <p style="margin: 0 0 10px;">
+                  El equipo de FriBuk ya revisó {html.escape(what)} y tomó las
+                  medidas que corresponden según las normas de la comunidad.
+                </p>
+                <p style="margin: 0 0 10px;">
+                  Gracias por ayudarnos a cuidar FriBuk.
+                </p>
+                <p style="margin: 18px 0 0; color: #756e69; font-size: 13px;">
+                  Este correo se envía automáticamente desde una dirección que
+                  no recibe mensajes: si lo respondes, tu respuesta no llegará.
+                  Para cualquier otra cosa, usa el
+                  <a href="{html.escape(help_url)}" style="color: #722f3f;">Centro de ayuda</a>.
+                </p>
+              </body>
+            </html>
+            """
+        })
+
+        return True
+
+    except Exception as e:
+        print(f"Error enviando aviso de reporte revisado: {e}")
+        return False
