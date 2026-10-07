@@ -202,6 +202,10 @@ class UserCreate(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+
+class SessionRefreshRequest(BaseModel):
+    refresh_token: str
     
 class StoryCreate(BaseModel):
     title: str
@@ -1557,6 +1561,8 @@ def login(user: LoginRequest):
                 "is_admin": is_admin_user(response.user.id)
             },
             "access_token": response.session.access_token,
+            # Permite renovar la sesión sin volver a pedir la contraseña.
+            "refresh_token": response.session.refresh_token,
             "token_type": "bearer"
         }
 
@@ -1573,6 +1579,70 @@ def login(user: LoginRequest):
             status_code=401,
             detail="Correo o contraseña incorrectos"
         )
+
+# ============================================================
+# RENOVACIÓN DE LA SESIÓN
+# ============================================================
+
+# El token de acceso dura poco. Con el de renovación, el frontend pide uno
+# nuevo en segundo plano y la persona no tiene que volver a iniciar sesión.
+SESSION_REFRESH_TOKEN_MAX_LENGTH = 2000
+
+
+def exchange_refresh_token(refresh_token: str) -> dict | None:
+    # Se llama directo a Supabase Auth, sin pasar por el cliente compartido:
+    # así la renovación de una persona no altera la sesión de ese cliente.
+    response = httpx.post(
+        f"{SUPABASE_URL.strip().rstrip('/')}/auth/v1/token",
+        params={"grant_type": "refresh_token"},
+        headers={"apikey": SUPABASE_ANON_KEY},
+        json={"refresh_token": refresh_token},
+        timeout=10
+    )
+
+    # Token inválido, usado o revocado: la sesión ya no se puede renovar.
+    if 400 <= response.status_code < 500:
+        return None
+    response.raise_for_status()
+
+    data = response.json()
+    if not data.get("access_token") or not data.get("refresh_token"):
+        return None
+
+    return {
+        "access_token": data["access_token"],
+        "refresh_token": data["refresh_token"]
+    }
+
+
+@app.post("/auth/refresh")
+def refresh_session(body: SessionRefreshRequest):
+    refresh_token = (body.refresh_token or "").strip()
+
+    if not refresh_token or len(refresh_token) > SESSION_REFRESH_TOKEN_MAX_LENGTH:
+        raise HTTPException(
+            status_code=401,
+            detail="La sesión expiró. Inicia sesión nuevamente."
+        )
+
+    try:
+        session = exchange_refresh_token(refresh_token)
+    except Exception as e:
+        # Fallo de red o de Supabase: la sesión puede seguir siendo válida.
+        print("No se pudo renovar la sesión:", repr(e))
+        raise HTTPException(
+            status_code=503,
+            detail="No se pudo renovar la sesión. Inténtalo nuevamente."
+        )
+
+    if not session:
+        raise HTTPException(
+            status_code=401,
+            detail="La sesión expiró. Inicia sesión nuevamente."
+        )
+
+    return {**session, "token_type": "bearer"}
+
 
 @app.get("/me")
 def get_me(current_user=Depends(get_current_user)):

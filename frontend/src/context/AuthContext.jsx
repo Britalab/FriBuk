@@ -1,5 +1,11 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "../api/client";
+import {
+  SESSION_EXPIRED_EVENT,
+  clearSession,
+  getAccessToken,
+  storeSession,
+} from "../api/session";
 
 const AuthContext = createContext();
 
@@ -8,13 +14,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+    const token = getAccessToken();
     if (token) {
       api
         .get("/me")
         .then((response) => setUser(response.data.user))
         .catch(() => {
-          localStorage.removeItem("access_token");
+          clearSession();
           setUser(null);
         })
         .finally(() => setLoading(false));
@@ -23,9 +29,18 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // La sesión ya no se pudo renovar: se cierra también en la pantalla.
+  useEffect(() => {
+    const handleSessionExpired = () => setUser(null);
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () =>
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, []);
+
   const login = async (email, password) => {
     const response = await api.post("/login", { email, password });
-    localStorage.setItem("access_token", response.data.access_token);
+    storeSession(response.data);
     setUser(response.data.user);
     return response.data;
   };
@@ -41,7 +56,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem("access_token");
+    clearSession();
     setUser(null);
   };
 
