@@ -414,6 +414,26 @@ def without_evidence(snapshot: dict) -> dict:
     }
 
 
+# Marca, dentro de la copia del contenido, de que un administrador revisó
+# un retiro automático y decidió mantenerlo.
+REMOVAL_CONFIRMED_KEY = "removal_confirmed_at"
+
+
+def without_confirmation(snapshot: dict) -> dict:
+    return {
+        key: value for key, value in snapshot.items()
+        if key != REMOVAL_CONFIRMED_KEY
+    }
+
+
+def removal_is_confirmed(case: dict) -> bool:
+    # Un retiro hecho por un administrador ya está revisado; uno automático,
+    # solo cuando alguien lo confirma.
+    return not case.get("removal_automatic") or bool(
+        (case.get("snapshot") or {}).get(REMOVAL_CONFIRMED_KEY)
+    )
+
+
 def set_profile_image(user_id: str, key: str, value: str | None) -> None:
     main = fribuk()
     auth_user = main.get_public_auth_user(user_id)
@@ -511,7 +531,9 @@ def show_content(case: dict) -> dict:
 def remove_content(
     case: dict, reason: str, actor_id: str | None, automatic: bool, note=None
 ) -> dict:
-    snapshot = hide_content(case, dict(case.get("snapshot") or {}))
+    snapshot = without_confirmation(
+        hide_content(case, dict(case.get("snapshot") or {}))
+    )
     updated = update_case(case, {
         "status": "removed",
         "snapshot": snapshot,
@@ -943,6 +965,7 @@ def serialize_cases(cases: list[dict]) -> list[dict]:
                     "reason": case.get("removal_reason"),
                     "reason_label": REMOVAL_REASONS.get(case.get("removal_reason")),
                     "automatic": bool(case.get("removal_automatic")),
+                    "confirmed": removal_is_confirmed(case),
                     "removed_at": case.get("removed_at")
                 }
                 if case["status"] == "removed" else None
@@ -1065,7 +1088,7 @@ def restore_removed_content(
         timestamp = now_iso()
         case = update_case(case, {
             "status": "restored",
-            "snapshot": show_content(case),
+            "snapshot": without_confirmation(show_content(case)),
             "restored_at": timestamp,
             "restored_by": str(admin_user["id"]),
             # Los reportes anteriores quedan en el historial, pero ya no
@@ -1077,6 +1100,50 @@ def restore_removed_content(
             str(case["id"]), case["target_type"], reviewed_since
         )
         return {"message": "Contenido restaurado", "case": serialize_cases([case])[0]}
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=400, detail=fribuk().public_error_detail(error)
+        )
+
+
+@router.post("/moderation/cases/{case_id}/confirm")
+def confirm_automatic_removal(
+    case_id: str, body: ModerationNote, admin_user=Depends(get_current_admin)
+):
+    # Un administrador revisó un retiro automático y lo mantiene. El
+    # contenido sigue oculto y quienes reportaron reciben su aviso.
+    note = clean_note(body.note, MODERATION_NOTE_MAX_LENGTH, "La nota")
+
+    try:
+        case = get_case_by_id(case_id)
+        if case["status"] != "removed":
+            raise HTTPException(
+                status_code=400, detail="Este contenido no está retirado."
+            )
+        if removal_is_confirmed(case):
+            raise HTTPException(
+                status_code=400, detail="Este retiro ya fue revisado."
+            )
+
+        reviewed_since = case.get("counting_since")
+        timestamp = now_iso()
+        case = update_case(case, {
+            "snapshot": {
+                **(case.get("snapshot") or {}), REMOVAL_CONFIRMED_KEY: timestamp
+            },
+            "counting_since": timestamp
+        })
+        record_action(
+            str(case["id"]), "reviewed", str(admin_user["id"]),
+            reason=case.get("removal_reason"),
+            note=note or "Retiro automático confirmado."
+        )
+        admin_alerts.notify_content_reports_reviewed(
+            str(case["id"]), case["target_type"], reviewed_since
+        )
+        return {"message": "Retiro confirmado", "case": serialize_cases([case])[0]}
     except HTTPException:
         raise
     except Exception as error:

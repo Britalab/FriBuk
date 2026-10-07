@@ -332,6 +332,7 @@ describe("ModerationPanel", () => {
               reason: "many_reports",
               reason_label: "Alto número de reportes",
               automatic: true,
+              confirmed: false,
               removed_at: new Date().toISOString(),
             },
             history: [
@@ -357,6 +358,45 @@ describe("ModerationPanel", () => {
     expect(screen.getByRole("button", { name: "Restaurar" })).not.toBeNull();
     expect(screen.queryByRole("button", { name: "Retirar" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Marcar como revisado" })).toBeNull();
+
+    // Un retiro automático espera la revisión: se puede confirmar.
+    expect(screen.getByText(/Pendiente de tu revisión/)).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar retiro" }));
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/moderation/cases/case-1/confirm", {})
+    );
+  });
+
+  it("un retiro ya revisado no ofrece confirmarlo otra vez", async () => {
+    const removal = {
+      reason_label: "Contenido sexual",
+      removed_at: new Date().toISOString(),
+    };
+    api.get.mockResolvedValue({
+      data: {
+        cases: [
+          // Retirado por la administración.
+          moderationCase({
+            id: "case-manual",
+            status: "removed",
+            removal: { ...removal, reason: "sexual", automatic: false, confirmed: true },
+          }),
+          // Retiro automático que ya fue confirmado.
+          moderationCase({
+            id: "case-confirmado",
+            status: "removed",
+            removal: { ...removal, reason: "many_reports", automatic: true, confirmed: true },
+          }),
+        ],
+        auto_remove_threshold: 5,
+      },
+    });
+
+    renderInRouter(<ModerationPanel />);
+
+    expect((await screen.findAllByRole("button", { name: "Restaurar" })).length).toBe(2);
+    expect(screen.queryByRole("button", { name: "Confirmar retiro" })).toBeNull();
+    expect(screen.queryByText(/Pendiente de tu revisión/)).toBeNull();
   });
 
   it("muestra el HTML de un reporte como texto, sin interpretarlo", async () => {

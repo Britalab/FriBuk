@@ -16,12 +16,14 @@ function ModerationCase({ item, onChanged }) {
   const { showToast } = useToast();
   const [reviewing, setReviewing] = useState(false);
 
-  const handleReview = async () => {
+  // Marcar reportes como revisados o confirmar un retiro automático: las dos
+  // acciones cierran la revisión y avisan a quienes reportaron.
+  const closeReview = async (action, successMessage) => {
     setReviewing(true);
 
     try {
-      const response = await api.post(`/moderation/cases/${item.id}/review`, {});
-      showToast("Reportes marcados como revisados.");
+      const response = await api.post(`/moderation/cases/${item.id}/${action}`, {});
+      showToast(successMessage);
       onChanged(response.data.case);
     } catch (error) {
       showToast(moderationErrorDetail(error, "No se pudo guardar el cambio."), "error");
@@ -29,6 +31,15 @@ function ModerationCase({ item, onChanged }) {
       setReviewing(false);
     }
   };
+
+  const handleReview = () =>
+    closeReview("review", "Reportes marcados como revisados.");
+  const handleConfirm = () =>
+    closeReview("confirm", "Retiro confirmado. Avisamos a quienes lo reportaron.");
+
+  // Un retiro automático queda a la espera de que alguien lo revise.
+  const awaitingReview =
+    item.status === "removed" && item.removal?.automatic && !item.removal.confirmed;
 
   return (
     <article className="moderation-case">
@@ -95,6 +106,7 @@ function ModerationCase({ item, onChanged }) {
               Retirado por: <strong>{item.removal.reason_label}</strong>
               {item.removal.automatic && " (automático)"} ·{" "}
               {formatModerationDate(item.removal.removed_at)}
+              {awaitingReview && " · Pendiente de tu revisión"}
             </p>
           )}
 
@@ -142,6 +154,17 @@ function ModerationCase({ item, onChanged }) {
             disabled={reviewing}
           >
             {reviewing ? "Guardando..." : "Marcar como revisado"}
+          </button>
+        )}
+
+        {awaitingReview && (
+          <button
+            type="button"
+            className="moderation-button"
+            onClick={handleConfirm}
+            disabled={reviewing}
+          >
+            {reviewing ? "Guardando..." : "Confirmar retiro"}
           </button>
         )}
       </footer>

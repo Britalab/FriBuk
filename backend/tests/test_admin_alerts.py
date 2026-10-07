@@ -273,6 +273,74 @@ class AdminAlertsTestCase(unittest.TestCase):
         self.admin_post(f"/moderation/cases/{self.case_id()}/restore")
         self.assertEqual(len(self.reviewed), 5)
 
+    def test_confirming_an_automatic_removal_emails_the_reporters_once(self):
+        self.use_reviewed_spy()
+        for user_id in REPORTER_IDS[:5]:
+            self.report(user_id)
+        case_id = self.case_id()
+        self.assertFalse(
+            self.client.get(
+                "/moderation/cases", headers=auth_header(ADMIN_ID)
+            ).json()["cases"][0]["removal"]["confirmed"]
+        )
+
+        # Solo la administración puede confirmar.
+        denied = self.client.post(
+            f"/moderation/cases/{case_id}/confirm", json={},
+            headers=auth_header(OWNER_ID)
+        )
+        self.assertEqual(denied.status_code, 403)
+        self.assertEqual(self.reviewed, [])
+
+        confirmed = self.admin_post(f"/moderation/cases/{case_id}/confirm")
+        self.assertEqual(confirmed.status_code, 200, confirmed.text)
+        self.assertEqual(len(self.reviewed), 5)
+
+        # El contenido sigue retirado y el caso figura como revisado.
+        body = confirmed.json()["case"]
+        self.assertEqual(body["status"], "removed")
+        self.assertTrue(body["removal"]["confirmed"])
+        self.assertTrue(body["removal"]["automatic"])
+        self.assertEqual(body["history"][-1]["action"], "reviewed")
+        self.assertEqual(body["history"][-1]["actor"], "equipo_fribuk")
+        self.assertEqual(
+            self.client.get(f"/forum/topics/{TOPIC_ID}").status_code, 404
+        )
+
+        # No se confirma dos veces ni se repiten los correos.
+        self.assertEqual(
+            self.admin_post(f"/moderation/cases/{case_id}/confirm").status_code, 400
+        )
+        self.assertEqual(len(self.reviewed), 5)
+
+        # Si después se restaura, tampoco se les vuelve a escribir.
+        self.admin_post(f"/moderation/cases/{case_id}/restore")
+        self.assertEqual(len(self.reviewed), 5)
+
+    def test_only_pending_automatic_removals_can_be_confirmed(self):
+        self.use_reviewed_spy()
+        self.report(REPORTER_IDS[0])
+        case_id = self.case_id()
+
+        # Un caso con reportes pendientes no está retirado.
+        self.assertEqual(
+            self.admin_post(f"/moderation/cases/{case_id}/confirm").status_code, 400
+        )
+
+        # Un retiro hecho por la administración ya está revisado.
+        self.admin_post("/moderation/remove", {
+            "target_type": "forum_topic", "target_id": TOPIC_ID, "reason": "spam"
+        })
+        self.assertTrue(
+            self.client.get(
+                "/moderation/cases", headers=auth_header(ADMIN_ID)
+            ).json()["cases"][0]["removal"]["confirmed"]
+        )
+        self.assertEqual(
+            self.admin_post(f"/moderation/cases/{case_id}/confirm").status_code, 400
+        )
+        self.assertEqual(len(self.reviewed), 1)
+
     def test_owner_and_strangers_are_not_emailed(self):
         self.use_reviewed_spy()
         self.report(REPORTER_IDS[0])
