@@ -1673,7 +1673,7 @@ PASSWORD_RECOVERY_MESSAGE = (
 )
 
 # Límites en memoria: (solicitudes permitidas, ventana en segundos).
-PASSWORD_RECOVERY_RATE_LIMITS = {"ip": (5, 3600), "email": (3, 3600)}
+PASSWORD_RECOVERY_RATE_LIMITS = {"ip": (15, 3600), "email": (6, 3600)}
 PASSWORD_RECOVERY_MAX_TRACKED_KEYS = 20000
 
 password_recovery_requests: dict[tuple[str, str], deque] = {}
