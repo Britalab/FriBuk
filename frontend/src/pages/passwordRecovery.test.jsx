@@ -92,7 +92,35 @@ describe("ForgotPassword", () => {
 });
 
 describe("ResetPassword", () => {
-  it("con el enlace del correo cambia la contraseña y lleva a iniciar sesión", async () => {
+  it("con el código del enlace cambia la contraseña al enviar el formulario", async () => {
+    api.post.mockResolvedValue({ data: { message: "Tu contraseña se cambió." } });
+    openLink("?token_hash=codigo-del-correo&type=recovery");
+
+    // Abrir la página no gasta el código: no se llama al backend todavía.
+    expect(screen.getByLabelText("Contraseña nueva")).not.toBeNull();
+    expect(api.post).not.toHaveBeenCalled();
+
+    fillPasswords("clave-nueva-123", "clave-nueva-123");
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/auth/password-update", {
+        token_hash: "codigo-del-correo",
+        password: "clave-nueva-123",
+      })
+    );
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/login", { replace: true })
+    );
+  });
+
+  it("un código que no es de recuperación no muestra el formulario", () => {
+    openLink("?token_hash=codigo-de-registro&type=signup");
+
+    expect(screen.queryByLabelText("Contraseña nueva")).toBeNull();
+    expect(screen.getByRole("alert").textContent).toContain("ya no es válido");
+  });
+
+  it("con un enlace del formato anterior también cambia la contraseña", async () => {
     api.post.mockResolvedValue({ data: { message: "Tu contraseña se cambió." } });
     openLink("#access_token=token-de-recuperacion&type=recovery&refresh_token=x");
 

@@ -39,6 +39,19 @@ class PasswordRecoveryTestCase(unittest.TestCase):
             main.request_password_recovery, main.supabase_public,
             main.supabase_admin, list(main.CORS_ALLOWED_ORIGINS)
         )
+        self.original_redeem = main.redeem_recovery_token_hash
+        # Códigos del enlace del correo: cada uno sirve una sola vez.
+        self.token_hashes = {"codigo-valido"}
+        self.redeem_calls = []
+
+        def redeem(token_hash):
+            self.redeem_calls.append(token_hash)
+            if token_hash in self.token_hashes:
+                self.token_hashes.discard(token_hash)
+                return USER_ID
+            return None
+
+        main.redeem_recovery_token_hash = redeem
         self.recovery_calls = []
         self.password_updates = []
         self.valid_tokens = {RECOVERY_TOKEN, PASSWORD_TOKEN}
@@ -76,6 +89,7 @@ class PasswordRecoveryTestCase(unittest.TestCase):
             main.supabase_admin, origins
         ) = self.originals
         main.CORS_ALLOWED_ORIGINS[:] = origins
+        main.redeem_recovery_token_hash = self.original_redeem
 
     def recover(self, email="ana@example.com", origin="https://www.fribuk.com"):
         headers = {"Origin": origin} if origin else {}
@@ -152,7 +166,60 @@ class PasswordRecoveryTestCase(unittest.TestCase):
 
         self.assertEqual(self.recover(email="una-mas@example.com").status_code, 429)
 
-    # ---------- elegir la contraseña nueva ----------
+    # ---------- elegir la contraseña nueva con el código del enlace ----------
+
+    def update_with_code(self, token_hash="codigo-valido", password="clave-nueva-123"):
+        return self.client.post(
+            "/auth/password-update",
+            json={"token_hash": token_hash, "password": password}
+        )
+
+    def test_link_code_sets_a_new_password_once(self):
+        response = self.update_with_code()
+
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(
+            self.password_updates, [(USER_ID, {"password": "clave-nueva-123"})]
+        )
+        self.assertEqual(set(response.json()), {"message"})
+
+        # El mismo código no sirve dos veces.
+        again = self.update_with_code(password="otra-clave-456")
+        self.assertEqual(again.status_code, 401)
+        self.assertEqual(len(self.password_updates), 1)
+
+    def test_invalid_link_code_is_rejected(self):
+        self.assertEqual(self.update_with_code(token_hash="inventado").status_code, 401)
+        self.assertEqual(self.update_with_code(token_hash="   ").status_code, 401)
+        self.assertEqual(
+            self.client.post(
+                "/auth/password-update", json={"password": "clave-nueva-123"}
+            ).status_code,
+            401
+        )
+        self.assertEqual(self.password_updates, [])
+
+    def test_weak_password_does_not_spend_the_link_code(self):
+        short = self.update_with_code(password="corta")
+
+        self.assertEqual(short.status_code, 400)
+        # El código sigue disponible para un segundo intento.
+        self.assertEqual(self.redeem_calls, [])
+        self.assertEqual(self.update_with_code().status_code, 200)
+
+    def test_supabase_failure_while_checking_the_code_is_not_an_expired_link(self):
+        def failing(_token_hash):
+            raise RuntimeError("Supabase no responde")
+
+        main.redeem_recovery_token_hash = failing
+
+        response = self.update_with_code()
+
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn("Supabase", response.text)
+        self.assertEqual(self.password_updates, [])
+
+    # ---------- enlaces del formato anterior ----------
 
     def test_recovery_token_can_set_a_new_password(self):
         response = self.update()

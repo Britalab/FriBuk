@@ -215,7 +215,10 @@ class PasswordRecoveryRequest(BaseModel):
 
 
 class PasswordUpdateRequest(BaseModel):
-    access_token: str
+    # Código del enlace del correo. Se canjea recién al enviar el formulario.
+    token_hash: str | None = None
+    # Enlaces del formato anterior, que ya traían una sesión de recuperación.
+    access_token: str | None = None
     password: str
     
 class StoryCreate(BaseModel):
@@ -1660,9 +1663,12 @@ def refresh_session(body: SessionRefreshRequest):
 # ============================================================
 
 # 1. La persona pide el enlace con su correo. 2. Supabase le envía un
-# correo con un enlace a la página "restablecer" del sitio. 3. Desde esa
-# página elige una contraseña nueva, que solo se acepta con el token de
-# recuperación que venía en el enlace.
+# correo con un enlace a la página "restablecer" del sitio, que lleva un
+# código de un solo uso. 3. Desde esa página elige una contraseña nueva.
+#
+# El código se canjea recién cuando la persona envía el formulario, no al
+# abrir el enlace: los filtros de correo visitan los enlaces para revisarlos
+# y, si abrirlo bastara para gastarlo, llegaría vencido a su destinataria.
 
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 72
@@ -1764,6 +1770,44 @@ def token_authentication_methods(access_token: str) -> set[str]:
         return set()
 
 
+def redeem_recovery_token_hash(token_hash: str) -> str | None:
+    # Canjea el código del enlace y devuelve el id de la cuenta, o None si
+    # el código no existe, venció o ya se usó. Llamada directa a Supabase
+    # Auth, sin pasar por el cliente compartido.
+    response = httpx.post(
+        f"{SUPABASE_URL.strip().rstrip('/')}/auth/v1/verify",
+        headers={"apikey": SUPABASE_ANON_KEY},
+        json={"type": "recovery", "token_hash": token_hash},
+        timeout=10
+    )
+    if 400 <= response.status_code < 500:
+        return None
+    response.raise_for_status()
+
+    user_id = (response.json().get("user") or {}).get("id")
+    return str(user_id) if user_id else None
+
+
+def recovery_user_id_from_session(access_token: str) -> str | None:
+    # Formato anterior del enlace: la sesión tiene que ser de recuperación.
+    # Una sesión normal no alcanza, para que quien solo tenga una sesión
+    # abierta no pueda cambiar la contraseña sin conocer la actual.
+    try:
+        response_user = supabase_public.auth.get_user(access_token)
+        recovery_user = response_user.user if response_user else None
+    except Exception:
+        recovery_user = None
+
+    if not recovery_user:
+        return None
+    if "recovery" not in token_authentication_methods(access_token):
+        raise HTTPException(
+            status_code=403,
+            detail="Para cambiar la contraseña usa el enlace que te enviamos por correo."
+        )
+    return str(recovery_user.id)
+
+
 @app.post("/auth/password-update")
 def update_password_with_recovery(body: PasswordUpdateRequest):
     expired = HTTPException(
@@ -1783,31 +1827,31 @@ def update_password_with_recovery(body: PasswordUpdateRequest):
             detail="La contraseña es demasiado larga"
         )
 
+    token_hash = (body.token_hash or "").strip()
     access_token = (body.access_token or "").strip()
-    if not access_token:
+
+    # La contraseña ya se validó arriba: el código no se gasta en un intento
+    # con una contraseña que no sirve.
+    if token_hash:
+        try:
+            user_id = redeem_recovery_token_hash(token_hash)
+        except Exception as e:
+            print("No se pudo canjear el código de recuperación:", repr(e))
+            raise HTTPException(
+                status_code=503,
+                detail="No se pudo comprobar el enlace. Inténtalo nuevamente."
+            )
+    elif access_token:
+        user_id = recovery_user_id_from_session(access_token)
+    else:
+        user_id = None
+
+    if not user_id:
         raise expired
-
-    try:
-        response_user = supabase_public.auth.get_user(access_token)
-        recovery_user = response_user.user if response_user else None
-    except Exception:
-        recovery_user = None
-
-    if not recovery_user:
-        raise expired
-
-    # Una sesión normal no alcanza: tiene que venir del enlace de
-    # recuperación. Así, quien solo tenga una sesión abierta no puede
-    # cambiar la contraseña sin conocer la actual.
-    if "recovery" not in token_authentication_methods(access_token):
-        raise HTTPException(
-            status_code=403,
-            detail="Para cambiar la contraseña usa el enlace que te enviamos por correo."
-        )
 
     try:
         supabase_admin.auth.admin.update_user_by_id(
-            str(recovery_user.id), {"password": password}
+            user_id, {"password": password}
         )
     except Exception as e:
         print("No se pudo cambiar la contraseña:", repr(e))

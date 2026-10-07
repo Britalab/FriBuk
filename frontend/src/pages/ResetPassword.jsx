@@ -7,14 +7,26 @@ import PasswordInput from "../components/PasswordInput";
 
 const PASSWORD_MIN_LENGTH = 8;
 
-// Lee del enlace del correo el token de recuperación. Llega después del "#"
-// de la dirección, que el navegador no envía a ningún servidor.
+// Lee lo que trae el enlace del correo.
+//
+// El enlace actual lleva un código de un solo uso (?token_hash=...) que no
+// se gasta al abrir la página, sino al enviar el formulario. Así no llega
+// vencido cuando un filtro de correo visita el enlace antes que la persona.
+//
+// Los enlaces del formato anterior traían la sesión después del "#".
 function readRecoveryLink() {
-  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const tokenHash =
+    query.get("type") === "recovery" ? query.get("token_hash") || "" : "";
+  const accessToken =
+    hash.get("type") === "recovery" ? hash.get("access_token") || "" : "";
+  const failed = Boolean(hash.get("error") || hash.get("error_code"));
+
   return {
-    accessToken: params.get("access_token") || "",
-    isRecovery: params.get("type") === "recovery",
-    failed: Boolean(params.get("error") || params.get("error_code")),
+    tokenHash,
+    accessToken: tokenHash ? "" : accessToken,
+    usable: Boolean(tokenHash || (accessToken && !failed)),
   };
 }
 
@@ -31,15 +43,17 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [expired, setExpired] = useState(false);
 
-  // Una vez leído, el token no se deja en la barra de direcciones ni en el
-  // historial del navegador.
+  // Una sesión que venga después del "#" no se deja en la barra de
+  // direcciones ni en el historial del navegador.
   useEffect(() => {
     if (window.location.hash) {
-      window.history.replaceState(null, "", window.location.pathname);
+      window.history.replaceState(
+        null, "", window.location.pathname + window.location.search
+      );
     }
   }, []);
 
-  const linkIsValid = link.accessToken && link.isRecovery && !link.failed && !expired;
+  const linkIsValid = link.usable && !expired;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -59,7 +73,9 @@ export default function ResetPassword() {
 
     try {
       const response = await api.post("/auth/password-update", {
-        access_token: link.accessToken,
+        ...(link.tokenHash
+          ? { token_hash: link.tokenHash }
+          : { access_token: link.accessToken }),
         password,
       });
       // Se entra de nuevo con la contraseña recién elegida.
