@@ -94,7 +94,61 @@ npm install
 npm run dev
 ```
 
-Vite inicia el frontend normalmente en `http://localhost:5173`. El cliente actual está configurado para comunicarse con la API local en `http://127.0.0.1:8000`.
+Vite inicia el frontend normalmente en `http://localhost:5173`. La dirección de la API sale de la variable `VITE_API_URL` (ver `frontend/.env.example`); sin ella se usa la API local en `http://127.0.0.1:8000`.
+
+Las pruebas del frontend se ejecutan con `npm test`.
+
+## Despliegue
+
+Arquitectura de producción:
+
+| Parte | Servicio | Dirección |
+| --- | --- | --- |
+| DNS y HTTPS | Cloudflare | `fribuk.com` |
+| Frontend (React + Vite) | Cloudflare Pages | `https://www.fribuk.com` |
+| Backend (FastAPI) | Render | `https://api.fribuk.com` |
+| Base de datos, cuentas e imágenes | Supabase | — |
+| Correos | Resend | — |
+
+### Backend en Render
+
+- **Root Directory:** `backend`
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:**
+
+  ```
+  uvicorn main:app --host 0.0.0.0 --port $PORT --forwarded-allow-ips="*"
+  ```
+
+  `--forwarded-allow-ips` hace que el backend vea la dirección real de cada visitante y no la del proxy; sin eso, los límites antispam por IP se compartirían entre todas las personas.
+- **Un solo proceso.** No agregar `--workers`: los límites antispam y algunos contadores viven en memoria y no se comparten entre procesos.
+- **Python:** `backend/.python-version` fija la versión. Si Render no la toma, definir la variable `PYTHON_VERSION` con el mismo valor.
+
+Variables de entorno del backend:
+
+| Variable | Valor |
+| --- | --- |
+| `SUPABASE_URL` | Dirección del proyecto de Supabase |
+| `SUPABASE_ANON_KEY` | Clave pública de Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave privada de Supabase. Nunca va en el frontend |
+| `CORS_ALLOWED_ORIGINS` | `https://www.fribuk.com` (varios orígenes se separan con comas) |
+| `RESEND_API_KEY` | Clave de Resend para el correo de bienvenida |
+| `EMAIL_FROM` | Remitente, con un dominio verificado en Resend |
+
+### Frontend en Cloudflare Pages
+
+- **Root directory:** `frontend`
+- **Build command:** `npm run build`
+- **Build output directory:** `dist`
+- **Variable de entorno:** `VITE_API_URL=https://api.fribuk.com`. Se fija al construir: si cambia, hay que volver a desplegar.
+
+No hace falta un archivo de redirecciones: Cloudflare Pages sirve la aplicación en cualquier ruta mientras no exista un `404.html`.
+
+### Supabase
+
+- Ejecutar una vez, en el SQL Editor, cada archivo de `backend/sql/`.
+- En Authentication, poner `https://www.fribuk.com` como dirección del sitio, para que los enlaces de confirmación de cuenta lleven al sitio real.
+- Configurar un envío de correos propio (SMTP): el servicio incluido solo permite unos pocos correos por hora.
 
 ## Seguridad y configuración
 
