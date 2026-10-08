@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
+import TagEditor from "../components/story/TagEditor";
 
 export default function EditStory() {
   const { storyId } = useParams();
@@ -25,6 +26,7 @@ export default function EditStory() {
   const [originalAuthor, setOriginalAuthor] = useState("");
   const [sensitiveContent, setSensitiveContent] = useState(false);
   const [contentWarnings, setContentWarnings] = useState([]);
+  const [tags, setTags] = useState([]);
 
   useEffect(() => {
     if (!coverPreview.startsWith("blob:")) return undefined;
@@ -48,6 +50,7 @@ export default function EditStory() {
         setOriginalAuthor(story.original_author || "");
         setSensitiveContent(Boolean(story.sensitive_content));
         setContentWarnings(story.content_warnings || []);
+        setTags(Array.isArray(story.tags) ? story.tags : []);
       } catch (err) {
         console.error("Error al cargar la historia:", err);
 
@@ -121,6 +124,7 @@ export default function EditStory() {
       original_author: originalAuthor.trim() || null,
       sensitive_content: sensitiveContent,
       content_warnings: sensitiveContent ? contentWarnings : [],
+      tags,
     });
 
       showToast(status === "published"
@@ -223,6 +227,8 @@ export default function EditStory() {
           maxLength={50}
         />
       </div>
+
+      <TagEditor tags={tags} onChange={setTags} />
 
       {/* ORIGEN DE LA OBRA */}
       <div className="form-group">

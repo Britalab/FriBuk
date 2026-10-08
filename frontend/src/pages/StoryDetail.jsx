@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import AddToListMenu from "../components/profile/AddToListMenu";
 import { contentWarningLabels } from "../utils/contentWarnings";
+import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
 import ReportButton from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
 import "../styles/moderation.css";
@@ -608,9 +609,17 @@ export default function StoryDetail() {
               {story.original_work && (
                 <p className="story-detail-original">
                   Basada en{" "}
-                  <strong>
-                    {story.original_work}
-                  </strong>
+                  {storyFandom(story) ? (
+                    <Link
+                      className="story-detail-author-link"
+                      to={feedFilterLink({ fandom: storyFandom(story) })}
+                      title={`Ver más historias de ${storyFandom(story)}`}
+                    >
+                      <strong>{story.original_work}</strong>
+                    </Link>
+                  ) : (
+                    <strong>{story.original_work}</strong>
+                  )}
 
                   {story.original_author && (
                     <>
@@ -622,6 +631,23 @@ export default function StoryDetail() {
               )}
 
             </div>
+
+            {/* Etiquetas: al tocarlas se ven otras historias con la misma */}
+
+            {storyTags(story).length > 0 && (
+              <div className="story-chips" aria-label="Etiquetas">
+                {storyTags(story).map((tag) => (
+                  <Link
+                    key={tag}
+                    className="story-chip"
+                    to={feedFilterLink({ tag })}
+                    title={`Ver historias con la etiqueta ${tag}`}
+                  >
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {/* Reportar o retirar la portada */}
 
@@ -767,7 +793,7 @@ export default function StoryDetail() {
               {readTarget && (
                 <Link
                   to={`/stories/${storyId}/chapters/${readTarget.id}`}
-                  className="read-button"
+                  className="story-read-button"
                 >
                   <span aria-hidden="true">📖</span>
                   {continueIndex !== -1

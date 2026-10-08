@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
+import TagEditor from "../components/story/TagEditor";
 
 export default function CreateStory() {
   const navigate = useNavigate();
@@ -21,44 +22,8 @@ export default function CreateStory() {
   const [sensitiveContent, setSensitiveContent] = useState(false);
   const [contentWarnings, setContentWarnings] = useState([]);
 
-  const [tagInput, setTagInput] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const suggestedTags = [
-    "magia",
-    "dragones",
-    "romance",
-    "amistad",
-    "LGBTQ+",
-    "misterio",
-    "aventura",
-    "slow burn",
-    "enemies to lovers",
-    "IA",
-    "crimen organizado",
-  ];
-
-  const addTag = (tag) => {
-    const cleanTag = tag.trim();
-
-    if (!cleanTag) return;
-
-    if (tags.includes(cleanTag)) {
-      setTagInput("");
-      return;
-    }
-
-    setTags((currentTags) => [...currentTags, cleanTag]);
-    setTagInput("");
-  };
-
-  const removeTag = (tagToRemove) => {
-    setTags((currentTags) =>
-      currentTags.filter((tag) => tag !== tagToRemove)
-    );
-  };
 
   const handleCoverChange = (event) => {
     const file = event.target.files?.[0];
@@ -357,82 +322,7 @@ export default function CreateStory() {
               />
             </div>
 
-            <div className="form-group">
-              <div className="form-label-row">
-                <label htmlFor="tagInput">
-                  Etiquetas
-                </label>
-
-                <span className="form-optional">
-                  Opcional
-                </span>
-              </div>
-
-              <p className="form-help">
-                Agrega palabras o conceptos que describan tu historia.
-              </p>
-
-              <div className="tag-input-row">
-                <input
-                  id="tagInput"
-                  type="text"
-                  value={tagInput}
-                  onChange={(event) =>
-                    setTagInput(event.target.value)
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      addTag(tagInput);
-                    }
-                  }}
-                  placeholder="Ej: vampiros, viajes en el tiempo..."
-                  maxLength={30}
-                />
-
-                <button
-                  type="button"
-                  className="tag-add-button"
-                  onClick={() => addTag(tagInput)}
-                >
-                  Agregar
-                </button>
-              </div>
-
-              {tags.length > 0 && (
-                <div className="story-tags">
-                  {tags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      className="story-tag selected"
-                      onClick={() => removeTag(tag)}
-                    >
-                      {tag} ×
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="tag-suggestions">
-                <span className="tag-suggestions-label">
-                  Sugerencias:
-                </span>
-
-                <div className="story-tags">
-                  {suggestedTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      className="story-tag"
-                      onClick={() => addTag(tag)}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <TagEditor tags={tags} onChange={setTags} />
           </section>
 
           <section className="story-form-section">

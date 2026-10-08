@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
@@ -7,6 +7,13 @@ import StoryCard from "../components/StoryCard";
 import UserSearchResult from "../components/UserSearchResult";
 import { useUserSearch } from "../hooks/useUserSearch";
 import SiteFooter from "../components/SiteFooter";
+import {
+  fandomList,
+  popularTags,
+  storyHasFandom,
+  storyHasTag,
+  storyMatchesSearch,
+} from "../utils/storySearch";
 
 const FEED_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap";
@@ -43,6 +50,25 @@ export default function Feed() {
   // Usuarios que coinciden con el texto buscado. Es independiente del
   // filtrado de historias: si falla, las historias se muestran igual.
   const userSearch = useUserSearch(search, { limit: 5 });
+
+  // Etiqueta (tropo o tema) y fandom elegidos. Viven en la dirección para
+  // que se pueda llegar a un filtro desde una tarjeta o desde una historia,
+  // y para poder compartir el enlace.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedTag = searchParams.get("etiqueta") || "";
+  const selectedFandom = searchParams.get("fandom") || "";
+
+  const setFilter = (name, value) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value) {
+        next.set(name, value);
+      } else {
+        next.delete(name);
+      }
+      return next;
+    });
+  };
 
   // Género seleccionado
   const [selectedGenre, setSelectedGenre] = useState("Todas");
@@ -203,19 +229,23 @@ export default function Feed() {
 
   // Filtrar historias
   const filteredStories = stories.filter((story) => {
-    const searchText = search.toLowerCase().trim();
-
-    const matchesSearch =
-      story.title?.toLowerCase().includes(searchText) ||
-      story.description?.toLowerCase().includes(searchText) ||
-      story.author_username?.toLowerCase().includes(searchText);
-
     const matchesGenre =
       selectedGenre === "Todas" ||
       story.genre?.toLowerCase() === selectedGenre.toLowerCase();
 
-    return matchesSearch && matchesGenre;
+    // El texto también se busca en las etiquetas y en el fandom.
+    return (
+      storyMatchesSearch(story, search) &&
+      matchesGenre &&
+      storyHasTag(story, selectedTag) &&
+      storyHasFandom(story, selectedFandom)
+    );
   });
+
+  // Tropos más usados y fandoms disponibles, calculados sobre todas las
+  // historias publicadas.
+  const tropes = popularTags(stories);
+  const fandoms = fandomList(stories);
 
   const sortedStories = [...filteredStories].sort((first, second) => {
     if (sortBy === "recent") {
@@ -426,12 +456,64 @@ export default function Feed() {
               name="story-search"
               type="text"
               ref={searchInputRef}
-              placeholder="Buscar historias, autores..."
+              placeholder="Buscar historias, autores, tropos, fandoms..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
         </section>
+
+        {/* Tropos y temas más usados */}
+        {tropes.length > 0 && (
+          <section className="feed-tropes" aria-label="Tropos y temas populares">
+            <span className="feed-tropes-label">Tropos populares:</span>
+
+            <div className="feed-tropes-list">
+              {tropes.map((trope) => {
+                const isSelected =
+                  selectedTag.toLowerCase() === trope.name.toLowerCase();
+
+                return (
+                  <button
+                    key={trope.name}
+                    type="button"
+                    className={`story-chip${isSelected ? " is-selected" : ""}`}
+                    aria-pressed={isSelected}
+                    onClick={() => setFilter("etiqueta", isSelected ? "" : trope.name)}
+                  >
+                    {trope.name}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Filtros activos de etiqueta y fandom */}
+        {(selectedTag || selectedFandom) && (
+          <section className="feed-active-filters" aria-label="Filtros activos">
+            {selectedTag && (
+              <button
+                type="button"
+                className="story-chip is-selected"
+                onClick={() => setFilter("etiqueta", "")}
+                aria-label={`Quitar el filtro de la etiqueta ${selectedTag}`}
+              >
+                Etiqueta: {selectedTag} ×
+              </button>
+            )}
+            {selectedFandom && (
+              <button
+                type="button"
+                className="story-chip is-selected"
+                onClick={() => setFilter("fandom", "")}
+                aria-label={`Quitar el filtro del fandom ${selectedFandom}`}
+              >
+                Fandom: {selectedFandom} ×
+              </button>
+            )}
+          </section>
+        )}
 
         {/* Usuarios que coinciden con la búsqueda */}
         {userSearch.users.length > 0 && (
@@ -495,6 +577,27 @@ export default function Feed() {
                 </button>
               ))}
           </div>
+
+          {fandoms.length > 0 && (
+            <select
+              className="sort-select"
+              value={
+                fandoms.find(
+                  (fandom) =>
+                    fandom.name.toLowerCase() === selectedFandom.toLowerCase()
+                )?.name || ""
+              }
+              onChange={(event) => setFilter("fandom", event.target.value)}
+              aria-label="Filtrar por fandom"
+            >
+              <option value="">Todos los fandoms</option>
+              {fandoms.map((fandom) => (
+                <option key={fandom.name} value={fandom.name}>
+                  {fandom.name} ({fandom.count})
+                </option>
+              ))}
+            </select>
+          )}
 
           <select
             className="sort-select"

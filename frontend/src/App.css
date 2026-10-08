@@ -2668,6 +2668,118 @@ button {
 }
 
 /* ========================================
+   ETIQUETAS Y FANDOM
+   ======================================== */
+
+/* Pastilla de una etiqueta o de un fandom: enlaza a las historias que la
+   comparten. Se usa en el inicio, en las tarjetas y en la página de la
+   historia. */
+.story-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.story-chip {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 11px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--burgundy);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.story-chip:hover {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.story-chip.is-selected {
+  border-color: var(--burgundy);
+  background: var(--burgundy);
+  color: #fff;
+}
+
+[data-theme="dark"] .story-chip.is-selected {
+  color: #1c1919;
+}
+
+/* El fandom se distingue de las etiquetas por su borde. */
+.story-chip.is-fandom {
+  border-color: var(--orange-soft);
+}
+
+.story-chip:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.story-chips-more {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.feed-tropes {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.feed-tropes-label {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.feed-tropes-list,
+.feed-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.feed-active-filters {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 600px) {
+  .feed-tropes {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* En el teléfono los tropos van en una fila que se desplaza de lado. */
+  .feed-tropes-list {
+    width: 100%;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    overflow-x: auto;
+  }
+
+  .feed-tropes-list .story-chip {
+    flex: 0 0 auto;
+  }
+}
+
+/* ========================================
    SEGUIR LEYENDO
    ======================================== */
 
@@ -4221,7 +4333,7 @@ button {
 }
 
 /* Botón principal de la historia: empezar o continuar la lectura. */
-.read-button {
+.story-read-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4248,16 +4360,16 @@ button {
     box-shadow 0.2s ease;
 }
 
-[data-theme="dark"] .read-button {
+[data-theme="dark"] .story-read-button {
   color: #1c1919;
 }
 
-.read-button:hover {
+.story-read-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(81, 32, 45, 0.22);
 }
 
-.read-button:focus-visible {
+.story-read-button:focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 3px;
 }

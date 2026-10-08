@@ -248,6 +248,8 @@ class StoryUpdate(BaseModel):
     original_author: str | None = None
     sensitive_content: bool = False
     content_warnings: list[str] = []
+    # Sin enviar (None), las etiquetas de la historia no se tocan.
+    tags: list[str] | None = None
 
 class CommentCreate(BaseModel):
     story_id: str
@@ -575,6 +577,80 @@ def clean_story_tags(tags: list[str]) -> list[str]:
     return clean_tags
 
 
+def attach_story_tags(story_id: str, tags: list[str]) -> None:
+    # Relaciona la historia con sus etiquetas, creando las que no existan.
+    for tag_name in tags:
+        tag_response = (
+            supabase_admin
+            .table("tags")
+            .select("id")
+            .eq("name", tag_name)
+            .execute()
+        )
+
+        if tag_response.data:
+            tag_id = tag_response.data[0]["id"]
+        else:
+            new_tag_response = (
+                supabase_admin
+                .table("tags")
+                .insert({"name": tag_name})
+                .execute()
+            )
+            tag_id = new_tag_response.data[0]["id"]
+
+        supabase_admin.table("story_tags").insert({
+            "story_id": story_id,
+            "tag_id": tag_id
+        }).execute()
+
+
+def replace_story_tags(story_id: str, tags: list[str]) -> None:
+    supabase_admin.table("story_tags").delete().eq("story_id", story_id).execute()
+    attach_story_tags(story_id, tags)
+
+
+def get_story_tags(story_ids: list) -> dict[str, list[str]]:
+    # Etiquetas de cada historia. Si la consulta falla, las historias se
+    # muestran igual, sin etiquetas.
+    ids = [str(story_id) for story_id in story_ids if story_id]
+    if not ids:
+        return {}
+
+    try:
+        links = (
+            supabase_admin
+            .table("story_tags")
+            .select("story_id, tag_id")
+            .in_("story_id", ids)
+            .execute()
+        ).data or []
+        tag_ids = list({str(link["tag_id"]) for link in links})
+        if not tag_ids:
+            return {}
+
+        tags = (
+            supabase_admin
+            .table("tags")
+            .select("id, name")
+            .in_("id", tag_ids)
+            .execute()
+        ).data or []
+    except Exception as e:
+        print("No se pudieron cargar las etiquetas:", repr(e))
+        return {}
+
+    names_by_id = {str(tag["id"]): tag.get("name") for tag in tags}
+    tags_by_story: dict[str, list[str]] = {}
+    for link in links:
+        name = names_by_id.get(str(link["tag_id"]))
+        story_tags = tags_by_story.setdefault(str(link["story_id"]), [])
+        if name and name not in story_tags:
+            story_tags.append(name)
+
+    return tags_by_story
+
+
 def validate_chapter_fields(chapter_number: int, title: str, content: str) -> dict:
     if not (1 <= chapter_number <= 100000):
         raise HTTPException(
@@ -703,6 +779,8 @@ def get_stories():
     stories = response.data
     author_ids = list({story["author_id"] for story in stories if story.get("author_id")})
     usernames_by_id = {}
+    # Las etiquetas (tropos y temas) permiten buscar y filtrar en el inicio.
+    tags_by_story = get_story_tags([story["id"] for story in stories])
 
     if author_ids:
         users_response = (
@@ -722,6 +800,7 @@ def get_stories():
             str(story.get("author_id")),
             "Autor desconocido"
         )
+        story["tags"] = tags_by_story.get(str(story["id"]), [])
 
         # ❤️ Cantidad de personas que pulsaron "Recomendar"
         votes_response = (
@@ -943,6 +1022,8 @@ def get_story(
             story["author_username"] = author_response.data[0]["username"]
         else:
             story["author_username"] = "Autor desconocido"
+
+        story["tags"] = get_story_tags([story["id"]]).get(str(story["id"]), [])
 
         return story
 
@@ -2017,40 +2098,7 @@ def create_story(
         story_id = created_story["id"]
 
         # 3. Guardar las etiquetas
-        for tag in clean_story_tags(story.tags):
-            tag_name = tag.strip()
-
-            if not tag_name:
-                continue
-
-            # Buscar si la etiqueta ya existe
-            tag_response = (
-                supabase_admin
-                .table("tags")
-                .select("id")
-                .eq("name", tag_name)
-                .execute()
-            )
-
-            if tag_response.data:
-                tag_id = tag_response.data[0]["id"]
-
-            else:
-                # Crear la etiqueta si no existe
-                new_tag_response = (
-                    supabase_admin
-                    .table("tags")
-                    .insert({"name": tag_name})
-                    .execute()
-                )
-
-                tag_id = new_tag_response.data[0]["id"]
-
-            # Relacionar la etiqueta con la historia
-            supabase_admin.table("story_tags").insert({
-                "story_id": story_id,
-                "tag_id": tag_id
-            }).execute()
+        attach_story_tags(story_id, clean_story_tags(story.tags))
 
         # 4. Devolver la historia creada
         return {
@@ -2192,6 +2240,7 @@ def update_story(
 
         clean_story = validate_story_fields(story)
         story_data.update({key: clean_story[key] for key in story_data})
+        new_tags = clean_story_tags(story.tags) if story.tags is not None else None
 
         # 5. Actualizar la historia
         response = (
@@ -2201,6 +2250,9 @@ def update_story(
             .eq("id", story_id)
             .execute()
         )
+
+        if new_tags is not None:
+            replace_story_tags(story_id, new_tags)
 
         return {
             "message": "Historia actualizada correctamente",

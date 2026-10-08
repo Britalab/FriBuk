@@ -1,6 +1,13 @@
 import { Link } from "react-router-dom";
+import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
+
+// Etiquetas que caben en la tarjeta sin recargarla.
+const CARD_TAG_LIMIT = 3;
 
 export default function StoryCard({ story }) {
+  const tags = storyTags(story);
+  const fandom = storyFandom(story);
+
   return (
     <article className="story-card">
 
@@ -54,6 +61,36 @@ export default function StoryCard({ story }) {
           {story.description ||
             "Esta historia todavía no tiene una descripción."}
         </p>
+
+        {/* Fandom y etiquetas: al tocarlos se filtra el inicio */}
+        {(fandom || tags.length > 0) && (
+          <div className="story-chips">
+            {fandom && (
+              <Link
+                className="story-chip is-fandom"
+                to={feedFilterLink({ fandom })}
+                title={`Ver historias de ${fandom}`}
+              >
+                {fandom}
+              </Link>
+            )}
+            {tags.slice(0, CARD_TAG_LIMIT).map((tag) => (
+              <Link
+                key={tag}
+                className="story-chip"
+                to={feedFilterLink({ tag })}
+                title={`Ver historias con la etiqueta ${tag}`}
+              >
+                {tag}
+              </Link>
+            ))}
+            {tags.length > CARD_TAG_LIMIT && (
+              <span className="story-chips-more">
+                +{tags.length - CARD_TAG_LIMIT}
+              </span>
+            )}
+          </div>
+        )}
 
         <p className="story-author">
           Por{" "}
