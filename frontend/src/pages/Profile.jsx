@@ -419,7 +419,16 @@ const handleDeleteStory = async (storyId, storyTitle) => {
           )}
           <p className="profile-username">@{username}</p>
           <ProfileAbout bio={profileInfo.bio} websiteUrl={profileInfo.website_url} />
+          <p className="profile-private-note">
+            Esta página es solo tuya. Aquí gestionas tu cuenta y tus obras.
+          </p>
           <div className="profile-header-actions">
+            <Link to={`/usuario/${userId}`} className="profile-header-action">
+              Ver mi perfil público
+            </Link>
+            <Link to="/perfil/personalizar" className="profile-header-action">
+              <span aria-hidden="true">✦</span> Personalizar mi espacio
+            </Link>
             <button
               type="button"
               className="profile-header-action"
@@ -431,12 +440,6 @@ const handleDeleteStory = async (storyId, storyTitle) => {
             >
               <span aria-hidden="true">✎</span> Editar perfil
             </button>
-            <Link to="/perfil/personalizar" className="profile-header-action">
-              <span aria-hidden="true">✦</span> Personalizar mi espacio
-            </Link>
-            <Link to={`/usuario/${userId}`} className="profile-header-action">
-              Ver mi perfil público
-            </Link>
             <Link to="/mensajes/ajustes" className="profile-header-action">
               <span aria-hidden="true">✉</span> Privacidad de mensajes
             </Link>

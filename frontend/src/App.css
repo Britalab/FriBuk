@@ -929,6 +929,59 @@ button {
   font-size: 1rem;
 }
 
+/* Aclara que el perfil privado no lo ve nadie más. */
+.profile-private-note {
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+/* Franja para quien mira su propio perfil público. Usa colores fijos del
+   sitio para leerse bien sobre cualquier tema del perfil. */
+.public-profile-own-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--orange-soft);
+  border-radius: 12px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.public-profile-own-notice p {
+  margin: 0;
+}
+
+.public-profile-own-notice strong {
+  color: var(--burgundy);
+}
+
+.public-profile-own-notice a {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border: 1px solid var(--burgundy);
+  border-radius: 9px;
+  color: var(--burgundy);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.public-profile-own-notice a:hover {
+  background: var(--burgundy);
+  color: #fff;
+}
+
+.public-profile-own-notice a:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
 .profile-display-name {
   margin: 10px 0 0;
   color: var(--burgundy);

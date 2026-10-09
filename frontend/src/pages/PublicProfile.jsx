@@ -236,6 +236,18 @@ export default function PublicProfile() {
   return (
     <ProfileSpace as="main" className="public-profile-page" customization={customization}>
       <div className="public-profile-container">
+        {/* Solo lo ve quien mira su propio perfil público. */}
+        {isOwnProfile && (
+          <div className="public-profile-own-notice" role="note">
+            <p>
+              <span aria-hidden="true">👁</span>{" "}
+              <strong>Así ven tu perfil las demás personas.</strong>{" "}
+              Para cambiarlo, vuelve a tu perfil.
+            </p>
+            <Link to="/perfil">Volver a mi perfil</Link>
+          </div>
+        )}
+
         <header className={`public-profile-header${bannerUrl ? " has-banner" : ""}`}>
           <ProfileStickers customization={customization} />
           {bannerUrl && (
