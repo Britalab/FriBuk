@@ -929,6 +929,12 @@ button {
   font-size: 1rem;
 }
 
+/* Ojo junto al texto, alineado con las letras. */
+.profile-eye-icon {
+  flex: 0 0 auto;
+  vertical-align: -3px;
+}
+
 /* Aclara que el perfil privado no lo ve nadie más. */
 .profile-private-note {
   margin: 12px 0 0;
