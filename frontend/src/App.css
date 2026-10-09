@@ -5711,6 +5711,24 @@ button {
 }
 
 /* Pregunta de dos opciones (No / Sí) con el aspecto de los demás campos. */
+/* Advertencias de contenido, agrupadas por tema. */
+.content-warning-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.content-warning-group-title {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .form-choice-label {
   display: block;
   margin-bottom: 8px;

@@ -380,7 +380,24 @@ STORY_STATUSES = {"draft", "published", "completed", "paused"}
 VISIBLE_STORY_STATUSES = ("published", "completed", "paused")
 # Advertencias de contenido que puede marcar el autor. Son solo un aviso
 # para el lector: no bloquean ni filtran historias.
-STORY_CONTENT_WARNINGS = ("violence", "strong_language", "sensitive_topics")
+STORY_CONTENT_WARNINGS = (
+    "graphic_violence",
+    "domestic_abuse",
+    "torture_kidnapping",
+    "explicit_sex",
+    "sexual_violence",
+    "suicide_self_harm",
+    "eating_disorders",
+    "drugs_addiction",
+    "animal_harm",
+    "discrimination",
+    "pregnancy_child_loss",
+    "strong_language",
+    # De la primera versión: el formulario ya no las ofrece, pero las
+    # historias que las tenían las conservan.
+    "violence",
+    "sensitive_topics"
+)
 STORY_WORK_TYPES = {
     "original",
     "fanfic",

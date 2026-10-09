@@ -1,4 +1,4 @@
-import { CONTENT_WARNINGS } from "../../utils/contentWarnings";
+import { contentWarningGroups } from "../../utils/contentWarnings";
 
 const CHOICES = [
   { value: false, label: "No" },
@@ -67,23 +67,43 @@ export default function ContentWarningFields({
             <span className="form-optional">Opcional</span>
           </div>
 
+          <p className="form-help">
+            Marca todas las que correspondan. Ayudan a cada persona a decidir
+            si quiere leer tu historia.
+          </p>
+
           <div
-            className="story-tags"
+            className="content-warning-groups"
             role="group"
             aria-labelledby="content-warnings-label"
           >
-            {CONTENT_WARNINGS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                className={`story-tag${
-                  warnings.includes(value) ? " selected" : ""
-                }`}
-                aria-pressed={warnings.includes(value)}
-                onClick={() => toggleWarning(value)}
+            {contentWarningGroups(warnings).map((group) => (
+              <div
+                className="content-warning-group"
+                role="group"
+                aria-label={group.title}
+                key={group.title}
               >
-                {label}
-              </button>
+                <span className="content-warning-group-title">
+                  {group.title}
+                </span>
+
+                <div className="story-tags">
+                  {group.warnings.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`story-tag${
+                        warnings.includes(value) ? " selected" : ""
+                      }`}
+                      aria-pressed={warnings.includes(value)}
+                      onClick={() => toggleWarning(value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
