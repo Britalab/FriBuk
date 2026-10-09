@@ -5664,6 +5664,25 @@ button {
   margin: 0;
 }
 
+/* Etiquetas de los campos que no llevan fila propia. */
+.story-editor-form .form-group > label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.story-editor-form .form-group > .form-help + label {
+  margin-top: 18px;
+}
+
+.story-editor-submit:focus-visible,
+.story-editor-cancel:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
 .story-editor-actions {
   display: flex;
   justify-content: flex-end;

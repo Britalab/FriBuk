@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
@@ -142,27 +142,23 @@ export default function EditStory() {
 
   if (loading) {
     return (
-      <main className="create-story-page">
-        <div className="create-story-container">
-          <p>Cargando historia...</p>
+      <main className="story-editor-page">
+        <div className="story-editor-container">
+          <p className="loading-text">Cargando historia...</p>
         </div>
       </main>
     );
   }
 
   return (
-      <main className="create-story-page">
-  <div className="create-story-container">
+      <main className="story-editor-page">
+  <div className="story-editor-container">
 
-    <div className="create-story-header">
-      <button
-        type="button"
-        className="back-button"
-        onClick={() => navigate(-1)}
-      >
-        ← Volver
-      </button>
+    <Link to={`/stories/${storyId}`} className="story-editor-back">
+      ← Volver a la historia
+    </Link>
 
+    <header className="story-editor-header">
       <p className="chapters-eyebrow">
         EDITAR HISTORIA
       </p>
@@ -173,10 +169,10 @@ export default function EditStory() {
         Modifica los datos de tu historia y guarda los
         cambios.
       </p>
-    </div>
+    </header>
 
     <form
-      className="create-story-form"
+      className="story-editor-form"
       onSubmit={handleSubmit}
     >
 
@@ -238,6 +234,7 @@ export default function EditStory() {
 
         <select
           id="workType"
+          className="form-select"
           value={workType}
           onChange={(event) => {
             const newType = event.target.value;
@@ -338,6 +335,7 @@ export default function EditStory() {
 
         <select
           id="status"
+          className="form-select"
           value={status}
           onChange={(event) =>
             setStatus(event.target.value)
@@ -410,20 +408,27 @@ export default function EditStory() {
       </div>
 
       {error && (
-        <p className="form-error">
-          {error}
-        </p>
+        <div className="form-error" role="alert">
+          <span>!</span>
+          <p>{error}</p>
+        </div>
       )}
 
-      <button
-        type="submit"
-        className="create-story-button"
-        disabled={saving}
-      >
-        {saving
-          ? "Guardando cambios..."
-          : "Guardar cambios"}
-      </button>
+      <div className="story-editor-actions">
+        <Link to={`/stories/${storyId}`} className="story-editor-cancel">
+          Cancelar
+        </Link>
+
+        <button
+          type="submit"
+          className="story-editor-submit"
+          disabled={saving}
+        >
+          {saving
+            ? "Guardando cambios..."
+            : "Guardar cambios"}
+        </button>
+      </div>
 
     </form>
   </div>
