@@ -28,7 +28,7 @@ SITEMAP_PAGE_SIZE = 1000
 SITEMAP_MAX_URLS = 5000
 # Páginas públicas que no dependen de la base de datos.
 SITEMAP_STATIC_PATHS = (
-    "/", "/autores", "/forum", "/terminos", "/comunidad", "/contenido",
+    "/", "/autores", "/forum", "/preguntas-frecuentes", "/terminos", "/comunidad", "/contenido",
     "/derechos-autor", "/privacidad", "/moderacion"
 )
 

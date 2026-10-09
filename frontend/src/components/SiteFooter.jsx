@@ -20,6 +20,7 @@ const FOOTER_COLUMNS = [
   {
     title: "Ayuda",
     links: [
+      { to: "/preguntas-frecuentes", label: "Preguntas frecuentes" },
       { to: "/support", label: "Centro de ayuda" }
     ]
   }

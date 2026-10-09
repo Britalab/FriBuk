@@ -40,6 +40,7 @@ import ContentPolicy from "./pages/ContentPolicy";
 import Copyright from "./pages/Copyright";
 import Privacy from "./pages/Privacy";
 import Moderation from "./pages/Moderation";
+import Faq from "./pages/Faq";
 
 import "./App.css";
 
@@ -203,6 +204,7 @@ function App() {
           <Route path="/derechos-autor" element={<Copyright />} />
           <Route path="/privacidad" element={<Privacy />} />
           <Route path="/moderacion" element={<Moderation />} />
+          <Route path="/preguntas-frecuentes" element={<Faq />} />
 
           <Route path="/support/admin" element={<SupportAdmin />} />
 

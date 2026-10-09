@@ -45,7 +45,7 @@ function paragraphs(text) {
 }
 
 // JSON seguro dentro de una etiqueta <script>.
-function jsonLd(data) {
+export function jsonLd(data) {
   return JSON.stringify(data).replace(/</g, "\\u003c");
 }
 
@@ -151,7 +151,7 @@ export function buildPreview(data, origin) {
 }
 
 // Escribe la vista previa en el HTML de la aplicación.
-function applyPreview(page, preview) {
+export function applyPreview(page, preview) {
   const setContent = (value) => ({
     element(element) {
       element.setAttribute("content", value);
@@ -169,7 +169,7 @@ function applyPreview(page, preview) {
     .on('meta[property="og:description"]', setContent(preview.description))
     .on('meta[property="og:image"]', setContent(preview.image))
     .on('meta[property="og:type"]', setContent(preview.type))
-    .on('meta[name="twitter:card"]', setContent("summary_large_image"))
+    .on('meta[name="twitter:card"]', setContent(preview.card || "summary_large_image"))
     .on("head", {
       element(element) {
         element.append(
@@ -189,7 +189,7 @@ function applyPreview(page, preview) {
 }
 
 // Página de la aplicación, tal como se serviría sin esta función.
-async function appPage(context) {
+export async function appPage(context) {
   const page = await context.next();
   if (page.status !== 404) return page;
   return context.env.ASSETS.fetch(new URL("/", context.request.url));
