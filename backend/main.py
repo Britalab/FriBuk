@@ -1181,11 +1181,13 @@ def add_forum_user_data(items: list[dict]) -> list[dict]:
         return items
 
     usernames_by_id = {}
+    avatars_by_id = {}
     for user_id in user_ids:
         try:
             auth_user = get_public_auth_user(user_id)
             profile_data = get_public_profile_data(auth_user)
             usernames_by_id[user_id] = profile_data.get("username") or "Usuario"
+            avatars_by_id[user_id] = profile_data.get("avatar_url")
         except HTTPException as e:
             if e.status_code != 404:
                 raise
@@ -1196,6 +1198,8 @@ def add_forum_user_data(items: list[dict]) -> list[dict]:
             str(item.get("user_id")),
             "Usuario"
         )
+        # Foto de perfil de quien publicó; sin foto, el foro muestra su inicial.
+        item["avatar_url"] = avatars_by_id.get(str(item.get("user_id")))
 
     return items
 

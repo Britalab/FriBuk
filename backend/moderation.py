@@ -675,6 +675,7 @@ def present_forum_replies(replies: list[dict], viewer) -> list[dict]:
                 "created_at": reply.get("created_at"),
                 "user_id": None,
                 "username": "Usuario",
+                "avatar_url": None,
                 "content": "",
                 "image_url": None,
                 "moderation": {"removed": True}

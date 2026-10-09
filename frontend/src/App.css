@@ -7971,6 +7971,14 @@ button {
   color: #ffffff;
   font-size: 0.9rem;
   font-weight: 800;
+  overflow: hidden;
+}
+
+.forum-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .forum-post-user > div:last-child {

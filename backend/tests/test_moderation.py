@@ -604,6 +604,22 @@ class ModerationTestCase(unittest.TestCase):
         reply = response.json()["reply"]
         self.assertEqual(reply["username"], "visitante")
         self.assertEqual(reply["content"], "Hola a todas")
+        self.assertIsNone(reply["avatar_url"])
+
+    def test_forum_posts_include_the_author_avatar(self):
+        self.assertEqual(self.upload("/me/avatar", OWNER_ID).status_code, 200)
+        avatar_url = self.public_profile()["avatar_url"]
+
+        self.assertEqual(self.topic().json()["avatar_url"], avatar_url)
+
+        by_id = {reply["id"]: reply for reply in self.replies()}
+        self.assertEqual(by_id[REPLY_ID]["avatar_url"], avatar_url)
+        # Quien no tiene foto llega sin ella: el foro muestra su inicial.
+        self.assertIsNone(by_id[OTHER_REPLY_ID]["avatar_url"])
+
+        # Una foto retirada por moderación deja de verse también en el foro.
+        self.remove(target_type="avatar", target_id=OWNER_ID)
+        self.assertIsNone(self.topic().json()["avatar_url"])
 
     def test_removed_reply_keeps_its_place_without_content(self):
         self.remove(target_type="forum_reply", target_id=REPLY_ID, reason="harassment")

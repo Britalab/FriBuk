@@ -98,6 +98,19 @@ function ForumInteractionControls({
   );
 }
 
+// Foto de perfil de quien publicó; si no tiene, la inicial de su nombre.
+function ForumAvatar({ username, avatarUrl }) {
+  return (
+    <div className="forum-avatar" aria-hidden="true">
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="" loading="lazy" />
+      ) : (
+        (username || "U").charAt(0).toUpperCase()
+      )}
+    </div>
+  );
+}
+
 export default function ForumTopic() {
   const { topicId } = useParams();
   const { user } = useAuth();
@@ -611,9 +624,7 @@ export default function ForumTopic() {
 
         <div className="forum-post-user">
 
-          <div className="forum-avatar">
-            ?
-          </div>
+          <ForumAvatar username={topic.username} avatarUrl={topic.avatar_url} />
 
           <div>
             <strong>
@@ -800,9 +811,7 @@ export default function ForumTopic() {
 
                 <div className="forum-post-user">
 
-                  <div className="forum-avatar">
-                    ?
-                  </div>
+                  <ForumAvatar username={item.username} avatarUrl={item.avatar_url} />
 
                   <div>
                     <strong>
