@@ -1038,14 +1038,25 @@ export default function StoryDetail() {
               </div>
 
               <h3>
-                Esta historia todavía no tiene
-                capítulos
+                {isOwner
+                  ? "Todavía no tienes capítulos"
+                  : "Esta historia todavía no tiene capítulos"}
               </h3>
 
               <p>
-                El autor aún no ha publicado
-                capítulos para esta historia.
+                {isOwner
+                  ? "Escribe el primero para empezar tu historia."
+                  : "El autor aún no ha publicado capítulos para esta historia."}
               </p>
+
+              {isOwner && (
+                <Link
+                  to={`/stories/${storyId}/create-chapter`}
+                  className="chapter-add-row"
+                >
+                  ＋ Agregar capítulo
+                </Link>
+              )}
 
             </div>
 
@@ -1107,6 +1118,17 @@ export default function StoryDetail() {
                 </article>
 
               ))}
+
+              {/* Mismo destino que el botón de arriba: evita volver a
+                  subir cuando la lista ya es larga. Solo lo ve la autora. */}
+              {isOwner && (
+                <Link
+                  to={`/stories/${storyId}/create-chapter`}
+                  className="chapter-add-row"
+                >
+                  ＋ Agregar capítulo
+                </Link>
+              )}
 
             </div>
 

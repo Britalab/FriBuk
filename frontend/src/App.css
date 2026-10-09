@@ -4244,6 +4244,33 @@ button {
   border-top: 1px solid var(--border);
 }
 
+/* "Agregar capítulo" al final de la lista: un capítulo todavía vacío. */
+.chapter-add-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  margin-top: 18px;
+  padding: 14px 18px;
+  border: 2px dashed var(--orange-soft);
+  border-radius: 14px;
+  color: var(--burgundy);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.chapter-add-row:hover {
+  border-color: var(--burgundy);
+  background: var(--bg-hover);
+}
+
+.chapter-add-row:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
 .chapter-card {
   display: grid;
   grid-template-columns: 64px 1fr auto;
