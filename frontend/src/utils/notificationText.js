@@ -41,6 +41,15 @@ export function getNotificationContent(notification) {
         to: notification.actor?.id ? `/usuario/${notification.actor.id}` : "/perfil",
       };
     case "story_comment":
+      // Comentario en un capítulo: dice quién y dónde, sin el texto.
+      if (data.chapter_id) {
+        return {
+          icon: "💬",
+          actor,
+          text: ` comentó ${quoted(data.chapter_title, "un capítulo")} de tu historia ${story}.`,
+          to: `/stories/${notification.story_id}/chapters/${data.chapter_id}`,
+        };
+      }
       return {
         icon: "💬",
         actor,

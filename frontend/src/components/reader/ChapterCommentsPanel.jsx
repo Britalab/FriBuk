@@ -326,7 +326,7 @@ function CommentItem({ comment, actions, isAuthenticated, onReply }) {
     const confirmed = window.confirm(
       comment.is_own
         ? "¿Eliminar tu comentario? También se eliminarán sus respuestas."
-        : "¿Retirar este comentario? Dejará de ser visible para todos."
+        : "¿Eliminar este comentario? Dejará de ser visible para todos."
     );
     if (!confirmed) return;
 
@@ -378,7 +378,7 @@ function CommentItem({ comment, actions, isAuthenticated, onReply }) {
           )}
           {comment.can_delete && (
             <button type="button" onClick={handleDelete} disabled={deleting}>
-              {comment.is_own ? "Eliminar" : "Retirar"}
+              Eliminar
             </button>
           )}
         </div>

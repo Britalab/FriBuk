@@ -633,11 +633,11 @@ class ChapterCommentsTestCase(unittest.TestCase):
             )
             self.assertEqual(response.status_code, 403, user_id)
 
-        for user_id in (BOB_ID, AUTHOR_ID):
-            response = self.client.delete(
-                f"/chapter-comments/{comment_id}", headers=auth_header(user_id)
-            )
-            self.assertEqual(response.status_code, 403, user_id)
+        # Otro lector no puede borrar un comentario ajeno.
+        response = self.client.delete(
+            f"/chapter-comments/{comment_id}", headers=auth_header(BOB_ID)
+        )
+        self.assertEqual(response.status_code, 403)
 
         self.assertIn(
             self.client.delete(f"/chapter-comments/{comment_id}").status_code,
@@ -645,6 +645,110 @@ class ChapterCommentsTestCase(unittest.TestCase):
         )
         self.assertEqual(self.stored(comment_id)["content"], "Buen fragmento")
         self.assertEqual(self.stored(comment_id)["status"], "visible")
+
+    def test_story_author_can_remove_comments_on_their_chapters(self):
+        comment_id = self.create_comment_id()
+        reply_id = self.create_comment_id(
+            user_id=BOB_ID, content="Respuesta", parent_id=comment_id
+        )
+
+        # Quien escribe la historia ve la opción en todos los comentarios;
+        # otro lector, solo en el suyo.
+        for viewer, expected in ((AUTHOR_ID, [True, True]), (BOB_ID, [False, True])):
+            listed = self.get_comments(viewer).json()["comments"]
+            self.assertEqual([c["can_delete"] for c in listed], expected, viewer)
+            # Retirar no da permiso para editar lo que escribió otra persona.
+            self.assertFalse(listed[0]["can_edit"])
+
+        response = self.client.delete(
+            f"/chapter-comments/{reply_id}", headers=auth_header(AUTHOR_ID)
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(self.stored(reply_id)["status"], "removed")
+        self.assertEqual(self.stored(reply_id)["removed_by"], AUTHOR_ID)
+        self.assertEqual(
+            [c["id"] for c in self.get_comments(ALICE_ID).json()["comments"]],
+            [comment_id]
+        )
+
+    def test_author_of_another_story_cannot_remove_comments(self):
+        # Bob escribe otra historia: eso no le da permisos en esta.
+        self.database.tables["stories"].append(
+            {"id": str(uuid.uuid4()), "author_id": BOB_ID, "status": "published"}
+        )
+        comment_id = self.create_comment_id()
+
+        response = self.client.delete(
+            f"/chapter-comments/{comment_id}", headers=auth_header(BOB_ID)
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.stored(comment_id)["status"], "visible")
+
+    # ---------- aviso a quien escribe ----------
+
+    def chapter_comment_notifications(self):
+        return self.database.tables.setdefault("notifications", [])
+
+    def test_author_is_notified_without_the_comment_text(self):
+        self.database.tables["notifications"] = []
+        self.database.tables["stories"][0]["title"] = "La historia"
+
+        main.notify_chapter_comment(CHAPTER_ID, ALICE_ID)
+
+        notifications = self.chapter_comment_notifications()
+        self.assertEqual(len(notifications), 1)
+        notification = notifications[0]
+        self.assertEqual(notification["recipient_user_id"], AUTHOR_ID)
+        self.assertEqual(notification["actor_user_id"], ALICE_ID)
+        self.assertEqual(notification["story_id"], STORY_ID)
+        # Quién y dónde, sin el contenido del comentario.
+        self.assertEqual(notification["data"], {
+            "story_title": "La historia",
+            "chapter_id": CHAPTER_ID,
+            "chapter_title": "Uno"
+        })
+
+    def test_several_comments_in_a_row_notify_once(self):
+        self.database.tables["notifications"] = []
+
+        def notify(chapter_id, user_id):
+            main.notify_chapter_comment(chapter_id, user_id)
+            # En la base real una notificación nace sin leer.
+            for notification in self.chapter_comment_notifications():
+                notification.setdefault("is_read", False)
+
+        for _ in range(3):
+            notify(CHAPTER_ID, ALICE_ID)
+        self.assertEqual(len(self.chapter_comment_notifications()), 1)
+
+        # Otra persona, u otro capítulo, sí avisa.
+        notify(CHAPTER_ID, BOB_ID)
+        notify(OTHER_CHAPTER_ID, ALICE_ID)
+        self.assertEqual(len(self.chapter_comment_notifications()), 3)
+
+        # Una vez leído el aviso, un comentario nuevo vuelve a avisar.
+        for notification in self.chapter_comment_notifications():
+            notification["is_read"] = True
+        notify(CHAPTER_ID, ALICE_ID)
+        self.assertEqual(len(self.chapter_comment_notifications()), 4)
+
+    def test_author_is_not_notified_of_their_own_comments(self):
+        self.database.tables["notifications"] = []
+
+        main.notify_chapter_comment(CHAPTER_ID, AUTHOR_ID)
+        self.assertEqual(self.chapter_comment_notifications(), [])
+
+    def test_publishing_a_comment_schedules_the_notification(self):
+        scheduled = []
+        main.run_notification_task = lambda task, *args: scheduled.append((task, args))
+
+        self.create_comment_id()
+        self.create_comment_id(content="En general, bien", general=True)
+
+        self.assertEqual(scheduled, [
+            (main.notify_chapter_comment, (CHAPTER_ID, ALICE_ID)),
+            (main.notify_chapter_comment, (CHAPTER_ID, ALICE_ID))
+        ])
 
     def test_author_delete_removes_replies_and_reactions(self):
         comment_id = self.create_comment_id()

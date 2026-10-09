@@ -6035,6 +6035,74 @@ def notify_story_event(
     )
 
 
+def notify_chapter_comment(chapter_id: str, actor_user_id: str) -> None:
+    # Avisa a quien escribe la historia que alguien comentó un capítulo.
+    # Solo dice quién y dónde: no incluye el texto del comentario.
+    chapter_response = (
+        supabase_admin
+        .table("chapters")
+        .select("id, story_id, title")
+        .eq("id", chapter_id)
+        .limit(1)
+        .execute()
+    )
+
+    if not chapter_response.data:
+        return
+
+    chapter = chapter_response.data[0]
+    story_response = (
+        supabase_admin
+        .table("stories")
+        .select("id, author_id, title")
+        .eq("id", str(chapter["story_id"]))
+        .limit(1)
+        .execute()
+    )
+
+    if not story_response.data or not story_response.data[0].get("author_id"):
+        return
+
+    story = story_response.data[0]
+    author_id = str(story["author_id"])
+    story_id = str(story["id"])
+
+    if author_id == str(actor_user_id):
+        return
+
+    # Quien comenta varios párrafos seguidos genera un solo aviso: mientras
+    # el anterior siga sin leer, no se crea otro para el mismo capítulo.
+    pending = (
+        supabase_admin
+        .table("notifications")
+        .select("id, data")
+        .eq("recipient_user_id", author_id)
+        .eq("type", "story_comment")
+        .eq("actor_user_id", str(actor_user_id))
+        .eq("story_id", story_id)
+        .eq("is_read", False)
+        .execute()
+    ).data or []
+
+    if any(
+        (row.get("data") or {}).get("chapter_id") == str(chapter["id"])
+        for row in pending
+    ):
+        return
+
+    create_notification(
+        author_id,
+        "story_comment",
+        actor_user_id=actor_user_id,
+        story_id=story_id,
+        data={
+            "story_title": story.get("title"),
+            "chapter_id": str(chapter["id"]),
+            "chapter_title": chapter.get("title")
+        }
+    )
+
+
 def notify_forum_reply(topic_id: str, actor_user_id: str, reply: dict) -> None:
     topic_response = (
         supabase_admin
@@ -6834,8 +6902,9 @@ def serialize_chapter_comment(
     counts_by_comment: dict,
     viewer_reactions: dict,
     viewer_id: str | None,
-    viewer_is_admin: bool
+    viewer_can_remove: bool
 ) -> dict:
+    # viewer_can_remove: quien escribe la historia, o moderación.
     comment_id = str(row["id"])
     user_id = str(row.get("user_id"))
     is_own = bool(viewer_id) and user_id == viewer_id
@@ -6860,7 +6929,7 @@ def serialize_chapter_comment(
         "my_reaction": viewer_reactions.get(comment_id),
         "is_own": is_own,
         "can_edit": is_own,
-        "can_delete": is_own or viewer_is_admin
+        "can_delete": is_own or viewer_can_remove
     }
 
 
@@ -7019,6 +7088,9 @@ def get_chapter_comments(
     ]
 
     viewer_is_admin = bool(viewer_id) and is_admin_user(viewer_id)
+    viewer_can_remove = viewer_is_admin or (
+        bool(viewer_id) and viewer_id == chapter["story_author_id"]
+    )
     comments = []
 
     if visible_rows:
@@ -7041,7 +7113,7 @@ def get_chapter_comments(
                 counts_by_comment,
                 viewer_reactions,
                 viewer_id,
-                viewer_is_admin
+                viewer_can_remove
             )
             for row in visible_rows
         ]
@@ -7125,6 +7197,8 @@ def create_chapter_comment(
         .execute()
     )
 
+    run_notification_task(notify_chapter_comment, chapter["id"], user_id)
+
     return {
         "message": "Comentario publicado correctamente",
         "comment": serialize_single_chapter_comment(response.data[0], current_user)
@@ -7197,9 +7271,13 @@ def delete_chapter_comment(
             .eq("user_id", user_id)
             .execute()
         )
-    elif is_admin_user(user_id):
-        # Moderación: el comentario deja de mostrarse, pero se conserva
-        # el registro de quién lo retiró y cuándo.
+    elif (
+        get_commentable_chapter(str(existing["chapter_id"]))["story_author_id"] == user_id
+        or is_admin_user(user_id)
+    ):
+        # Quien escribe la historia decide qué comentarios quedan en sus
+        # capítulos; moderación también puede retirarlos. El comentario
+        # deja de mostrarse, pero se conserva quién lo retiró y cuándo.
         (
             supabase_admin
             .table("chapter_comments")
