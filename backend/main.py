@@ -263,7 +263,9 @@ class FavoriteCreate(BaseModel):
 
 class ChapterCreate(BaseModel):
     story_id: str
-    chapter_number: int
+    # Se acepta por compatibilidad, pero no se usa: al crear, el capítulo
+    # siempre queda a continuación del último de la historia.
+    chapter_number: int | None = None
     title: str
     content: str
     status: str = "draft"
@@ -3156,9 +3158,24 @@ def create_chapter(
         if story.data[0]["author_id"] != str(current_user.id):
             raise HTTPException(status_code=403, detail="No podés agregar capítulos a historias de otros usuarios")
 
+        # El número lo asigna el servidor: el siguiente al más alto que ya
+        # exista en la historia, contando borradores. Así no quedan saltos
+        # ni números repetidos por un error al escribirlo.
+        existing_chapters = (
+            supabase_admin
+            .table("chapters")
+            .select("chapter_number")
+            .eq("story_id", chapter.story_id)
+            .execute()
+        ).data or []
+        next_chapter_number = max(
+            (int(item.get("chapter_number") or 0) for item in existing_chapters),
+            default=0
+        ) + 1
+
         chapter_data = {
             "story_id": chapter.story_id,
-            "chapter_number": chapter.chapter_number,
+            "chapter_number": next_chapter_number,
             "title": chapter.title,
             "content": chapter.content,
             "status": chapter.status
@@ -3170,7 +3187,7 @@ def create_chapter(
                 detail="Estado de capítulo no válido"
             )
         chapter_data.update(validate_chapter_fields(
-            chapter.chapter_number, chapter.title, chapter.content
+            next_chapter_number, chapter.title, chapter.content
         ))
 
         response = supabase_admin.table("chapters").insert(chapter_data).execute()

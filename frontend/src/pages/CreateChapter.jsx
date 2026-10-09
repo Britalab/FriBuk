@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 
@@ -8,7 +8,9 @@ export default function CreateChapter() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [chapterNumber, setChapterNumber] = useState("");
+  // Posición que tendrá el capítulo: se asigna sola, a continuación del
+  // último. Solo se consulta para mostrársela a quien escribe.
+  const [chapterPosition, setChapterPosition] = useState(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
@@ -17,13 +19,27 @@ export default function CreateChapter() {
   const loading = savingAs !== null;
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    let isActive = true;
+
+    api
+      .get(`/stories/${storyId}/chapters`)
+      .then((response) => {
+        if (isActive && Array.isArray(response.data)) {
+          setChapterPosition(response.data.length + 1);
+        }
+      })
+      .catch((err) => {
+        console.error("Error al consultar los capítulos:", err);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [storyId]);
+
   const validateChapter = () => {
     setError("");
-
-    if (!chapterNumber || Number(chapterNumber) < 1) {
-      setError("El número del capítulo debe ser mayor que 0.");
-      return false;
-    }
 
     if (!title.trim()) {
       setError("El título del capítulo es obligatorio.");
@@ -45,7 +61,6 @@ export default function CreateChapter() {
     try {
       await api.post("/chapters", {
         story_id: storyId,
-        chapter_number: Number(chapterNumber),
         title: title.trim(),
         content: content.trim(),
         status,
@@ -98,13 +113,9 @@ export default function CreateChapter() {
     <main className="story-editor-page">
       <div className="story-editor-container">
 
-        <button
-          type="button"
-          className="story-editor-back"
-          onClick={() => navigate(`/stories/${storyId}`)}
-        >
+        <Link to={`/stories/${storyId}`} className="story-editor-back">
           ← Volver a la historia
-        </button>
+        </Link>
 
         <header className="story-editor-header">
           <p className="chapters-eyebrow">
@@ -132,29 +143,16 @@ export default function CreateChapter() {
                 <h2>Información del capítulo</h2>
 
                 <p>
-                  Define el número y el título de este capítulo.
+                  Ponle un título a este capítulo.
                 </p>
               </div>
             </div>
 
-            <div className="form-group">
-              <div className="form-label-row">
-                <label htmlFor="chapterNumber">
-                  Número del capítulo
-                </label>
-              </div>
-
-              <input
-                id="chapterNumber"
-                type="number"
-                min="1"
-                value={chapterNumber}
-                onChange={(event) =>
-                  setChapterNumber(event.target.value)
-                }
-                placeholder="Ej: 1"
-              />
-            </div>
+            <p className="form-help chapter-position-note">
+              {chapterPosition
+                ? `Será el capítulo ${chapterPosition} de tu historia. El número se asigna solo.`
+                : "El número del capítulo se asigna solo, a continuación del último."}
+            </p>
 
             <div className="form-group">
               <div className="form-label-row">

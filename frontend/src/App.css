@@ -5358,6 +5358,23 @@ button {
   transform: translateX(-3px);
 }
 
+.story-editor-back:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--orange);
+  outline-offset: 4px;
+}
+
+/* Aviso de la posición que tendrá un capítulo nuevo. */
+.chapter-position-note {
+  margin: 0 0 22px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-soft);
+  color: var(--text-main);
+  font-size: 13px;
+}
+
 .story-editor-header {
   margin-bottom: 30px;
 }

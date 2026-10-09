@@ -89,7 +89,8 @@ class StoryTagsTestCase(unittest.TestCase):
                 {"story_id": DRAFT_STORY_ID, "tag_id": "t2"}
             ],
             "votes": [],
-            "ratings": []
+            "ratings": [],
+            "chapters": []
         }
 
         users = {
@@ -98,6 +99,8 @@ class StoryTagsTestCase(unittest.TestCase):
         }
 
         self.originals = (main.supabase_admin, main.supabase_public)
+        self.original_notify = main.run_notification_task
+        main.run_notification_task = lambda *args, **kwargs: None
         main.supabase_admin = self.database
         main.supabase_public = SimpleNamespace(
             auth=FakeAuth(users), table=self.database.table
@@ -106,6 +109,61 @@ class StoryTagsTestCase(unittest.TestCase):
 
     def tearDown(self):
         main.supabase_admin, main.supabase_public = self.originals
+        main.run_notification_task = self.original_notify
+
+    # ---------- número de capítulo ----------
+
+    def create_chapter(self, user_id=AUTHOR_ID, story_id=STORY_ID, **extra):
+        return self.client.post(
+            "/chapters",
+            json={
+                "story_id": story_id, "title": "Un capítulo",
+                "content": "Texto del capítulo.", **extra
+            },
+            headers=auth_header(user_id)
+        )
+
+    def chapter_numbers(self, story_id=STORY_ID):
+        return [
+            chapter["chapter_number"] for chapter in self.database.tables["chapters"]
+            if chapter["story_id"] == story_id
+        ]
+
+    def test_chapter_number_is_assigned_automatically(self):
+        first = self.create_chapter()
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertEqual(first.json()["chapter"]["chapter_number"], 1)
+
+        self.assertEqual(self.create_chapter(status="published").status_code, 200)
+        self.assertEqual(self.create_chapter().status_code, 200)
+        self.assertEqual(self.chapter_numbers(), [1, 2, 3])
+
+        # Cada historia lleva su propia cuenta.
+        self.assertEqual(self.create_chapter(story_id=OTHER_STORY_ID).status_code, 200)
+        self.assertEqual(self.chapter_numbers(OTHER_STORY_ID), [1])
+
+    def test_a_number_sent_by_the_form_is_ignored(self):
+        self.create_chapter()
+
+        # Ni saltos ni repetidos, aunque se envíe un número a mano.
+        self.assertEqual(self.create_chapter(chapter_number=40).status_code, 200)
+        self.assertEqual(self.create_chapter(chapter_number=1).status_code, 200)
+        self.assertEqual(self.chapter_numbers(), [1, 2, 3])
+
+    def test_new_chapter_goes_after_the_highest_existing_number(self):
+        # Una historia antigua con un salto: el nuevo va al final.
+        self.database.tables["chapters"].extend(
+            {"id": str(uuid.uuid4()), "story_id": STORY_ID, "chapter_number": number,
+             "title": "Viejo", "content": "x", "status": "published"}
+            for number in (1, 2, 5)
+        )
+
+        self.assertEqual(self.create_chapter().status_code, 200)
+        self.assertEqual(self.chapter_numbers(), [1, 2, 5, 6])
+
+    def test_only_the_author_adds_chapters(self):
+        self.assertEqual(self.create_chapter(user_id=OTHER_ID).status_code, 403)
+        self.assertEqual(self.database.tables["chapters"], [])
 
     def update(self, user_id=AUTHOR_ID, **changes):
         body = {"title": "Bajo la última sombra", "status": "published", **changes}
