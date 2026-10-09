@@ -234,7 +234,7 @@ button {
   color: var(--orange);
 }
 
-/* Los tres botones de navegación comparten exactamente el mismo estilo. */
+/* Los tres botones de navegación comparten forma y tamaño. */
 .navbar-authors,
 .navbar-forum,
 .navbar-create-story {
@@ -242,22 +242,34 @@ button {
   align-items: center;
   justify-content: center;
   min-height: 38px;
-  padding: 8px 14px;
-  border: 1px solid var(--burgundy);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
   border-radius: 9px;
-  background: var(--burgundy);
-  color: #fff;
+  background: transparent;
+  color: var(--burgundy);
   font-size: 0.86rem;
   font-weight: 700;
   line-height: 1.2;
   text-decoration: none;
   white-space: nowrap;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* "Crear historia" es la acción principal: va en borgoña sólido. */
+.navbar-create-story {
+  border-color: var(--burgundy);
+  background: var(--burgundy);
+  color: #fff;
   box-shadow: 0 2px 8px rgba(114, 47, 63, 0.25);
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .navbar-authors:hover,
-.navbar-forum:hover,
+.navbar-forum:hover {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+  color: var(--burgundy-dark);
+}
+
 .navbar-create-story:hover {
   border-color: var(--burgundy-dark);
   background: var(--burgundy-dark);
