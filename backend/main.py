@@ -3666,7 +3666,7 @@ def create_forum_topic(
 
         return {
             "message": "Tema creado correctamente",
-            "topic": response.data[0],
+            "topic": add_forum_user_data([response.data[0]])[0],
         }
     except Exception as e:
         if uploaded_path is not None:
@@ -4461,9 +4461,10 @@ def create_forum_reply(
             notify_forum_reply, topic_id, str(current_user.id), response.data[0]
         )
 
+        # Con el nombre de quien la escribió, para mostrarla sin recargar.
         return {
             "message": "Respuesta creada correctamente",
-            "reply": response.data[0]
+            "reply": add_forum_user_data([response.data[0]])[0]
         }
 
     except HTTPException:

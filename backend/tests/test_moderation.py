@@ -587,6 +587,24 @@ class ModerationTestCase(unittest.TestCase):
         )
         self.assertEqual(reply.status_code, 404)
 
+    def test_new_reply_comes_back_with_its_author_name(self):
+        # Sin esto, la respuesta recién publicada se mostraba como "Usuario"
+        # hasta recargar la página.
+        self.database.new_row = lambda table_name, payload: {
+            "id": str(uuid.uuid4()), "created_at": "2026-01-02T10:00:00+00:00", **payload
+        }
+
+        response = self.client.post(
+            f"/forum/topics/{TOPIC_ID}/replies",
+            data={"content": "Hola a todas"},
+            headers=auth_header(OUTSIDER_ID)
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        reply = response.json()["reply"]
+        self.assertEqual(reply["username"], "visitante")
+        self.assertEqual(reply["content"], "Hola a todas")
+
     def test_removed_reply_keeps_its_place_without_content(self):
         self.remove(target_type="forum_reply", target_id=REPLY_ID, reason="harassment")
 
