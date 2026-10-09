@@ -7,6 +7,10 @@ load_dotenv()
 
 resend.api_key = os.getenv("RESEND_API_KEY")
 
+# Dirección pública del sitio, para los enlaces de los correos. La variable
+# SITE_URL la reemplaza si el sitio cambia de dominio.
+SITE_URL = (os.getenv("SITE_URL") or "https://www.fribuk.com").strip().rstrip("/")
+
 
 def send_welcome_email(email: str, username: str):
     # El nombre de usuario lo escribe quien se registra: se escapa para que
@@ -181,7 +185,7 @@ def send_welcome_email(email: str, username: str):
                                             <tr>
                                                 <td align="center" style="padding: 10px 0 25px 0;">
 
-                                                    <a href="#"
+                                                    <a href="{html.escape(SITE_URL)}"
                                                         style="
                                                             display: inline-block;
                                                             background-color: #d96a32;
