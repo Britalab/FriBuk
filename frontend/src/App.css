@@ -7002,6 +7002,51 @@ button {
   font-size: 0.75rem;
 }
 
+/* Eliminar la cuenta: acción irreversible, separada del resto. */
+.support-ticket-danger {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  text-align: right;
+}
+
+.support-ticket-delete-account {
+  padding: 7px 12px;
+  border: 1px solid #c0392b;
+  border-radius: 8px;
+  background: transparent;
+  color: #c0392b;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.support-ticket-delete-account:hover:not(:disabled) {
+  background: #c0392b;
+  color: #fff;
+}
+
+.support-ticket-delete-account:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.support-ticket-delete-account:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] .support-ticket-delete-account {
+  border-color: #ff8a7a;
+  color: #ff8a7a;
+}
+
+[data-theme="dark"] .support-ticket-delete-account:hover:not(:disabled) {
+  background: #ff8a7a;
+  color: #1c1919;
+}
+
 .support-ticket-id {
   font-family: monospace;
   opacity: 0.7;

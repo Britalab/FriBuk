@@ -505,6 +505,13 @@ def clean_username(value: str | None) -> str:
             )
         )
 
+    # Prefijo reservado para las cuentas eliminadas (ver accounts.py).
+    if username.lower().startswith("eliminado_"):
+        raise HTTPException(
+            status_code=400,
+            detail="Ese nombre de usuario no está disponible"
+        )
+
     return username
 
 
@@ -7384,3 +7391,14 @@ app.include_router(moderation.router)
 import seo  # noqa: E402
 
 app.include_router(seo.router)
+
+
+
+# ============================================================
+# ELIMINACIÓN DE CUENTAS
+# ============================================================
+
+# Borrado de una cuenta a pedido de su dueña, solo administración: ver accounts.py.
+import accounts  # noqa: E402
+
+app.include_router(accounts.router)

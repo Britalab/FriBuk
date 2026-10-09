@@ -23,6 +23,8 @@ export default function SupportAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState(null);
+  // Solicitud desde la que se está eliminando una cuenta.
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const loadTickets = async () => {
@@ -45,6 +47,61 @@ export default function SupportAdmin() {
 
     loadTickets();
   }, []);
+
+  // Elimina la cuenta de quien envió la solicitud. Pide escribir el nombre
+  // de usuario: no se puede deshacer. El servidor repite todas las
+  // comprobaciones.
+  const handleDeleteAccount = async (ticket) => {
+    setDeletingId(ticket.id);
+
+    try {
+      const { data: account } = await api.get(`/admin/accounts/${ticket.user_id}`);
+
+      if (account.is_deleted) {
+        window.alert("Esta cuenta ya fue eliminada.");
+        return;
+      }
+
+      if (account.is_self || account.role === "admin") {
+        window.alert("No se puede eliminar una cuenta de administración.");
+        return;
+      }
+
+      const typed = window.prompt(
+        `Vas a ELIMINAR la cuenta @${account.username}.\n\n` +
+          `Se borrarán sus historias (${account.stories}) con sus capítulos, ` +
+          "sus listas, mensajes, seguidores, imágenes y datos de perfil, y no " +
+          "podrá volver a iniciar sesión.\n" +
+          "Sus publicaciones del foro y sus comentarios en historias de otras " +
+          "personas se conservan, firmados por un usuario eliminado.\n\n" +
+          "NO SE PUEDE DESHACER.\n\n" +
+          `Para confirmar, escribe el nombre de usuario: ${account.username}`
+      );
+
+      if (typed === null) return;
+
+      const { data: result } = await api.post(
+        `/admin/accounts/${ticket.user_id}/delete`,
+        { confirm_username: typed }
+      );
+
+      window.alert(
+        result.problems.length === 0
+          ? `La cuenta @${result.previous_username} fue eliminada.`
+          : `La cuenta @${result.previous_username} quedó sin acceso, pero ` +
+            "algunos datos no se pudieron borrar:\n\n- " +
+            result.problems.join("\n- ") +
+            "\n\nAnota esta lista para revisarlo."
+      );
+    } catch (error) {
+      console.error(error);
+      window.alert(
+        error.response?.data?.detail || "No se pudo eliminar la cuenta."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleStatusChange = async (ticketId, newStatus) => {
     try {
@@ -219,6 +276,21 @@ export default function SupportAdmin() {
                   </span>
 
                 </div>
+
+                {ticket.user_id && (
+                  <div className="support-ticket-danger">
+                    <button
+                      type="button"
+                      className="support-ticket-delete-account"
+                      onClick={() => handleDeleteAccount(ticket)}
+                      disabled={deletingId !== null}
+                    >
+                      {deletingId === ticket.id
+                        ? "Eliminando..."
+                        : "Eliminar la cuenta de quien envió esta solicitud"}
+                    </button>
+                  </div>
+                )}
 
               </article>
             ))}
