@@ -4328,8 +4328,42 @@ button {
 
 .chapter-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
+}
+
+/* Publicar un borrador desde la lista. Va sobre el enlace que cubre la
+   tarjeta completa, igual que "Editar". */
+.chapter-publish-button {
+  position: relative;
+  z-index: 1;
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 1px solid var(--orange);
+  border-radius: 999px;
+  background: var(--orange);
+  color: #fff;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.chapter-publish-button:hover:not(:disabled) {
+  filter: brightness(0.93);
+}
+
+.chapter-publish-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.chapter-publish-button:focus-visible {
+  outline: 2px solid var(--burgundy);
+  outline-offset: 3px;
 }
 
 .chapter-link,

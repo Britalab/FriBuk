@@ -19,12 +19,54 @@ export default function StoryDetail() {
   const [story, setStory] = useState(null);
   usePageTitle(story?.title);
   const [chapters, setChapters] = useState([]);
+  // Capítulo en borrador que se está publicando desde la lista.
+  const [publishingChapterId, setPublishingChapterId] = useState(null);
   const [voteCount, setVoteCount] = useState(0);
   const [ratingAverage, setRatingAverage] = useState(null);
   // Punto donde el lector dejó esta historia, si ya la empezó.
   const [readingProgress, setReadingProgress] = useState(null);
 
   const isOwner = user && story && user.id === story.author_id;
+
+  // Publica un borrador sin tener que abrir el editor. Igual que allí, pide
+  // confirmación: un capítulo publicado no vuelve a borrador.
+  const handlePublishChapter = async (chapter) => {
+    if (publishingChapterId) return;
+
+    const confirmed = window.confirm(
+      `¿Publicar «${chapter.title}»? Será visible para los lectores y no podrá volver a borrador.`
+    );
+
+    if (!confirmed) return;
+
+    setPublishingChapterId(chapter.id);
+
+    try {
+      const response = await api.put(`/chapters/${chapter.id}`, {
+        chapter_number: chapter.chapter_number,
+        title: chapter.title,
+        content: chapter.content,
+        status: "published",
+      });
+
+      const published = response.data.chapter;
+      setChapters((current) => current.map((item) => (
+        item.id === chapter.id
+          ? { ...item, ...published, status: published?.status || "published" }
+          : item
+      )));
+      showToast("Capítulo publicado correctamente. Ya es visible para los lectores.");
+    } catch (err) {
+      console.error("Error al publicar el capítulo:", err);
+      showToast(
+        err.response?.data?.detail ||
+          "No se pudo publicar el capítulo. Intenta nuevamente.",
+        "error"
+      );
+    } finally {
+      setPublishingChapterId(null);
+    }
+  };
 
   // =========================================
   // VOTO
@@ -1095,6 +1137,19 @@ export default function StoryDetail() {
                   </div>
 
                   <div className="chapter-actions">
+
+                    {isOwner && chapter.status === "draft" && (
+                      <button
+                        type="button"
+                        className="chapter-publish-button"
+                        onClick={() => handlePublishChapter(chapter)}
+                        disabled={publishingChapterId !== null}
+                      >
+                        {publishingChapterId === chapter.id
+                          ? "Publicando..."
+                          : "Publicar"}
+                      </button>
+                    )}
 
                     <Link
                       to={`/stories/${storyId}/chapters/${chapter.id}`}
