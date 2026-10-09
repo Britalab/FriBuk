@@ -2668,6 +2668,106 @@ button {
 }
 
 /* ========================================
+   AVISO DE VERSIÓN NUEVA
+   ======================================== */
+
+.update-notice {
+  position: fixed;
+  z-index: 250;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 16px;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 16px;
+  border: 1px solid var(--orange-soft);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: 0 12px 32px rgba(40, 30, 25, 0.2);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.update-notice p {
+  margin: 0;
+}
+
+.update-notice strong {
+  color: var(--burgundy);
+}
+
+.update-notice-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.update-notice-reload {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--burgundy);
+  border-radius: 10px;
+  background: var(--burgundy);
+  color: #fff;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.update-notice-reload:hover {
+  border-color: var(--burgundy-dark);
+  background: var(--burgundy-dark);
+}
+
+[data-theme="dark"] .update-notice-reload {
+  color: #1c1919;
+}
+
+.update-notice-close {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.update-notice-close:hover {
+  background: var(--bg-hover);
+  color: var(--burgundy);
+}
+
+.update-notice-reload:focus-visible,
+.update-notice-close:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .update-notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .update-notice-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* ========================================
    ETIQUETAS Y FANDOM
    ======================================== */
 

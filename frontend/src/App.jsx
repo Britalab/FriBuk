@@ -5,6 +5,7 @@ import ToastProvider from "./components/ToastProvider";
 import NotificationsProvider from "./components/NotificationsProvider";
 
 import Navbar from "./components/Navbar";
+import UpdateNotice from "./components/UpdateNotice";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
@@ -50,6 +51,7 @@ function App() {
         <NotificationsProvider>
 
         <Navbar />
+        <UpdateNotice />
 
         <Routes>
           <Route path="/" element={<Feed />} />
