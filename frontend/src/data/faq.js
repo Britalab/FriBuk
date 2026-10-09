@@ -47,6 +47,11 @@ export const FAQ = [
       "Con tu sesión iniciada, pulsa «Crear historia», completa el título, la sinopsis y el género, y luego agrega capítulos. Puedes guardar la historia y cada capítulo como borrador: mientras estén en borrador solo tú puedes verlos.",
   },
   {
+    question: "¿Cuál es la diferencia entre mi perfil y mi perfil público?",
+    answer:
+      "Tienes dos. Tu perfil es privado: solo lo ves tú, y es donde gestionas tu cuenta y tus obras, incluidos tus borradores. Tu perfil público es el que ve el resto de la gente: muestra tus historias publicadas y toda la personalización que elijas, como tu foto, tu banner, el tema y los emojis. Desde tu perfil puedes cambiarla con «Personalizar mi espacio» y comprobar cómo queda con «Ver mi perfil público».",
+  },
+  {
     question: "¿Cómo comento una historia?",
     answer:
       "Mientras lees un capítulo, haz doble clic sobre un párrafo (o tócalo dos veces en el teléfono) para comentarlo. Al final de cada capítulo también hay un espacio, «¿Qué te pareció este capítulo?», para comentarlo completo.",
