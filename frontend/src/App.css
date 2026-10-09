@@ -6984,6 +6984,75 @@ button {
 
 /* Lista de tickets */
 
+/* Solicitudes agrupadas por temática, cada grupo plegable. */
+.support-ticket-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.support-ticket-group {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+}
+
+.support-ticket-group > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 16px 20px;
+  color: var(--text-main);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.support-ticket-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.support-ticket-group > summary::before {
+  content: "▸";
+  color: var(--burgundy);
+  transition: transform 0.18s ease;
+}
+
+.support-ticket-group[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.support-ticket-group > summary:focus-visible {
+  border-radius: 16px;
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.support-ticket-group-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.support-ticket-group-open {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(230, 126, 34, 0.14);
+  color: var(--orange);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.support-ticket-group-total {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.support-ticket-group > .support-ticket-list {
+  padding: 4px 16px 16px;
+}
+
 .support-ticket-list {
   display: flex;
   flex-direction: column;
