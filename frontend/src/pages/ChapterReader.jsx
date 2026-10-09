@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { useChapterComments } from "../hooks/useChapterComments";
 import { anchorMatchesText, paragraphAnchor } from "../utils/textAnchors";
 import ReaderParagraph from "../components/reader/ReaderParagraph";
@@ -103,6 +104,7 @@ export default function ChapterReader() {
   const [chapters, setChapters] = useState([]);
   const [chapter, setChapter] = useState(null);
   const [loading, setLoading] = useState(true);
+  usePageTitle(chapter?.id === chapterId ? chapter.title : "");
 
   // Panel de comentarios abierto: un párrafo o la lista de texto editado.
   const [panelState, setPanelState] = useState(null);

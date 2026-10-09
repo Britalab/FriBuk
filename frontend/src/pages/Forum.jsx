@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/client";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 export default function Forum() {
+  usePageTitle("Foro");
   const [topics, setTopics] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);

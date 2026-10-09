@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
+import { usePageTitle } from "../hooks/usePageTitle";
 import ReportButton from "../components/moderation/ReportButton";
 import { RemoveButton, RestoreButton } from "../components/moderation/AdminModerationButtons";
 import { ModerationNotice } from "../components/moderation/ModerationNotices";
@@ -118,6 +119,7 @@ export default function ForumTopic() {
   const navigate = useNavigate();
 
   const [topic, setTopic] = useState(null);
+  usePageTitle(topic?.title);
   const [topicInteractions, setTopicInteractions] = useState(null);
   const [replies, setReplies] = useState([]);
   const [topicInteractionLoading, setTopicInteractionLoading] = useState(false);

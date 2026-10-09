@@ -1,8 +1,10 @@
 import { useSearchParams } from "react-router-dom";
 import UserSearchResult from "../components/UserSearchResult";
 import { useUserSearch } from "../hooks/useUserSearch";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 export default function Authors() {
+  usePageTitle("Autores");
   // El texto buscado vive en la URL (/autores?q=...): se puede compartir el
   // enlace y al volver atrás se conserva la búsqueda.
   const [searchParams, setSearchParams] = useSearchParams();

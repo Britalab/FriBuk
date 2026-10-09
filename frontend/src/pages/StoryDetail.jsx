@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
+import { usePageTitle } from "../hooks/usePageTitle";
 import AddToListMenu from "../components/profile/AddToListMenu";
 import { contentWarningLabels } from "../utils/contentWarnings";
 import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
@@ -16,6 +17,7 @@ export default function StoryDetail() {
   const { showToast } = useToast();
 
   const [story, setStory] = useState(null);
+  usePageTitle(story?.title);
   const [chapters, setChapters] = useState([]);
   const [voteCount, setVoteCount] = useState(0);
   const [ratingAverage, setRatingAverage] = useState(null);

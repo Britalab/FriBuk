@@ -7374,3 +7374,13 @@ app.include_router(messages_router)
 import moderation  # noqa: E402
 
 app.include_router(moderation.router)
+
+
+# ============================================================
+# BUSCADORES Y VISTAS PREVIAS AL COMPARTIR
+# ============================================================
+
+# Datos públicos de historias y mapa del sitio: ver seo.py.
+import seo  # noqa: E402
+
+app.include_router(seo.router)

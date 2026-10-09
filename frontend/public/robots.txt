@@ -1,0 +1,15 @@
+# FriBuk: las historias y el foro son públicos; lo personal no se indexa.
+User-agent: *
+Allow: /
+Disallow: /perfil
+Disallow: /mensajes
+Disallow: /notificaciones
+Disallow: /actividad
+Disallow: /support
+Disallow: /create-story
+Disallow: /login
+Disallow: /register
+Disallow: /recuperar
+Disallow: /restablecer
+
+Sitemap: https://www.fribuk.com/sitemap.xml
