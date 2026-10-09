@@ -1,12 +1,10 @@
 import { memo } from "react";
 
 // Un párrafo del capítulo. El texto se muestra siempre como texto plano:
-// el botón de comentarios va fuera de él y nunca modifica el contenido.
-// Se comenta el párrafo completo, desde ese botón.
-function ReaderParagraph({ index, text, count, isActive, canComment, onOpen }) {
-  // Las líneas en blanco entre párrafos no se comentan.
-  const showButton = count > 0 || (canComment && text.trim() !== "");
-
+// el indicador de comentarios va fuera de él y nunca modifica el contenido.
+// El indicador solo aparece cuando el párrafo ya tiene comentarios, para no
+// interrumpir la lectura; se comenta con doble clic o doble toque.
+function ReaderParagraph({ index, text, count, isActive, onOpen }) {
   return (
     <p className={`reader-paragraph${isActive ? " is-active" : ""}`}>
       <span className="reader-paragraph-text" data-paragraph-index={index}>
@@ -15,24 +13,21 @@ function ReaderParagraph({ index, text, count, isActive, canComment, onOpen }) {
           : text}
       </span>
 
-      {showButton && (
+      {count > 0 && (
         <button
           type="button"
-          className={`reader-comment-indicator${count === 0 ? " is-empty" : ""}`}
+          className="reader-comment-indicator"
           data-comment-indicator={index}
           onClick={() => onOpen(index)}
           aria-expanded={isActive}
           aria-label={
-            count === 0
-              ? "Comentar este párrafo"
-              : count === 1
+            count === 1
               ? "Ver 1 comentario de este párrafo"
               : `Ver ${count} comentarios de este párrafo`
           }
-          title={count === 0 ? "Comentar este párrafo" : undefined}
         >
           <span className="reader-comment-indicator-icon" aria-hidden="true">💬</span>
-          {count > 0 && <span aria-hidden="true">{count}</span>}
+          <span aria-hidden="true">{count}</span>
         </button>
       )}
     </p>

@@ -101,17 +101,13 @@
   }
 }
 
-/* Párrafo todavía sin comentarios: el botón invita a escribir el primero
-   sin competir con el texto. */
-.reader-comment-indicator.is-empty {
-  opacity: 0.4;
+/* Se comenta con doble toque: el navegador no debe usarlo para ampliar. */
+.reader-text {
+  touch-action: manipulation;
 }
 
-.reader-comment-indicator.is-empty:hover,
-.reader-comment-indicator.is-empty:focus-visible,
-.reader-paragraph:hover .reader-comment-indicator.is-empty,
-.reader-paragraph.is-active .reader-comment-indicator.is-empty {
-  opacity: 1;
+.reader-comments-hint-touch {
+  display: none;
 }
 
 @media (hover: none), (pointer: coarse) {
@@ -121,8 +117,12 @@
     justify-content: center;
   }
 
-  .reader-comment-indicator.is-empty {
-    opacity: 0.55;
+  .reader-comments-hint-mouse {
+    display: none;
+  }
+
+  .reader-comments-hint-touch {
+    display: inline;
   }
 }
 

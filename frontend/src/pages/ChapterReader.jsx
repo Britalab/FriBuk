@@ -13,6 +13,22 @@ import "../styles/chapter-comments.css";
 
 const NO_THREADS = [];
 
+// Doble toque en un teléfono: dos toques breves, seguidos y en el mismo
+// lugar. Un toque largo o con movimiento es desplazar o seleccionar texto.
+const TAP_MAX_DURATION = 450;
+const TAP_MAX_MOVE = 10;
+const DOUBLE_TAP_DELAY = 400;
+const DOUBLE_TAP_DISTANCE = 30;
+
+// Párrafo del capítulo sobre el que ocurrió un evento, o null.
+function paragraphIndexOf(target) {
+  if (!(target instanceof Element) || target.closest("button")) return null;
+
+  const element = target.closest(".reader-paragraph")
+    ?.querySelector("[data-paragraph-index]");
+  return element ? Number(element.dataset.paragraphIndex) : null;
+}
+
 // Progreso de lectura: se guarda el párrafo que queda bajo esta línea de la
 // pantalla (justo debajo de la barra de navegación), poco después de que
 // la persona deja de desplazarse.
@@ -302,15 +318,77 @@ export default function ChapterReader() {
       return;
     }
 
-    // Un párrafo sin comentarios se abre listo para escribir el primero.
-    const firstComment =
-      user && !threadsByParagraph.has(index)
-        ? paragraphAnchor(paragraphs[index], index, MAX_CHAPTER_QUOTE_LENGTH)
-        : null;
-
-    setPanelState({ chapterId, mode: "paragraph", index, draft: firstComment });
+    setPanelState({ chapterId, mode: "paragraph", index, draft: null });
     scrollToParagraph(index);
-  }, [chapterId, scrollToParagraph, user, threadsByParagraph, paragraphs]);
+  }, [chapterId, scrollToParagraph]);
+
+  // Doble clic o doble toque sobre un párrafo: se abre listo para comentarlo.
+  const commentParagraph = useCallback((index) => {
+    if (!commentsEnabled || index === null) return;
+
+    const anchor = paragraphAnchor(
+      paragraphs[index], index, MAX_CHAPTER_QUOTE_LENGTH
+    );
+    // Las líneas en blanco entre párrafos no se comentan.
+    if (!anchor) return;
+
+    // El doble clic del ratón deja una palabra seleccionada.
+    window.getSelection?.()?.removeAllRanges();
+
+    setPanelState((current) => (
+      // Si ya se está escribiendo sobre ese párrafo, no se toca el borrador.
+      current?.chapterId === chapterId &&
+      current.mode === "paragraph" &&
+      current.index === index &&
+      current.draft
+        ? current
+        // Sin sesión, el panel invita a iniciarla.
+        : { chapterId, mode: "paragraph", index, draft: user ? anchor : null }
+    ));
+    scrollToParagraph(index);
+  }, [commentsEnabled, paragraphs, chapterId, user, scrollToParagraph]);
+
+  const tapRef = useRef({ start: null, last: null });
+
+  const handleTextPointerDown = (event) => {
+    tapRef.current.start =
+      event.pointerType === "mouse"
+        ? null
+        : { id: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp };
+  };
+
+  const handleTextPointerUp = (event) => {
+    const taps = tapRef.current;
+    const start = taps.start;
+    taps.start = null;
+
+    if (
+      !start ||
+      start.id !== event.pointerId ||
+      event.timeStamp - start.time > TAP_MAX_DURATION ||
+      Math.hypot(event.clientX - start.x, event.clientY - start.y) > TAP_MAX_MOVE
+    ) {
+      taps.last = null;
+      return;
+    }
+
+    const index = paragraphIndexOf(event.target);
+    const last = taps.last;
+    const isDoubleTap =
+      last &&
+      index !== null &&
+      last.index === index &&
+      event.timeStamp - last.time <= DOUBLE_TAP_DELAY &&
+      Math.hypot(event.clientX - last.x, event.clientY - last.y) <= DOUBLE_TAP_DISTANCE;
+
+    if (isDoubleTap) {
+      taps.last = null;
+      commentParagraph(index);
+      return;
+    }
+
+    taps.last = { index, x: event.clientX, y: event.clientY, time: event.timeStamp };
+  };
 
   // "Comentar este párrafo" en un párrafo que ya tiene comentarios.
   const startDraft = useCallback(() => {
@@ -438,7 +516,14 @@ export default function ChapterReader() {
 
         {/* Texto */}
         <div className="reader-text-area">
-          <div className="reader-text" ref={textRef}>
+          <div
+            className="reader-text"
+            ref={textRef}
+            onDoubleClick={(event) => commentParagraph(paragraphIndexOf(event.target))}
+            onPointerDown={handleTextPointerDown}
+            onPointerUp={handleTextPointerUp}
+            onPointerCancel={() => { tapRef.current.start = null; }}
+          >
             {paragraphs.map((paragraph, index) => (
               <ReaderParagraph
                 key={index}
@@ -446,7 +531,6 @@ export default function ChapterReader() {
                 text={paragraph}
                 count={countByParagraph.get(index) || 0}
                 isActive={index === activeIndex}
-                canComment={commentsEnabled}
                 onOpen={openParagraph}
               />
             ))}
@@ -458,8 +542,12 @@ export default function ChapterReader() {
         {commentsEnabled && (
           <div className="reader-comments-footer">
             <p className="reader-comments-hint">
-              Usa el <span aria-hidden="true">💬</span> junto a cada
-              párrafo para comentarlo.
+              <span className="reader-comments-hint-mouse">
+                Haz doble clic en un párrafo para comentarlo.
+              </span>
+              <span className="reader-comments-hint-touch">
+                Toca dos veces un párrafo para comentarlo.
+              </span>
             </p>
 
             {orphanCount > 0 && (
