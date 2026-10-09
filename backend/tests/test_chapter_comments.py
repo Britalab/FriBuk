@@ -204,6 +204,8 @@ CONTENT = "\n".join([
 ])
 
 QUOTE = "Juanito le dijo que sí."
+# Los comentarios se hacen sobre el párrafo completo.
+MARIA = "María no supo qué responder y miró hacia la ventana abierta."
 
 
 def auth_header(user_id):
@@ -406,38 +408,57 @@ class ChapterCommentsTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_anchor_is_built_from_the_stored_text(self):
-        comment_id = self.create_comment_id(**anchor_payload(3, "miró hacia la ventana"))
+        comment_id = self.create_comment_id(**anchor_payload(3, MARIA))
         row = self.stored(comment_id)
         paragraph = CONTENT.split("\n")[3]
 
-        self.assertEqual(
-            paragraph[row["start_offset"]:row["end_offset"]], "miró hacia la ventana"
-        )
-        self.assertEqual(row["quote"], "miró hacia la ventana")
-        self.assertTrue(row["prefix"].endswith("y "))
-        self.assertTrue(row["suffix"].startswith(" abierta."))
+        self.assertEqual(paragraph[row["start_offset"]:row["end_offset"]], MARIA)
+        self.assertEqual(row["quote"], MARIA)
+        self.assertTrue(row["prefix"].endswith("que sí.\n"))
+        self.assertTrue(row["suffix"].startswith("\n—Sí."))
         self.assertEqual(row["user_id"], ALICE_ID)
 
-    def test_selection_is_trimmed(self):
-        paragraph = CONTENT.split("\n")[3]
-        start = paragraph.index(" miró hacia ")
+    def test_only_whole_paragraphs_can_be_commented(self):
+        # Una palabra o una frase suelta no se acepta, aunque exista.
+        for fragment in ("María", "miró hacia la ventana"):
+            response = self.create_comment(**anchor_payload(3, fragment))
+            self.assertEqual(response.status_code, 409, response.text)
+
+        self.assertEqual(self.database.tables["chapter_comments"], [])
+
+    def test_positions_sent_by_the_browser_are_ignored(self):
         response = self.create_comment(
-            content="Hola",
-            paragraph_index=3,
-            start_offset=start,
-            end_offset=start + len(" miró hacia "),
-            quote=" miró hacia "
+            content="Hola", paragraph_index=3, start_offset=0, end_offset=5,
+            quote=MARIA
         )
         self.assertEqual(response.status_code, 200, response.text)
-        self.assertEqual(response.json()["comment"]["quote"], "miró hacia")
+
+        comment = response.json()["comment"]
+        self.assertEqual(comment["quote"], MARIA)
+        self.assertEqual(
+            (comment["start_offset"], comment["end_offset"]), (0, len(MARIA))
+        )
+
+    def test_empty_paragraph_cannot_be_commented(self):
+        response = self.create_comment(content="Hola", paragraph_index=1, quote="x")
+        self.assertEqual(response.status_code, 409)
+
+    def test_paragraph_is_quoted_without_surrounding_spaces(self):
+        self.database.tables["chapters"][0]["content"] = "   Hola, mundo.  "
+        response = self.create_comment(
+            content="Hola", paragraph_index=0, quote="  Hola, mundo. "
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+
+        comment = response.json()["comment"]
+        self.assertEqual(comment["quote"], "Hola, mundo.")
+        self.assertEqual((comment["start_offset"], comment["end_offset"]), (3, 15))
 
     def test_offsets_count_unicode_characters(self):
-        quote = "antes de salir"
-        comment_id = self.create_comment_id(**anchor_payload(5, quote))
+        paragraph = CONTENT.split("\n")[5]
+        comment_id = self.create_comment_id(**anchor_payload(5, paragraph))
         row = self.stored(comment_id)
-        self.assertEqual(
-            CONTENT.split("\n")[5][row["start_offset"]:row["end_offset"]], quote
-        )
+        self.assertEqual((row["start_offset"], row["end_offset"]), (0, len(paragraph)))
 
     def test_stale_selection_is_rejected(self):
         payload = anchor_payload(2, QUOTE)
@@ -457,14 +478,27 @@ class ChapterCommentsTestCase(unittest.TestCase):
         payload = anchor_payload(2, QUOTE, text="x" * 1001)
         self.assertEqual(self.create_comment(**payload).status_code, 400)
 
-    def test_long_fragment_is_rejected(self):
-        long_content = "a" * 700
-        self.database.tables["chapters"][0]["content"] = long_content
+    def test_long_paragraph_is_quoted_from_its_start(self):
+        # La cita guardada tiene un máximo: de un párrafo más largo se
+        # cita el comienzo, sin partir una palabra.
+        long_paragraph = " ".join(["palabra"] * 120)
+        self.database.tables["chapters"][0]["content"] = long_paragraph
+        expected = " ".join(["palabra"] * 75)
+
         response = self.create_comment(
-            content="Muy largo", paragraph_index=0, start_offset=0,
-            end_offset=700, quote=long_content
+            content="Muy largo", paragraph_index=0, quote=expected
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200, response.text)
+
+        comment = response.json()["comment"]
+        self.assertEqual(comment["quote"], expected)
+        self.assertLessEqual(len(comment["quote"]), 600)
+
+        # El párrafo completo supera el máximo: no es la cita válida.
+        response = self.create_comment(
+            content="Muy largo", paragraph_index=0, quote=long_paragraph
+        )
+        self.assertEqual(response.status_code, 409)
 
     def test_only_published_visible_chapters_accept_comments(self):
         for chapter_id in (DRAFT_CHAPTER_ID, HIDDEN_CHAPTER_ID, str(uuid.uuid4()), "abc"):
@@ -481,7 +515,7 @@ class ChapterCommentsTestCase(unittest.TestCase):
     def test_comments_in_several_paragraphs(self):
         self.create_comment_id()
         self.create_comment_id(user_id=BOB_ID)
-        self.create_comment_id(**anchor_payload(3, "María"))
+        self.create_comment_id(**anchor_payload(3, MARIA))
 
         response = self.get_comments()
         self.assertEqual(response.status_code, 200)
@@ -708,7 +742,7 @@ class ChapterCommentsTestCase(unittest.TestCase):
         self.assertEqual(len(self.database.tables["chapter_comment_reactions"]), 1)
 
         # El usuario puede reaccionar por separado en otro comentario.
-        other_id = self.create_comment_id(**anchor_payload(3, "María"))
+        other_id = self.create_comment_id(**anchor_payload(3, MARIA))
         self.assertEqual(self.react(other_id, "fire").json()["reactions"], {"fire": 1})
         self.assertEqual(len(self.database.tables["chapter_comment_reactions"]), 2)
 

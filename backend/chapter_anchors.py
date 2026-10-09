@@ -75,6 +75,44 @@ def build_anchor(
     }
 
 
+def build_paragraph_anchor(
+    content: str | None,
+    paragraph_index: int,
+    max_length: int
+) -> dict | None:
+    # Anclaje de un párrafo completo: se comenta por párrafo, no por
+    # palabra. La cita tiene un largo máximo, así que de un párrafo más
+    # largo se cita el comienzo, sin partir una palabra. Devuelve None si
+    # el párrafo no existe o está vacío.
+    paragraphs = split_paragraphs(content)
+
+    if not (0 <= paragraph_index < len(paragraphs)):
+        return None
+
+    anchor = build_anchor(
+        content, paragraph_index, 0, len(paragraphs[paragraph_index])
+    )
+
+    if anchor is None or len(anchor["quote"]) <= max_length:
+        return anchor
+
+    quote = anchor["quote"][:max_length]
+    last_space = max(
+        (position for position, character in enumerate(quote) if character.isspace()),
+        default=0
+    )
+    if last_space > 0:
+        quote = quote[:last_space]
+    quote = quote.rstrip()
+
+    return build_anchor(
+        content,
+        paragraph_index,
+        anchor["start_offset"],
+        anchor["start_offset"] + len(quote)
+    )
+
+
 def _prefix_matches(text: str, position: int, prefix: str) -> bool:
     # Un contexto más corto que el máximo significa que la cita estaba
     # pegada al inicio del capítulo: solo coincide si sigue estándolo.

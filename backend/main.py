@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr
 from email_service import send_welcome_email
 import admin_alerts
-from chapter_anchors import build_anchor, locate_anchor
+from chapter_anchors import build_paragraph_anchor, locate_anchor
 from profile_catalog import (
     DEFAULT_PROFILE_THEME,
     MAX_AMBIENT_DECORATIONS,
@@ -7097,38 +7097,24 @@ def create_chapter_comment(
             "suffix": None
         })
     else:
-        if (
-            comment.paragraph_index is None
-            or comment.start_offset is None
-            or comment.end_offset is None
-            or not (comment.quote or "").strip()
-        ):
+        if comment.paragraph_index is None or not (comment.quote or "").strip():
             raise HTTPException(
                 status_code=400,
-                detail="Selecciona el fragmento del texto que quieres comentar"
+                detail="Elige el párrafo que quieres comentar"
             )
 
-        # El anclaje se construye con el texto guardado del capítulo, no
-        # con lo que envía el navegador. Si no coinciden, el capítulo
-        # cambió desde que el lector lo abrió.
-        anchor = build_anchor(
+        # Se comenta el párrafo completo, nunca una palabra o una frase
+        # suelta: las posiciones que envíe el navegador no se usan. El
+        # anclaje sale del texto guardado del capítulo; si no coincide con
+        # lo que el lector tenía a la vista, el capítulo cambió.
+        anchor = build_paragraph_anchor(
             chapter.get("content"),
             comment.paragraph_index,
-            comment.start_offset,
-            comment.end_offset
+            CHAPTER_COMMENT_QUOTE_MAX_LENGTH
         )
 
         if anchor is None or anchor["quote"] != comment.quote.strip():
             raise HTTPException(status_code=409, detail=CHAPTER_CHANGED_DETAIL)
-
-        if len(anchor["quote"]) > CHAPTER_COMMENT_QUOTE_MAX_LENGTH:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "El fragmento seleccionado no puede superar los "
-                    f"{CHAPTER_COMMENT_QUOTE_MAX_LENGTH} caracteres"
-                )
-            )
 
         comment_data.update(anchor)
 
