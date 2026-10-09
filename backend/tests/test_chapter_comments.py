@@ -312,6 +312,71 @@ class ChapterCommentsTestCase(unittest.TestCase):
             headers=auth_header(user_id)
         )
 
+    # ---------- comentarios generales del capítulo ----------
+
+    def test_general_comment_needs_no_fragment(self):
+        response = self.create_comment(content="Me encantó el capítulo", general=True)
+        self.assertEqual(response.status_code, 200, response.text)
+
+        comment = response.json()["comment"]
+        self.assertTrue(comment["is_general"])
+        self.assertIsNone(comment["paragraph_index"])
+        self.assertIsNone(comment["quote"])
+
+        row = self.stored(comment["id"])
+        for field in ("paragraph_index", "start_offset", "end_offset", "quote"):
+            self.assertIsNone(row[field])
+
+    def test_general_and_paragraph_comments_are_told_apart(self):
+        general_id = self.create_comment_id(content="En general, bien", general=True)
+        paragraph_id = self.create_comment_id()
+
+        listed = {
+            comment["id"]: comment
+            for comment in self.get_comments().json()["comments"]
+        }
+        self.assertTrue(listed[general_id]["is_general"])
+        self.assertFalse(listed[paragraph_id]["is_general"])
+
+    def test_general_comment_accepts_replies(self):
+        general_id = self.create_comment_id(content="Qué final", general=True)
+        reply = self.create_comment(
+            user_id=BOB_ID, content="Totalmente", parent_id=general_id
+        )
+        self.assertEqual(reply.status_code, 200, reply.text)
+        # Una respuesta no es un comentario general por sí misma.
+        self.assertFalse(reply.json()["comment"]["is_general"])
+
+    def test_general_comment_survives_chapter_edits(self):
+        general_id = self.create_comment_id(content="Gran capítulo", general=True)
+
+        response = self.edit_chapter("Un texto completamente nuevo.")
+        self.assertEqual(response.status_code, 200, response.text)
+
+        self.assertFalse(self.stored(general_id).get("is_orphaned"))
+        listed = self.get_comments().json()["comments"]
+        self.assertEqual([comment["id"] for comment in listed], [general_id])
+        self.assertFalse(listed[0]["is_orphaned"])
+
+    def test_general_comment_follows_the_usual_rules(self):
+        # Sin sesión, sin texto o en un capítulo no publicado: no se acepta.
+        anonymous = self.client.post(
+            f"/chapters/{CHAPTER_ID}/comments",
+            json={"content": "Hola", "general": True}
+        )
+        self.assertIn(anonymous.status_code, (401, 403))
+        self.assertEqual(
+            self.create_comment(content="   ", general=True).status_code, 400
+        )
+        self.assertEqual(
+            self.create_comment(
+                chapter_id=DRAFT_CHAPTER_ID, content="Hola", general=True
+            ).status_code,
+            404
+        )
+        # Sin marcarlo como general, sigue haciendo falta el párrafo.
+        self.assertEqual(self.create_comment(content="Hola").status_code, 400)
+
     # ---------- crear ----------
 
     def test_authenticated_user_can_comment(self):

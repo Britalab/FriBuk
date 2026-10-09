@@ -354,8 +354,10 @@ ChapterCommentReactionValue = Literal[
 
 class ChapterCommentCreate(BaseModel):
     content: str
-    # Una respuesta indica parent_id; un comentario nuevo indica el fragmento.
+    # Una respuesta indica parent_id; un comentario de párrafo indica el
+    # fragmento; un comentario general del capítulo indica general = true.
     parent_id: str | None = None
+    general: bool = False
     paragraph_index: int | None = None
     start_offset: int | None = None
     end_offset: int | None = None
@@ -6851,6 +6853,8 @@ def serialize_chapter_comment(
         "start_offset": None if is_reply else row.get("start_offset"),
         "end_offset": None if is_reply else row.get("end_offset"),
         "quote": None if is_reply else row.get("quote"),
+        # Comentario principal sin párrafo: es sobre el capítulo completo.
+        "is_general": not is_reply and row.get("paragraph_index") is None,
         "is_orphaned": bool(row.get("is_orphaned")),
         "reactions": counts_by_comment.get(comment_id, {}),
         "my_reaction": viewer_reactions.get(comment_id),
@@ -6925,6 +6929,11 @@ def reanchor_chapter_comments(chapter_id: str, content: str | None) -> None:
     moved_ids_by_anchor = {}
 
     for row in rows:
+        # Un comentario general no apunta a ningún texto: editar el
+        # capítulo no lo afecta.
+        if row.get("paragraph_index") is None:
+            continue
+
         anchor = locate_anchor(content, row)
 
         if anchor is None:
@@ -7055,7 +7064,11 @@ def create_chapter_comment(
     limit_chapter_comment_requests("write", user_id)
 
     is_reply = comment.parent_id is not None
-    chapter = get_visible_chapter(chapter_id, with_content=not is_reply)
+    # Comentario sobre el capítulo completo, sin apuntar a un párrafo.
+    is_general = not is_reply and comment.general
+    chapter = get_visible_chapter(
+        chapter_id, with_content=not (is_reply or is_general)
+    )
 
     comment_data = {
         "chapter_id": chapter["id"],
@@ -7074,6 +7087,15 @@ def create_chapter_comment(
             )
 
         comment_data["parent_id"] = str(parent["id"])
+    elif is_general:
+        comment_data.update({
+            "paragraph_index": None,
+            "start_offset": None,
+            "end_offset": None,
+            "quote": None,
+            "prefix": None,
+            "suffix": None
+        })
     else:
         if (
             comment.paragraph_index is None

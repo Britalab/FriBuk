@@ -86,8 +86,6 @@
 .reader-reaction-picker button:focus-visible,
 .reader-emoji-toggle:focus-visible,
 .reader-emoji-picker button:focus-visible,
-.reader-selection-action button:focus-visible,
-.reader-selection-action a:focus-visible,
 .reader-comment-author:focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
@@ -103,55 +101,69 @@
   }
 }
 
-/* ---------- Acción "Comentar" al seleccionar texto ---------- */
-
-.reader-selection-action {
-  position: absolute;
-  z-index: 20;
-  transform: translateX(-50%);
-  -webkit-user-select: none;
-  user-select: none;
+/* Párrafo todavía sin comentarios: el botón invita a escribir el primero
+   sin competir con el texto. */
+.reader-comment-indicator.is-empty {
+  opacity: 0.4;
 }
 
-.reader-selection-action.is-docked {
-  position: fixed;
-  z-index: 130;
-  left: 50%;
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+.reader-comment-indicator.is-empty:hover,
+.reader-comment-indicator.is-empty:focus-visible,
+.reader-paragraph:hover .reader-comment-indicator.is-empty,
+.reader-paragraph.is-active .reader-comment-indicator.is-empty {
+  opacity: 1;
 }
 
-.reader-selection-action button,
-.reader-selection-action a {
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 15px;
-  border: 1px solid var(--burgundy);
-  border-radius: 999px;
-  background: var(--burgundy);
-  color: #fff;
+@media (hover: none), (pointer: coarse) {
+  .reader-comment-indicator {
+    min-width: 34px;
+    min-height: 30px;
+    justify-content: center;
+  }
+
+  .reader-comment-indicator.is-empty {
+    opacity: 0.55;
+  }
+}
+
+.reader-comment-start {
+  align-self: flex-start;
+  margin-bottom: 16px;
+}
+
+/* ---------- ¿Qué te pareció este capítulo? ---------- */
+
+.reader-general-comments {
+  margin-top: 48px;
+  padding: 24px 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
   font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 0.84rem;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(41, 37, 37, 0.18);
-  touch-action: manipulation;
+  text-align: left;
 }
 
-.reader-selection-action.is-docked button,
-.reader-selection-action.is-docked a {
-  min-height: 44px;
-  padding: 10px 20px;
-  font-size: 0.9rem;
+.reader-general-comments h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  color: var(--text-main);
+  font-size: 1.15rem;
+  line-height: 1.3;
 }
 
-[data-theme="dark"] .reader-selection-action button,
-[data-theme="dark"] .reader-selection-action a {
-  color: #1c1919;
+.reader-general-list {
+  margin-top: 22px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 600px) {
+  .reader-general-comments {
+    padding: 20px 16px;
+  }
 }
 
 /* ---------- Pie del texto ---------- */
@@ -172,95 +184,10 @@
   font-size: 0.8rem;
 }
 
-.reader-comments-hint-touch {
-  display: none;
-}
-
-/* Aviso táctil: ocupa el lugar de la acción "Comentar" hasta que se usa. */
-.reader-tap-hint {
-  position: fixed;
-  z-index: 125;
-  left: 50%;
-  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  max-width: calc(100vw - 28px);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 6px 6px 15px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--bg-card);
-  color: var(--text-main);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 0.86rem;
-  font-weight: 600;
-  box-shadow: 0 8px 24px rgba(41, 37, 37, 0.16);
-  transform: translateX(-50%);
-  animation: reader-tap-hint-in 0.25s ease both;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-.reader-tap-hint p {
-  margin: 0;
-}
-
-.reader-tap-hint button {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.reader-tap-hint button:focus-visible {
-  outline: 2px solid var(--orange);
-  outline-offset: 2px;
-}
-
-@keyframes reader-tap-hint-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 10px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reader-tap-hint {
-    animation: none;
-  }
-}
-
-/* En pantallas táctiles se comenta tocando una frase. */
+/* Sin el destello gris del navegador al tocar el texto. */
 @media (hover: none), (pointer: coarse) {
-  .reader-comments-hint-mouse {
-    display: none;
-  }
-
-  .reader-comments-hint-touch {
-    display: inline;
-  }
-
-  /* Sin el destello gris del navegador al tocar el texto. */
   .reader-text {
     -webkit-tap-highlight-color: transparent;
-  }
-}
-
-/* Con la bandeja de comentarios abierta, la acción queda justo encima. */
-@media (max-width: 1099px) {
-  .reader-page.has-comments-panel .reader-selection-action.is-docked {
-    bottom: calc(62vh + 12px);
-    bottom: calc(min(62dvh, 560px) + 12px);
   }
 }
 

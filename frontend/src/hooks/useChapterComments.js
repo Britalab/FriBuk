@@ -68,6 +68,19 @@ export function useChapterComments(chapterId, enabled, userId) {
     return data.comment;
   }, [chapterId, updateComments]);
 
+  // Comentario sobre el capítulo completo, sin párrafo.
+  const createGeneralComment = useCallback(async (content) => {
+    const data = await request(
+      () => api.post(`/chapters/${chapterId}/comments`, {
+        content,
+        general: true,
+      }),
+      "No se pudo publicar el comentario."
+    );
+    updateComments((current) => [...current, data.comment]);
+    return data.comment;
+  }, [chapterId, updateComments]);
+
   const createReply = useCallback(async (parentId, content) => {
     const data = await request(
       () => api.post(`/chapters/${chapterId}/comments`, {
@@ -121,6 +134,7 @@ export function useChapterComments(chapterId, enabled, userId) {
   return {
     comments,
     createComment,
+    createGeneralComment,
     createReply,
     updateComment,
     deleteComment,

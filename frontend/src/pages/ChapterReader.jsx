@@ -4,20 +4,14 @@ import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import { useChapterComments } from "../hooks/useChapterComments";
-import { anchorMatchesText } from "../utils/textAnchors";
+import { anchorMatchesText, paragraphAnchor } from "../utils/textAnchors";
 import ReaderParagraph from "../components/reader/ReaderParagraph";
-import SelectionCommentAction from "../components/reader/SelectionCommentAction";
+import ChapterGeneralComments from "../components/reader/ChapterGeneralComments";
 import ChapterCommentsPanel from "../components/reader/ChapterCommentsPanel";
 import { MAX_CHAPTER_QUOTE_LENGTH } from "../components/reader/chapterReactions";
 import "../styles/chapter-comments.css";
 
 const NO_THREADS = [];
-
-// Aviso para pantallas táctiles: explica que se comenta tocando una frase.
-// Se oculta solo a los pocos segundos y vuelve en el siguiente capítulo
-// hasta que la persona lo cierra o comenta por primera vez.
-const TAP_HINT_KEY = "fribuk-reader-tap-hint";
-const TAP_HINT_DURATION = 10000;
 
 // Progreso de lectura: se guarda el párrafo que queda bajo esta línea de la
 // pantalla (justo debajo de la barra de navegación), poco después de que
@@ -26,33 +20,16 @@ const READING_LINE = 110;
 const PROGRESS_SCROLL_DELAY = 400;
 const PROGRESS_SAVE_DELAY = 1500;
 
-function shouldShowTapHint() {
-  try {
-    return (
-      window.matchMedia("(hover: none), (pointer: coarse)").matches &&
-      localStorage.getItem(TAP_HINT_KEY) !== "seen"
-    );
-  } catch {
-    return false;
-  }
-}
-
-function rememberTapHintSeen() {
-  try {
-    localStorage.setItem(TAP_HINT_KEY, "seen");
-  } catch {
-    // Sin almacenamiento, el aviso simplemente vuelve a aparecer.
-  }
-}
-
 // Organiza los comentarios del capítulo por párrafo. Un comentario cuyo
 // fragmento ya no coincide con el texto nunca se asigna a otro párrafo:
-// pasa a la lista de comentarios de texto editado.
+// pasa a la lista de comentarios de texto editado. Los comentarios sobre
+// el capítulo completo van aparte, al final.
 function organizeComments(comments, paragraphs) {
   const repliesByParent = new Map();
   const threadsByParagraph = new Map();
   const countByParagraph = new Map();
   const orphanThreads = [];
+  const generalThreads = [];
 
   for (const comment of comments) {
     if (!comment.parent_id) continue;
@@ -64,6 +41,11 @@ function organizeComments(comments, paragraphs) {
 
   for (const comment of comments) {
     if (comment.parent_id) continue;
+
+    if (comment.is_general) {
+      generalThreads.push(comment);
+      continue;
+    }
 
     const index = comment.paragraph_index;
     const isLocated =
@@ -88,7 +70,13 @@ function organizeComments(comments, paragraphs) {
     threads.sort((a, b) => a.start_offset - b.start_offset);
   }
 
-  return { repliesByParent, threadsByParagraph, countByParagraph, orphanThreads };
+  return {
+    repliesByParent,
+    threadsByParagraph,
+    countByParagraph,
+    orphanThreads,
+    generalThreads,
+  };
 }
 
 export default function ChapterReader() {
@@ -102,11 +90,6 @@ export default function ChapterReader() {
 
   // Panel de comentarios abierto: un párrafo o la lista de texto editado.
   const [panelState, setPanelState] = useState(null);
-  // Frase tocada en un teléfono, resaltada antes de comentarla.
-  const [previewState, setPreviewState] = useState(null);
-  const [tapHintEnabled, setTapHintEnabled] = useState(shouldShowTapHint);
-  // Capítulo en el que el aviso táctil ya se ocultó por tiempo.
-  const [tapHintExpiredFor, setTapHintExpiredFor] = useState(null);
   const textRef = useRef(null);
 
   useEffect(() => {
@@ -142,8 +125,13 @@ export default function ChapterReader() {
     [chapter]
   );
 
-  const { repliesByParent, threadsByParagraph, countByParagraph, orphanThreads } =
-    useMemo(() => organizeComments(comments, paragraphs), [comments, paragraphs]);
+  const {
+    repliesByParent,
+    threadsByParagraph,
+    countByParagraph,
+    orphanThreads,
+    generalThreads,
+  } = useMemo(() => organizeComments(comments, paragraphs), [comments, paragraphs]);
 
   // El progreso solo se guarda para lectores con sesión y capítulos publicados.
   const tracksProgress = Boolean(user) && commentsEnabled;
@@ -268,60 +256,6 @@ export default function ChapterReader() {
       ? orphanThreads
       : threadsByParagraph.get(activeIndex) || NO_THREADS;
 
-  // Fragmentos resaltados en el párrafo abierto.
-  const activeRanges = useMemo(() => {
-    if (activeIndex === null) return null;
-
-    const ranges = activeThreads.map((thread) => ({
-      start: thread.start_offset,
-      end: thread.end_offset,
-    }));
-    if (draft) ranges.push({ start: draft.startOffset, end: draft.endOffset });
-
-    return ranges;
-  }, [activeIndex, activeThreads, draft]);
-
-  const preview =
-    previewState?.chapterId === chapterId ? previewState.anchor : null;
-  const previewIndex = preview ? preview.paragraphIndex : null;
-
-  const previewRanges = useMemo(() => {
-    if (!preview) return null;
-
-    const range = { start: preview.startOffset, end: preview.endOffset };
-    return previewIndex === activeIndex && activeRanges
-      ? [...activeRanges, range]
-      : [range];
-  }, [preview, previewIndex, activeIndex, activeRanges]);
-
-  const dismissTapHint = useCallback(() => {
-    setTapHintEnabled(false);
-    rememberTapHintSeen();
-  }, []);
-
-  const showPreview = useCallback((anchor) => {
-    setPreviewState(anchor ? { chapterId, anchor } : null);
-    // Quien ya tocó una frase no necesita el aviso.
-    if (anchor) dismissTapHint();
-  }, [chapterId, dismissTapHint]);
-
-  const tapHintVisible =
-    tapHintEnabled &&
-    commentsEnabled &&
-    tapHintExpiredFor !== chapterId &&
-    !preview &&
-    !panel;
-
-  useEffect(() => {
-    if (!tapHintVisible) return undefined;
-
-    const timer = setTimeout(
-      () => setTapHintExpiredFor(chapterId),
-      TAP_HINT_DURATION
-    );
-    return () => clearTimeout(timer);
-  }, [tapHintVisible, chapterId]);
-
   const focusIndicator = useCallback((index) => {
     if (index === null || index === undefined) return;
     document
@@ -368,27 +302,27 @@ export default function ChapterReader() {
       return;
     }
 
-    setPanelState({ chapterId, mode: "paragraph", index, draft: null });
+    // Un párrafo sin comentarios se abre listo para escribir el primero.
+    const firstComment =
+      user && !threadsByParagraph.has(index)
+        ? paragraphAnchor(paragraphs[index], index, MAX_CHAPTER_QUOTE_LENGTH)
+        : null;
+
+    setPanelState({ chapterId, mode: "paragraph", index, draft: firstComment });
     scrollToParagraph(index);
-  }, [chapterId, scrollToParagraph]);
+  }, [chapterId, scrollToParagraph, user, threadsByParagraph, paragraphs]);
 
-  const startComment = useCallback((anchor) => {
-    if (Array.from(anchor.quote).length > MAX_CHAPTER_QUOTE_LENGTH) {
-      showToast(
-        `Selecciona un fragmento más corto (máximo ${MAX_CHAPTER_QUOTE_LENGTH} caracteres).`,
-        "error"
-      );
-      return;
-    }
+  // "Comentar este párrafo" en un párrafo que ya tiene comentarios.
+  const startDraft = useCallback(() => {
+    if (activeIndex === null) return;
 
-    setPanelState({
-      chapterId,
-      mode: "paragraph",
-      index: anchor.paragraphIndex,
-      draft: anchor,
-    });
-    scrollToParagraph(anchor.paragraphIndex);
-  }, [chapterId, scrollToParagraph, showToast]);
+    const anchor = paragraphAnchor(
+      paragraphs[activeIndex], activeIndex, MAX_CHAPTER_QUOTE_LENGTH
+    );
+    if (!anchor) return;
+
+    setPanelState((current) => (current ? { ...current, draft: anchor } : current));
+  }, [activeIndex, paragraphs]);
 
   const closePanel = useCallback(() => {
     setPanelState(null);
@@ -512,53 +446,20 @@ export default function ChapterReader() {
                 text={paragraph}
                 count={countByParagraph.get(index) || 0}
                 isActive={index === activeIndex}
-                ranges={
-                  index === previewIndex
-                    ? previewRanges
-                    : index === activeIndex
-                    ? activeRanges
-                    : null
-                }
+                canComment={commentsEnabled}
                 onOpen={openParagraph}
               />
             ))}
           </div>
 
-          {commentsEnabled && (
-            <SelectionCommentAction
-              containerRef={textRef}
-              isAuthenticated={Boolean(user)}
-              onComment={startComment}
-              onPreview={showPreview}
-            />
-          )}
-
-          {tapHintVisible && (
-            <div className="reader-tap-hint" role="status">
-              <span aria-hidden="true">💬</span>
-              <p>Toca una frase para comentarla</p>
-              <button
-                type="button"
-                onClick={dismissTapHint}
-                aria-label="Cerrar aviso"
-              >
-                <span aria-hidden="true">×</span>
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Comentarios */}
         {commentsEnabled && (
           <div className="reader-comments-footer">
             <p className="reader-comments-hint">
-              <span className="reader-comments-hint-mouse">
-                Selecciona una parte del texto para comentarla.
-              </span>
-              <span className="reader-comments-hint-touch">
-                Toca una frase para comentarla, o mantén presionado para
-                elegir un fragmento exacto.
-              </span>
+              Usa el <span aria-hidden="true">💬</span> junto a cada
+              párrafo para comentarlo.
             </p>
 
             {orphanCount > 0 && (
@@ -579,6 +480,15 @@ export default function ChapterReader() {
               </button>
             )}
           </div>
+        )}
+
+        {commentsEnabled && (
+          <ChapterGeneralComments
+            threads={generalThreads}
+            repliesByParent={repliesByParent}
+            isAuthenticated={Boolean(user)}
+            actions={commentActions}
+          />
         )}
 
         {/* Navegación */}
@@ -650,6 +560,7 @@ export default function ChapterReader() {
           isAuthenticated={Boolean(user)}
           actions={commentActions}
           onSubmitDraft={submitDraft}
+          onStartDraft={startDraft}
           onCancelDraft={cancelDraft}
           onClose={closePanel}
         />

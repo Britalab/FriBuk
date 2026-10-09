@@ -22,12 +22,14 @@ function formatDate(value) {
   });
 }
 
-// Formulario compartido para comentar, responder y editar.
-function CommentForm({
+// Formulario compartido para comentar, responder y editar. Sin `onCancel`
+// no muestra el botón de cancelar (el formulario fijo del final del capítulo).
+export function CommentForm({
   label,
   placeholder,
   submitLabel,
   initialValue = "",
+  autoFocus = true,
   onSubmit,
   onCancel,
 }) {
@@ -43,11 +45,11 @@ function CommentForm({
 
   useEffect(() => {
     const textarea = textareaRef.current;
-    if (!textarea) return;
+    if (!textarea || !autoFocus) return;
 
     textarea.focus({ preventScroll: true });
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-  }, []);
+  }, [autoFocus]);
 
   // Escribe un emoji donde está el cursor. Los emojis también se pueden
   // escribir con el teclado; este selector es solo un atajo.
@@ -171,14 +173,16 @@ function CommentForm({
           )}
         </span>
 
-        <button
-          type="button"
-          className="reader-comment-button"
-          onClick={onCancel}
-          disabled={sending}
-        >
-          Cancelar
-        </button>
+        {onCancel && (
+          <button
+            type="button"
+            className="reader-comment-button"
+            onClick={onCancel}
+            disabled={sending}
+          >
+            Cancelar
+          </button>
+        )}
 
         <button
           type="submit"
@@ -383,7 +387,7 @@ function CommentItem({ comment, actions, isAuthenticated, onReply }) {
   );
 }
 
-function CommentThread({ comment, replies, actions, isAuthenticated }) {
+export function CommentThread({ comment, replies, actions, isAuthenticated }) {
   const [replying, setReplying] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -464,6 +468,7 @@ export default function ChapterCommentsPanel({
   isAuthenticated,
   actions,
   onSubmitDraft,
+  onStartDraft,
   onCancelDraft,
   onClose,
 }) {
@@ -536,13 +541,23 @@ export default function ChapterCommentsPanel({
             <blockquote className="reader-comment-quote">{draft.quote}</blockquote>
             <CommentForm
               key={`${draft.paragraphIndex}:${draft.startOffset}:${draft.endOffset}`}
-              label="Tu comentario sobre este fragmento"
+              label="Tu comentario sobre este párrafo"
               placeholder="¿Qué te hizo sentir esta parte?"
               submitLabel="Publicar"
               onCancel={onCancelDraft}
               onSubmit={onSubmitDraft}
             />
           </section>
+        )}
+
+        {!isOrphans && !draft && isAuthenticated && groups.length > 0 && (
+          <button
+            type="button"
+            className="reader-comment-button is-primary reader-comment-start"
+            onClick={onStartDraft}
+          >
+            Comentar este párrafo
+          </button>
         )}
 
         {groups.map((group) => (
@@ -563,11 +578,11 @@ export default function ChapterCommentsPanel({
 
         {!draft && groups.length === 0 && (
           <p className="reader-comments-note">
-            Todavía no hay comentarios en esta parte.
+            Todavía no hay comentarios en este párrafo.
           </p>
         )}
 
-        {!isAuthenticated && groups.length > 0 && (
+        {!isAuthenticated && !isOrphans && (
           <p className="reader-comments-note">
             <Link to="/login">Inicia sesión</Link> para comentar, responder y reaccionar.
           </p>
