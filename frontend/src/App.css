@@ -242,25 +242,32 @@ button {
   align-items: center;
   justify-content: center;
   min-height: 38px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
+  padding: 8px 14px;
+  border: 1px solid var(--burgundy);
   border-radius: 9px;
-  background: transparent;
-  color: var(--burgundy);
+  background: var(--burgundy);
+  color: #fff;
   font-size: 0.86rem;
   font-weight: 700;
   line-height: 1.2;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  box-shadow: 0 2px 8px rgba(114, 47, 63, 0.25);
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .navbar-authors:hover,
 .navbar-forum:hover,
 .navbar-create-story:hover {
-  border-color: var(--orange-soft);
-  background: var(--bg-hover);
-  color: var(--burgundy-dark);
+  border-color: var(--burgundy-dark);
+  background: var(--burgundy-dark);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(114, 47, 63, 0.32);
+}
+
+/* En modo oscuro el borgoña oscuro es más claro: el texto pasa a oscuro. */
+[data-theme="dark"] .navbar-create-story:hover {
+  color: #1c1919;
 }
 
 /* Acceso a Mensajes: mismo aspecto que la campana de notificaciones. */
