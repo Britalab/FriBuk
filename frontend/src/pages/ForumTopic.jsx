@@ -956,7 +956,22 @@ export default function ForumTopic() {
               }}
             />
             {replyImage && (
-              <span className="forum-selected-file">{replyImage.name}</span>
+              <span className="forum-selected-file">
+                <span>{replyImage.name}</span>
+                <button
+                  type="button"
+                  className="forum-selected-file-remove"
+                  onClick={() => {
+                    setReplyImage(null);
+                    // Vacía también el selector, para poder elegir la misma imagen otra vez.
+                    if (replyImageInputRef.current) replyImageInputRef.current.value = "";
+                  }}
+                  aria-label="Quitar la imagen elegida"
+                  title="Quitar imagen"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </span>
             )}
           </div>
 

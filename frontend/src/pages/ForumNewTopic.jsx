@@ -109,7 +109,22 @@ export default function ForumNewTopic() {
               onChange={(e) => setTopicImage(e.target.files?.[0] || null)}
             />
             {topicImage && (
-              <span className="forum-selected-file">{topicImage.name}</span>
+              <span className="forum-selected-file">
+                <span>{topicImage.name}</span>
+                <button
+                  type="button"
+                  className="forum-selected-file-remove"
+                  onClick={() => {
+                    setTopicImage(null);
+                    // Vacía también el selector, para poder elegir la misma imagen otra vez.
+                    if (topicImageInputRef.current) topicImageInputRef.current.value = "";
+                  }}
+                  aria-label="Quitar la imagen elegida"
+                  title="Quitar imagen"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              </span>
             )}
           </div>
 

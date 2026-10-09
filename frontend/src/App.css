@@ -8546,9 +8546,50 @@ button {
 }
 
 .forum-selected-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: #756d68;
   font-size: 0.8rem;
   overflow-wrap: anywhere;
+}
+
+/* Quita la imagen elegida antes de publicar. */
+.forum-selected-file-remove {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #c0392b;
+  border-radius: 50%;
+  background: transparent;
+  color: #c0392b;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.forum-selected-file-remove:hover {
+  background: #c0392b;
+  color: #fff;
+}
+
+.forum-selected-file-remove:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] .forum-selected-file-remove {
+  border-color: #ff8a7a;
+  color: #ff8a7a;
+}
+
+[data-theme="dark"] .forum-selected-file-remove:hover {
+  background: #ff8a7a;
+  color: #1c1919;
 }
 
 .forum-form-group textarea {
