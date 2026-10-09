@@ -4,6 +4,7 @@ import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
 import TagEditor from "../components/story/TagEditor";
+import { genreOptions } from "../utils/genres";
 
 export default function CreateStory() {
   const navigate = useNavigate();
@@ -310,16 +311,21 @@ export default function CreateStory() {
                 </span>
               </div>
 
-              <input
+              <select
                 id="genre"
-                type="text"
+                className="form-select"
                 value={genre}
                 onChange={(event) =>
                   setGenre(event.target.value)
                 }
-                placeholder="Ej: Romance, Fantasía, Misterio"
-                maxLength={50}
-              />
+              >
+                <option value="">Sin género</option>
+                {genreOptions(genre).map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <TagEditor tags={tags} onChange={setTags} />

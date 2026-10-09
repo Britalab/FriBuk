@@ -14,6 +14,7 @@ import {
   storyHasTag,
   storyMatchesSearch,
 } from "../utils/storySearch";
+import { GENRES } from "../utils/genres";
 
 const FEED_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap";
@@ -74,44 +75,7 @@ export default function Feed() {
   const [selectedGenre, setSelectedGenre] = useState("Todas");
   const [showMoreGenres, setShowMoreGenres] = useState(false);
 
-  const genres = [
-    "Todas",
-    "Romance",
-    "Fantasía",
-    "Romantasy",
-    "Enemies to lovers",
-    "Slow burn",
-    "Found family",
-    "Rivals",
-    "Fake dating",
-    "Dark romance",
-    "Ciencia ficción",
-    "Misterio",
-    "Thriller",
-    "Policial",
-    "Terror",
-    "Suspenso",
-    "Acción",
-    "Aventura",
-    "Drama",
-    "Comedia",
-    "Distopía",
-    "Ficción contemporánea",
-    "Histórico",
-    "Juvenil",
-    "Realista",
-    "Paranormal",
-    "Sobrenatural",
-    "Fantasía urbana",
-    "Fantasía oscura",
-    "Postapocalíptica",
-    "LGBTIQ+",
-    "Omegaverse",
-    "Fanfiction",
-    "Poesía",
-    "Fábula",
-    "Slice of Life",
-    ];
+  const genres = ["Todas", ...GENRES];
 
   const loadStories = useCallback(async () => {
     setLoading(true);
