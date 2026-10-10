@@ -5820,6 +5820,98 @@ button {
   min-height: 48px;
 }
 
+/* Cuadro de texto del capítulo, con negrita, cursiva y vista previa. */
+.chapter-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chapter-text-tool {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.chapter-text-tool:hover:not(:disabled) {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+  color: var(--burgundy);
+}
+
+.chapter-text-tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.chapter-text-preview-toggle {
+  min-height: 40px;
+  margin-left: auto;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--burgundy);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chapter-text-preview-toggle:hover,
+.chapter-text-preview-toggle[aria-pressed="true"] {
+  border-color: var(--burgundy);
+  background: var(--bg-hover);
+}
+
+.chapter-text-tool:focus-visible,
+.chapter-text-preview-toggle:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+/* Se ve como el capítulo publicado. */
+.chapter-text-preview {
+  min-height: 300px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+
+/* Mismo espaciado entre párrafos que el lector. */
+.chapter-text-preview p {
+  margin: 0 0 1.7em;
+}
+
+.chapter-text-preview p:last-child {
+  margin-bottom: 0;
+}
+
+.chapter-text-preview-empty {
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+
+.chapter-text-editor .form-help {
+  margin-top: 8px;
+}
+
 .form-group textarea {
   resize: vertical;
   min-height: 130px;

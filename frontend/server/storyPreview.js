@@ -9,6 +9,8 @@
 // Al cargar, la aplicación reemplaza ese contenido por la página normal.
 // Ante cualquier problema se entrega la página de siempre, sin cambios.
 
+import { inlineToHtml, stripInline } from "../src/utils/richText.js";
+
 const SITE_NAME = "FriBuk";
 const DEFAULT_API_URL = "https://api.fribuk.com";
 const API_TIMEOUT_MS = 4000;
@@ -40,7 +42,7 @@ function paragraphs(text) {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .map((line) => `<p>${inlineToHtml(line, escapeHtml)}</p>`)
     .join("");
 }
 
@@ -82,7 +84,7 @@ export function buildPreview(data, origin) {
     const chapterTitle = chapter.title || `Capítulo ${chapter.position}`;
     const url = `${storyUrl}/chapters/${encodeURIComponent(chapter.id)}`;
     const description =
-      excerpt(chapter.content) ||
+      excerpt(stripInline(chapter.content)) ||
       `Capítulo ${chapter.position} de «${storyTitle}»${byline}.`;
 
     return {

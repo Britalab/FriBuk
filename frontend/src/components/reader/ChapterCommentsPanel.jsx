@@ -8,6 +8,7 @@ import {
   QUICK_CHAPTER_REACTIONS,
 } from "./chapterReactions";
 import { countEmojis } from "../../utils/emoji";
+import FormattedText from "./FormattedText";
 
 const COLLAPSED_REPLIES = 2;
 
@@ -538,7 +539,9 @@ export default function ChapterCommentsPanel({
 
         {draft && (
           <section className="reader-comment-group">
-            <blockquote className="reader-comment-quote">{draft.quote}</blockquote>
+            <blockquote className="reader-comment-quote">
+              <FormattedText text={draft.quote} />
+            </blockquote>
             <CommentForm
               key={`${draft.paragraphIndex}:${draft.startOffset}:${draft.endOffset}`}
               label="Tu comentario sobre este párrafo"
@@ -562,7 +565,9 @@ export default function ChapterCommentsPanel({
 
         {groups.map((group) => (
           <section className="reader-comment-group" key={group.key}>
-            <blockquote className="reader-comment-quote">{group.quote}</blockquote>
+            <blockquote className="reader-comment-quote">
+              <FormattedText text={group.quote} />
+            </blockquote>
 
             {group.threads.map((thread) => (
               <CommentThread

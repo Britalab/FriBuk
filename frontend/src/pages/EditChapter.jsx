@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../hooks/useToast";
+import ChapterTextEditor from "../components/story/ChapterTextEditor";
 
 export default function EditChapter() {
   const { storyId, chapterId } = useParams();
@@ -279,13 +280,10 @@ export default function EditChapter() {
                 </label>
               </div>
 
-              <textarea
+              <ChapterTextEditor
                 id="chapterContent"
                 value={content}
-                onChange={(event) =>
-                  setContent(event.target.value)
-                }
-                rows={20}
+                onChange={setContent}
                 placeholder="Comienza a escribir tu capítulo..."
               />
             </div>

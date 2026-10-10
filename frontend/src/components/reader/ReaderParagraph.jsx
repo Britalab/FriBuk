@@ -1,4 +1,5 @@
 import { memo } from "react";
+import FormattedText from "./FormattedText";
 
 // Un párrafo del capítulo. El texto se muestra siempre como texto plano:
 // el indicador de comentarios va fuera de él y nunca modifica el contenido.
@@ -9,8 +10,8 @@ function ReaderParagraph({ index, text, count, isActive, onOpen }) {
     <p className={`reader-paragraph${isActive ? " is-active" : ""}`}>
       <span className="reader-paragraph-text" data-paragraph-index={index}>
         {isActive
-          ? <mark className="reader-anchor-mark">{text}</mark>
-          : text}
+          ? <mark className="reader-anchor-mark"><FormattedText text={text} /></mark>
+          : <FormattedText text={text} />}
       </span>
 
       {count > 0 && (
