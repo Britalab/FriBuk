@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr
 from email_service import send_welcome_email
 import admin_alerts
-from chapter_anchors import build_paragraph_anchor, locate_anchor
+from chapter_anchors import build_paragraph_anchor, relocate_anchor
 from profile_catalog import (
     DEFAULT_PROFILE_THEME,
     MAX_AMBIENT_DECORATIONS,
@@ -6988,9 +6988,9 @@ def get_chapter_comment_reaction_summary(comment_id: str, viewer_id: str) -> dic
 
 
 def reanchor_chapter_comments(chapter_id: str, content: str | None) -> None:
-    # Tras editar un capítulo: cada comentario conserva su fragmento, se
-    # mueve a la nueva posición del mismo texto o queda huérfano. Un
-    # comentario huérfano no vuelve a anclarse automáticamente.
+    # Tras editar un capítulo: cada comentario sigue a su párrafo (aunque
+    # se retoque o cambie de lugar) o queda huérfano si el párrafo ya no
+    # existe. Un comentario huérfano no vuelve a anclarse automáticamente.
     rows = []
     offset = 0
 
@@ -7015,8 +7015,10 @@ def reanchor_chapter_comments(chapter_id: str, content: str | None) -> None:
             break
         offset += CHAPTER_COMMENT_PAGE_SIZE
 
+    # La cita también se actualiza: es el texto actual del párrafo.
     anchor_fields = (
-        "paragraph_index", "start_offset", "end_offset", "prefix", "suffix"
+        "paragraph_index", "start_offset", "end_offset", "prefix", "suffix",
+        "quote"
     )
     orphaned_ids = []
     moved_ids_by_anchor = {}
@@ -7027,7 +7029,7 @@ def reanchor_chapter_comments(chapter_id: str, content: str | None) -> None:
         if row.get("paragraph_index") is None:
             continue
 
-        anchor = locate_anchor(content, row)
+        anchor = relocate_anchor(content, row, CHAPTER_COMMENT_QUOTE_MAX_LENGTH)
 
         if anchor is None:
             orphaned_ids.append(row["id"])
@@ -7039,7 +7041,8 @@ def reanchor_chapter_comments(chapter_id: str, content: str | None) -> None:
             row.get("start_offset"),
             row.get("end_offset"),
             row.get("prefix") or "",
-            row.get("suffix") or ""
+            row.get("suffix") or "",
+            row.get("quote")
         )
         if new_values != old_values:
             moved_ids_by_anchor.setdefault(new_values, []).append(row["id"])

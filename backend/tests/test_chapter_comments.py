@@ -1062,7 +1062,10 @@ class ChapterCommentsTestCase(unittest.TestCase):
         paragraph = new_content.split("\n")[row["paragraph_index"]]
         self.assertFalse(row["is_orphaned"])
         self.assertEqual(row["paragraph_index"], 3)
-        self.assertEqual(paragraph[row["start_offset"]:row["end_offset"]], QUOTE)
+        # El comentario es del párrafo entero, también ahora que creció.
+        self.assertEqual(paragraph, "Entonces, " + QUOTE)
+        self.assertEqual(paragraph[row["start_offset"]:row["end_offset"]], paragraph)
+        self.assertEqual(row["quote"], paragraph)
 
         comment = self.get_comments().json()["comments"][0]
         self.assertEqual(comment["paragraph_index"], 3)
@@ -1078,6 +1081,121 @@ class ChapterCommentsTestCase(unittest.TestCase):
         for field in ("paragraph_index", "start_offset", "end_offset", "quote"):
             self.assertEqual(after[field], before[field])
         self.assertFalse(after["is_orphaned"])
+
+    # ---------- el comentario sigue a su párrafo ----------
+
+    def assert_follows(self, comment_id, new_content, paragraph_index):
+        self.assertEqual(self.edit_chapter(new_content).status_code, 200)
+
+        row = self.stored(comment_id)
+        paragraph = new_content.split("\n")[paragraph_index]
+        self.assertFalse(row.get("is_orphaned"), row.get("quote"))
+        self.assertEqual(row["paragraph_index"], paragraph_index)
+        # La cita pasa a ser el texto actual del párrafo.
+        self.assertEqual(row["quote"], paragraph.strip())
+        self.assertEqual(
+            paragraph[row["start_offset"]:row["end_offset"]], paragraph.strip()
+        )
+
+        listed = self.get_comments().json()["comments"]
+        self.assertEqual([c["is_orphaned"] for c in listed], [False])
+
+    def test_adding_or_removing_bold_keeps_the_comment(self):
+        comment_id = self.create_comment_id()
+
+        # Poner negrita, cambiarla por cursiva y quitarla: sigue en su lugar.
+        for version in (
+            "Juanito le dijo que **sí**.",
+            "*Juanito* le dijo que sí.",
+            "***Juanito le dijo que sí.***",
+            QUOTE
+        ):
+            self.assert_follows(comment_id, CONTENT.replace(QUOTE, version, 1) if version != QUOTE else CONTENT, 2)
+            # La siguiente edición parte de esta versión.
+            self.database.tables["chapters"][0]["content"] = (
+                CONTENT.replace(QUOTE, version, 1)
+            )
+
+    def test_formatting_a_repeated_short_line_keeps_each_comment(self):
+        # "—Sí." está en los párrafos 4 y 6: cada comentario sigue al suyo.
+        first_id = self.create_comment_id(**anchor_payload(4, "—Sí."))
+        lines = CONTENT.split("\n")
+        lines[4] = "—**Sí.**"
+
+        self.assert_follows(first_id, "\n".join(lines), 4)
+
+    def test_small_corrections_keep_the_comment(self):
+        comment_id = self.create_comment_id(**anchor_payload(3, MARIA))
+
+        for corrected in (
+            # Una tilde y una coma.
+            "Maria no supo qué responder, y miró hacia la ventana abierta.",
+            # Una palabra cambiada.
+            "María no supo qué contestar y miró hacia la ventana abierta.",
+        ):
+            self.database.tables["chapter_comments"][0]["is_orphaned"] = False
+            self.assert_follows(comment_id, CONTENT.replace(MARIA, corrected), 3)
+            self.database.tables["chapters"][0]["content"] = CONTENT
+            self.assertEqual(self.edit_chapter(CONTENT).status_code, 200)
+
+    def test_comment_follows_a_paragraph_that_moved_and_changed(self):
+        comment_id = self.create_comment_id(**anchor_payload(3, MARIA))
+        moved = "Un párrafo nuevo.\n\n" + CONTENT.replace(
+            MARIA, "María no supo qué responder y miró hacia la *ventana* abierta."
+        )
+
+        self.assert_follows(comment_id, moved, 5)
+
+    def test_rewritten_paragraph_becomes_orphan(self):
+        comment_id = self.create_comment_id(**anchor_payload(3, MARIA))
+
+        self.edit_chapter(
+            CONTENT.replace(MARIA, "Esa noche nadie quiso volver a hablar del tema.")
+        )
+
+        row = self.stored(comment_id)
+        self.assertTrue(row["is_orphaned"])
+        # Conserva el texto que se comentó.
+        self.assertEqual(row["quote"], MARIA)
+
+    def test_deleted_paragraph_becomes_orphan(self):
+        comment_id = self.create_comment_id(**anchor_payload(3, MARIA))
+        lines = CONTENT.split("\n")
+        del lines[3]
+
+        self.edit_chapter("\n".join(lines))
+        self.assertTrue(self.stored(comment_id)["is_orphaned"])
+
+    def test_long_paragraph_comment_survives_formatting(self):
+        long_paragraph = " ".join(["palabra"] * 120)
+        self.database.tables["chapters"][0]["content"] = long_paragraph
+        comment_id = self.create_comment_id(
+            content="Largo", paragraph_index=0, quote=" ".join(["palabra"] * 75)
+        )
+
+        edited = "**palabra** " + " ".join(["palabra"] * 119)
+        self.assertEqual(self.edit_chapter(edited).status_code, 200)
+
+        row = self.stored(comment_id)
+        self.assertFalse(row.get("is_orphaned"))
+        self.assertEqual(row["paragraph_index"], 0)
+        self.assertTrue(row["quote"].startswith("**palabra** palabra"))
+
+    def test_old_fragment_comments_keep_the_strict_rule(self):
+        # Comentario de la versión anterior, sobre una frase suelta.
+        paragraph = CONTENT.split("\n")[3]
+        start = paragraph.index("miró hacia la ventana")
+        self.database.tables["chapter_comments"].append({
+            "id": str(uuid.uuid4()), "chapter_id": CHAPTER_ID, "user_id": ALICE_ID,
+            "parent_id": None, "content": "Qué imagen", "status": "visible",
+            "is_orphaned": False,
+            **build_anchor(CONTENT, 3, start, start + len("miró hacia la ventana"))
+        })
+        comment_id = self.database.tables["chapter_comments"][0]["id"]
+
+        # El párrafo sigue ahí, pero la frase citada cambió.
+        self.edit_chapter(CONTENT.replace("miró hacia la ventana", "miró por la ventana"))
+        self.assertTrue(self.stored(comment_id)["is_orphaned"])
 
     def test_removed_fragment_becomes_orphan(self):
         comment_id = self.create_comment_id()

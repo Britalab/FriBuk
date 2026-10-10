@@ -11,7 +11,9 @@
 # Las posiciones se cuentan en caracteres Unicode (code points).
 # Este módulo no accede a la base de datos: solo trabaja con texto.
 
+import re
 from bisect import bisect_right
+from difflib import SequenceMatcher
 
 # Caracteres de contexto guardados a cada lado de la cita.
 ANCHOR_CONTEXT_LENGTH = 32
@@ -202,5 +204,120 @@ def locate_anchor(content: str | None, anchor: dict) -> dict | None:
     # 3. Sin contexto: solo una cita larga que aparece una única vez.
     if quote_is_distinctive and occurrences == 1:
         return anchor_at(text.find(quote))
+
+    return None
+
+
+# ============================================================
+# COMENTARIOS DE PÁRRAFO: SIGUEN A SU PÁRRAFO
+# ============================================================
+#
+# Un comentario hecho sobre un párrafo completo se queda en ese párrafo
+# aunque su autora lo retoque: si le pone o le quita negrita o cursiva, si
+# corrige una palabra o si lo cambia de lugar. Solo queda huérfano cuando
+# el párrafo se borra o se reescribe hasta ser otro. Ante la duda entre
+# dos párrafos no se adivina: queda huérfano.
+
+# Parecido mínimo (0 a 1) para considerar que un párrafo retocado es el mismo.
+SAME_PLACE_SIMILARITY = 0.7
+# Si además cambió de lugar, debe parecerse mucho más y ser el único candidato.
+MOVED_SIMILARITY = 0.85
+MOVED_SIMILARITY_MARGIN = 0.1
+
+# Marcas de negrita y cursiva: *así*, **así** o ***así*** (las mismas reglas
+# que frontend/src/utils/richText.js).
+INLINE_MARKS = re.compile(r"(\*{1,3})(?=[^\s*])([^*\n]*?[^\s*])\1(?!\*)")
+
+
+def comparable_text(text: str | None) -> str:
+    # El texto sin marcas de formato y con los espacios unificados: lo que
+    # de verdad dice el párrafo.
+    return " ".join(INLINE_MARKS.sub(r"\2", text or "").split())
+
+
+def is_paragraph_anchor(anchor: dict) -> bool:
+    # Un comentario de párrafo cita desde el inicio del párrafo: antes de la
+    # cita solo puede haber un salto de línea (o el inicio del capítulo).
+    prefix = (anchor.get("prefix") or "").rstrip(" \t\r")
+    return bool(anchor.get("quote")) and (prefix == "" or prefix.endswith("\n"))
+
+
+def relocate_anchor(content: str | None, anchor: dict, max_length: int) -> dict | None:
+    # Nueva posición de un comentario tras editar el capítulo, o None si
+    # queda huérfano. Los comentarios antiguos sobre una frase suelta
+    # mantienen la regla estricta de locate_anchor.
+    exact = locate_anchor(content, anchor)
+
+    if not is_paragraph_anchor(anchor):
+        return exact
+
+    if exact is not None:
+        # El comentario es del párrafo entero, también si el párrafo creció.
+        return build_paragraph_anchor(content, exact["paragraph_index"], max_length)
+
+    quote = comparable_text(anchor.get("quote"))
+    if not quote:
+        return None
+
+    paragraphs = [comparable_text(item) for item in split_paragraphs(content)]
+    # De un párrafo más largo que el máximo solo se guardó el comienzo.
+    quote_is_partial = len(anchor.get("quote") or "") >= max_length - ANCHOR_CONTEXT_LENGTH
+    quote_is_distinctive = len(quote) >= ANCHOR_SELF_SUFFICIENT_LENGTH
+    original_index = anchor.get("paragraph_index")
+    has_original = (
+        isinstance(original_index, int) and 0 <= original_index < len(paragraphs)
+    )
+
+    def says_the_same(paragraph: str) -> bool:
+        return paragraph == quote or (quote_is_partial and paragraph.startswith(quote))
+
+    def similarity(paragraph: str) -> float:
+        compared = paragraph[:len(quote)] if quote_is_partial else paragraph
+        matcher = SequenceMatcher(None, quote, compared, autojunk=False)
+        # Las dos primeras son cotas rápidas: evitan comparar a fondo
+        # párrafos que claramente no se parecen.
+        if matcher.real_quick_ratio() < SAME_PLACE_SIMILARITY:
+            return 0.0
+        if matcher.quick_ratio() < SAME_PLACE_SIMILARITY:
+            return 0.0
+        return matcher.ratio()
+
+    def anchor_at(index: int) -> dict | None:
+        return build_paragraph_anchor(content, index, max_length)
+
+    # 1. Mismo lugar y mismo texto: solo cambió el formato.
+    if has_original and says_the_same(paragraphs[original_index]):
+        return anchor_at(original_index)
+
+    # 2. Mismo texto en otro lugar. Una línea corta ("—Sí.") puede repetirse,
+    #    así que solo vale para un texto largo que aparece una única vez.
+    if quote_is_distinctive:
+        same = [index for index, item in enumerate(paragraphs) if says_the_same(item)]
+        if len(same) == 1:
+            return anchor_at(same[0])
+        if same:
+            return None
+
+    # 3. Mismo lugar, texto retocado.
+    if (
+        has_original
+        and paragraphs[original_index]
+        and similarity(paragraphs[original_index]) >= SAME_PLACE_SIMILARITY
+    ):
+        return anchor_at(original_index)
+
+    # 4. Retocado y además movido: debe ser inconfundible.
+    if quote_is_distinctive:
+        scored = sorted(
+            (
+                (similarity(item), index)
+                for index, item in enumerate(paragraphs) if item
+            ),
+            reverse=True
+        )
+        if scored and scored[0][0] >= MOVED_SIMILARITY:
+            runner_up = scored[1][0] if len(scored) > 1 else 0.0
+            if scored[0][0] - runner_up >= MOVED_SIMILARITY_MARGIN:
+                return anchor_at(scored[0][1])
 
     return None
