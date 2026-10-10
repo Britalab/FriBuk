@@ -58,55 +58,98 @@ export function inlineToHtml(text, escape) {
     .join("");
 }
 
-const MARKERS = { bold: "**", italic: "*" };
+const MAX_MARKS = 3;
 
-// Aplica o quita una marca en la selección de un cuadro de texto. Devuelve
-// el texto nuevo y la selección que debe quedar. Sin selección, deja las
-// marcas con el cursor en medio. Una selección de varios párrafos se marca
-// párrafo por párrafo, porque una marca no cruza saltos de línea.
+// Asteriscos seguidos al final de `before` y al inicio de `after`.
+function countTrailing(value) {
+  let count = 0;
+  while (count < value.length && value[value.length - 1 - count] === "*") count += 1;
+  return count;
+}
+
+function countLeading(value) {
+  let count = 0;
+  while (count < value.length && value[count] === "*") count += 1;
+  return count;
+}
+
+// Con n asteriscos a cada lado: 1 es cursiva, 2 negrita y 3 las dos.
+function hasFormat(marks, kind) {
+  return kind === "bold" ? marks >= 2 : marks % 2 === 1;
+}
+
+function marksAfterToggle(marks, kind, turnOn) {
+  const bold = kind === "bold" ? turnOn : marks >= 2;
+  const italic = kind === "italic" ? turnOn : marks % 2 === 1;
+  return (bold ? 2 : 0) + (italic ? 1 : 0);
+}
+
+// Un párrafo (o parte de él) separado en espacios, marcas y texto.
+function splitLine(line) {
+  const text = line.trim();
+  const lead = line.slice(0, line.indexOf(text));
+  const tail = line.slice(lead.length + text.length);
+  const marks = Math.min(countLeading(text), countTrailing(text), MAX_MARKS);
+  const core = text.slice(marks, text.length - marks);
+
+  // Una línea vacía o hecha solo de asteriscos (***) no se destaca.
+  return core.replace(/\*/g, "").trim() ? { lead, tail, marks, core } : null;
+}
+
+// Aplica o quita negrita o cursiva en la selección de un cuadro de texto.
+// Devuelve el texto nuevo y la selección que debe quedar.
+//
+// Pulsar el mismo botón dos veces deja el texto como estaba: las marcas se
+// quitan, no se acumulan. Una selección de varios párrafos se marca párrafo
+// por párrafo, porque una marca no cruza saltos de línea.
 export function toggleInline(value, start, end, kind) {
-  const marker = MARKERS[kind];
-  const size = marker.length;
-
+  // Sin selección: marcas vacías con el cursor en medio, o se quitan si el
+  // cursor ya está entre unas marcas vacías.
   if (start === end) {
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+    const marks = Math.min(countTrailing(before), countLeading(after), MAX_MARKS);
+    const next = marksAfterToggle(marks, kind, !hasFormat(marks, kind));
+    const cursor = start - marks + next;
+
     return {
-      value: value.slice(0, start) + marker + marker + value.slice(end),
-      start: start + size,
-      end: start + size,
+      value:
+        before.slice(0, before.length - marks) +
+        "*".repeat(next * 2) +
+        after.slice(marks),
+      start: cursor,
+      end: cursor,
     };
   }
 
-  const selected = value.slice(start, end);
+  // Las marcas pegadas a la selección cuentan como parte de ella: da igual
+  // si se seleccionó «palabra» o «**palabra**».
+  let from = start;
+  let to = end;
+  for (let extra = 0; extra < MAX_MARKS && value[from - 1] === "*"; extra += 1) from -= 1;
+  for (let extra = 0; extra < MAX_MARKS && value[to] === "*"; extra += 1) to += 1;
 
-  // Ya estaba marcada (las marcas dentro o justo fuera de la selección).
-  const outside =
-    value.slice(start - size, start) === marker &&
-    value.slice(end, end + size) === marker &&
-    (kind === "bold" || (value[start - size - 1] !== "*" && value[end + size] !== "*"));
+  const lines = value.slice(from, to).split("\n");
+  const parts = lines.map(splitLine);
+  const first = parts.find(Boolean);
 
-  if (outside) {
-    return {
-      value: value.slice(0, start - size) + selected + value.slice(end + size),
-      start: start - size,
-      end: end - size,
-    };
-  }
+  if (!first) return { value, start, end };
 
-  const wrapped = selected
-    .split("\n")
-    .map((line) => {
-      const text = line.trim();
-      if (!text) return line;
+  // Todo lo seleccionado queda igual: con el formato, o sin él.
+  const turnOn = !hasFormat(first.marks, kind);
+  const result = lines
+    .map((line, index) => {
+      const part = parts[index];
+      if (!part) return line;
 
-      const lead = line.slice(0, line.indexOf(text));
-      const tail = line.slice(lead.length + text.length);
-      return `${lead}${marker}${text}${marker}${tail}`;
+      const marks = "*".repeat(marksAfterToggle(part.marks, kind, turnOn));
+      return `${part.lead}${marks}${part.core}${marks}${part.tail}`;
     })
     .join("\n");
 
   return {
-    value: value.slice(0, start) + wrapped + value.slice(end),
-    start,
-    end: start + wrapped.length,
+    value: value.slice(0, from) + result + value.slice(to),
+    start: from,
+    end: from + result.length,
   };
 }

@@ -58,11 +58,56 @@ describe("stripInline e inlineToHtml", () => {
 });
 
 describe("toggleInline", () => {
+  // Pulsa el botón sobre lo que quedó seleccionado tras la pulsación anterior.
+  const press = (state, kind) => toggleInline(state.value, state.start, state.end, kind);
+  const selected = (state) => state.value.slice(state.start, state.end);
+
   it("marca la selección y la deja seleccionada", () => {
     const result = toggleInline("una palabra clave", 4, 11, "bold");
 
     expect(result.value).toBe("una **palabra** clave");
-    expect(result.value.slice(result.start, result.end)).toBe("**palabra**");
+    expect(selected(result)).toBe("**palabra**");
+  });
+
+  it("pulsar otra vez quita las marcas en vez de sumarlas", () => {
+    let state = { value: "una palabra clave", start: 4, end: 11 };
+
+    state = press(state, "bold");
+    expect(state.value).toBe("una **palabra** clave");
+
+    state = press(state, "bold");
+    expect(state.value).toBe("una palabra clave");
+    expect(selected(state)).toBe("palabra");
+
+    // Y lo mismo todas las veces que se repita.
+    for (let times = 0; times < 4; times += 1) state = press(state, "italic");
+    expect(state.value).toBe("una palabra clave");
+  });
+
+  it("da igual si se seleccionó la palabra o la palabra con sus marcas", () => {
+    expect(toggleInline("una **palabra** clave", 6, 13, "bold").value).toBe(
+      "una palabra clave"
+    );
+    expect(toggleInline("una **palabra** clave", 4, 15, "bold").value).toBe(
+      "una palabra clave"
+    );
+    expect(toggleInline("una *palabra* clave", 4, 13, "italic").value).toBe(
+      "una palabra clave"
+    );
+  });
+
+  it("negrita y cursiva se combinan y se quitan por separado", () => {
+    let state = { value: "palabra", start: 0, end: 7 };
+
+    state = press(state, "bold");
+    state = press(state, "italic");
+    expect(state.value).toBe("***palabra***");
+
+    state = press(state, "bold");
+    expect(state.value).toBe("*palabra*");
+
+    state = press(state, "italic");
+    expect(state.value).toBe("palabra");
   });
 
   it("no incluye los espacios de los extremos dentro de la marca", () => {
@@ -78,23 +123,36 @@ describe("toggleInline", () => {
     expect([result.start, result.end]).toEqual([7, 7]);
   });
 
-  it("quita la marca si la selección ya la tenía", () => {
-    const result = toggleInline("una **palabra** clave", 6, 13, "bold");
+  it("sin selección, pulsar otra vez borra las marcas vacías", () => {
+    let state = { value: "hola ", start: 5, end: 5 };
 
-    expect(result.value).toBe("una palabra clave");
-    expect(result.value.slice(result.start, result.end)).toBe("palabra");
+    state = press(state, "bold");
+    state = press(state, "bold");
+    expect(state).toEqual({ value: "hola ", start: 5, end: 5 });
+
+    // Negrita y luego cursiva: tres asteriscos por lado; se quitan de a una.
+    state = press(press(state, "bold"), "italic");
+    expect(state.value).toBe("hola ******");
+    expect(state.start).toBe(8);
+
+    state = press(state, "bold");
+    expect(state.value).toBe("hola **");
+    state = press(state, "italic");
+    expect(state.value).toBe("hola ");
   });
 
-  it("la cursiva no confunde una negrita con una cursiva", () => {
-    // «palabra» está en negrita: pedir cursiva la agrega, no quita un asterisco.
-    expect(toggleInline("**palabra**", 2, 9, "italic").value).toBe("***palabra***");
-  });
-
-  it("marca cada párrafo por separado", () => {
+  it("marca cada párrafo por separado, y los desmarca juntos", () => {
     const text = "primero\n\nsegundo";
+    const marked = toggleInline(text, 0, text.length, "italic");
 
-    expect(toggleInline(text, 0, text.length, "italic").value).toBe(
-      "*primero*\n\n*segundo*"
+    expect(marked.value).toBe("*primero*\n\n*segundo*");
+    expect(press(marked, "italic").value).toBe(text);
+  });
+
+  it("no toca un separador de escena", () => {
+    expect(toggleInline("***", 0, 3, "bold").value).toBe("***");
+    expect(toggleInline("uno\n***\ndos", 0, 11, "bold").value).toBe(
+      "**uno**\n***\n**dos**"
     );
   });
 });
