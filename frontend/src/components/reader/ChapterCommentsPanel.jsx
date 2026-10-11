@@ -9,6 +9,7 @@ import {
 } from "./chapterReactions";
 import { countEmojis } from "../../utils/emoji";
 import FormattedText from "./FormattedText";
+import MentionText from "../MentionText";
 
 const COLLAPSED_REPLIES = 2;
 
@@ -364,7 +365,9 @@ function CommentItem({ comment, actions, isAuthenticated, onReply }) {
           }}
         />
       ) : (
-        <p className="reader-comment-content">{comment.content}</p>
+        <p className="reader-comment-content">
+          <MentionText text={comment.content} />
+        </p>
       )}
 
       <ReactionBar comment={comment} onToggle={handleReaction} />

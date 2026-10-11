@@ -41,6 +41,7 @@ import Copyright from "./pages/Copyright";
 import Privacy from "./pages/Privacy";
 import Moderation from "./pages/Moderation";
 import Faq from "./pages/Faq";
+import MentionRedirect from "./pages/MentionRedirect";
 
 import "./App.css";
 
@@ -205,6 +206,7 @@ function App() {
           <Route path="/privacidad" element={<Privacy />} />
           <Route path="/moderacion" element={<Moderation />} />
           <Route path="/preguntas-frecuentes" element={<Faq />} />
+          <Route path="/u/:username" element={<MentionRedirect />} />
 
           <Route path="/support/admin" element={<SupportAdmin />} />
 

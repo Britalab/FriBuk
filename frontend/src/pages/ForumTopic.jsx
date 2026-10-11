@@ -4,6 +4,8 @@ import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import { usePageTitle } from "../hooks/usePageTitle";
+import MentionText from "../components/MentionText";
+import { appendMention } from "../utils/mentions";
 import ReportButton from "../components/moderation/ReportButton";
 import { RemoveButton, RestoreButton } from "../components/moderation/AdminModerationButtons";
 import { ModerationNotice } from "../components/moderation/ModerationNotices";
@@ -128,6 +130,22 @@ export default function ForumTopic() {
   const [reply, setReply] = useState("");
   const [replyImage, setReplyImage] = useState(null);
   const replyImageInputRef = useRef(null);
+  const replyTextRef = useRef(null);
+
+  // "Responder" a alguien: deja su @nombre en el cuadro de respuesta.
+  const replyTo = (username) => {
+    setReply((current) => appendMention(current, username));
+    setReplyError("");
+
+    const textarea = replyTextRef.current;
+    if (!textarea) return;
+
+    textarea.scrollIntoView({ block: "center", behavior: "smooth" });
+    requestAnimationFrame(() => {
+      textarea.focus({ preventScroll: true });
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    });
+  };
 
   const [loading, setLoading] = useState(true);
   const [repliesLoading, setRepliesLoading] = useState(true);
@@ -653,7 +671,7 @@ export default function ForumTopic() {
 
         <div className="forum-post-content">
 
-          <p>{topic.content}</p>
+          <p><MentionText text={topic.content} /></p>
 
           {topic.image_url && (
             <img
@@ -831,7 +849,7 @@ export default function ForumTopic() {
 
                 <div className="forum-reply-content">
 
-                  {item.content && <p>{item.content}</p>}
+                  {item.content && <p><MentionText text={item.content} /></p>}
 
                   {item.image_url && (
                     <img
@@ -859,6 +877,15 @@ export default function ForumTopic() {
 
                 {!item.moderation && (
                   <div className="moderation-actions">
+                    {user && user.id !== item.user_id && item.username && (
+                      <button
+                        type="button"
+                        className="moderation-report-button"
+                        onClick={() => replyTo(item.username)}
+                      >
+                        Responder
+                      </button>
+                    )}
                     {user?.id !== item.user_id && (
                       <ReportButton targetType="forum_reply" targetId={item.id} />
                     )}
@@ -935,12 +962,13 @@ export default function ForumTopic() {
         <form onSubmit={handleReply}>
 
           <textarea
+            ref={replyTextRef}
             value={reply}
             onChange={(e) => {
               setReply(e.target.value);
               setReplyError("");
             }}
-            placeholder="Escribe tu respuesta..."
+            placeholder="Escribe tu respuesta... Usa @ y el nombre de usuario para nombrar a alguien."
             rows="5"
           />
 

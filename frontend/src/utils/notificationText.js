@@ -41,6 +41,17 @@ export function getNotificationContent(notification) {
         to: notification.actor?.id ? `/usuario/${notification.actor.id}` : "/perfil",
       };
     case "story_comment":
+      // Alguien te nombró con @ en un comentario.
+      if (data.mention) {
+        return {
+          icon: "@",
+          actor,
+          text: ` te mencionó en un comentario de ${quoted(data.chapter_title, "un capítulo")}${data.story_title ? `, de ${quoted(data.story_title, "")}` : ""}.`,
+          to: data.chapter_id
+            ? `/stories/${notification.story_id}/chapters/${data.chapter_id}`
+            : `/stories/${notification.story_id}`,
+        };
+      }
       // Comentario en un capítulo: dice quién y dónde, sin el texto.
       if (data.chapter_id) {
         return {
@@ -96,6 +107,14 @@ export function getNotificationContent(notification) {
       };
     }
     case "forum_reply":
+      if (data.mention) {
+        return {
+          icon: "@",
+          actor,
+          text: ` te mencionó en el tema ${quoted(data.topic_title, "del foro")}.`,
+          to: `/forum/${notification.forum_topic_id}`,
+        };
+      }
       return {
         icon: "🗨️",
         actor,

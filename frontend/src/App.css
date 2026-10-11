@@ -935,6 +935,23 @@ button {
   vertical-align: -3px;
 }
 
+/* Mención (@nombre) dentro de un comentario o del foro. */
+.mention-link {
+  color: var(--burgundy);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mention-link:hover {
+  text-decoration: underline;
+}
+
+.mention-link:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
 /* Aclara que el perfil privado no lo ve nadie más. */
 .profile-private-note {
   margin: 12px 0 0;

@@ -3711,6 +3711,13 @@ def create_forum_topic(
             .execute()
         )
 
+        # Avisa a quienes se nombró con @ en el tema.
+        if "@" in (content or ""):
+            run_notification_task(
+                mentions.notify_forum_mentions,
+                str(response.data[0]["id"]), str(current_user.id), content
+            )
+
         return {
             "message": "Tema creado correctamente",
             "topic": add_forum_user_data([response.data[0]])[0],
@@ -4507,6 +4514,12 @@ def create_forum_reply(
         run_notification_task(
             notify_forum_reply, topic_id, str(current_user.id), response.data[0]
         )
+        # Avisa a quienes se nombró con @ en la respuesta.
+        if "@" in (content or ""):
+            run_notification_task(
+                mentions.notify_forum_mentions,
+                topic_id, str(current_user.id), content
+            )
 
         # Con el nombre de quien la escribió, para mostrarla sin recargar.
         return {
@@ -7225,6 +7238,12 @@ def create_chapter_comment(
     )
 
     run_notification_task(notify_chapter_comment, chapter["id"], user_id)
+    # Avisa a quienes se nombró con @ en el comentario.
+    if "@" in comment_data["content"]:
+        run_notification_task(
+            mentions.notify_chapter_comment_mentions,
+            chapter["id"], user_id, comment_data["content"]
+        )
 
     return {
         "message": "Comentario publicado correctamente",
@@ -7422,3 +7441,14 @@ app.include_router(seo.router)
 import accounts  # noqa: E402
 
 app.include_router(accounts.router)
+
+
+
+# ============================================================
+# MENCIONES CON @
+# ============================================================
+
+# Nombrar a alguien en un comentario o en el foro: ver mentions.py.
+import mentions  # noqa: E402
+
+app.include_router(mentions.router)
