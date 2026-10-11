@@ -159,7 +159,7 @@ No hace falta un archivo de redirecciones: Cloudflare Pages sirve la aplicación
 El plan gratuito de Supabase no hace copias automáticas. Para descargar una copia completa (base de datos, cuentas e imágenes) a tu computador, desde la carpeta `backend`:
 
 ```
-venv\Scripts\python.exe scriptsackup.py
+venv\Scripts\python.exe scripts\backup.py
 ```
 
 Genera un archivo `.zip` con la fecha en la carpeta `FriBuk-copias` de tu usuario. Conviene hacerlo una vez por semana y antes de cualquier cambio delicado, y guardar el archivo también fuera del computador.
