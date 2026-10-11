@@ -154,6 +154,18 @@ No hace falta un archivo de redirecciones: Cloudflare Pages sirve la aplicación
 - En Authentication, poner `https://www.fribuk.com` como dirección del sitio, para que los enlaces de confirmación de cuenta lleven al sitio real.
 - Configurar un envío de correos propio (SMTP): el servicio incluido solo permite unos pocos correos por hora.
 
+## Copia de seguridad
+
+El plan gratuito de Supabase no hace copias automáticas. Para descargar una copia completa (base de datos, cuentas e imágenes) a tu computador, desde la carpeta `backend`:
+
+```
+venv\Scripts\python.exe scriptsackup.py
+```
+
+Genera un archivo `.zip` con la fecha en la carpeta `FriBuk-copias` de tu usuario. Conviene hacerlo una vez por semana y antes de cualquier cambio delicado, y guardar el archivo también fuera del computador.
+
+La copia contiene datos personales (correos y mensajes privados): no debe subirse a GitHub ni compartirse. El script solo lee; no modifica nada en Supabase.
+
 ## Seguridad y configuración
 
 - Las credenciales de Supabase pertenecen al backend y se leen desde variables de entorno.
