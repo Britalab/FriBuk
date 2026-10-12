@@ -35,25 +35,25 @@
   cursor: default;
 }
 
-/* "Reportar" con opciones desplegables (perfil público). */
+/* "Reportar" con opciones desplegables (perfil público). Las opciones se
+   abren dentro de la página, empujando lo de abajo: así nunca quedan
+   cortadas por el borde del encabezado ni de la pantalla. */
 .moderation-report-menu {
-  position: relative;
-  display: inline-block;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 100%;
 }
 
 .moderation-report-options {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 6px);
-  left: 0;
   min-width: 170px;
   display: flex;
   flex-direction: column;
+  margin-top: 6px;
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg-card);
-  box-shadow: 0 10px 28px rgba(40, 30, 25, 0.18);
 }
 
 .moderation-report-options button {
@@ -108,7 +108,7 @@
 .moderation-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin-top: 14px;
 }
