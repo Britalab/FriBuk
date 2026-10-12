@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import { usePageTitle } from "../hooks/usePageTitle";
 import AddToListMenu from "../components/profile/AddToListMenu";
+import ShareButton from "../components/ShareButton";
 import { contentWarningLabels } from "../utils/contentWarnings";
 import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
 import ReportButton from "../components/moderation/ReportButton";
@@ -884,8 +885,20 @@ export default function StoryDetail() {
                   : "Agregar a favoritos"}
               </button>
 
+              {/* Un borrador no se comparte: nadie más podría abrirlo. */}
               {["published", "completed", "paused"].includes(story.status) && (
-                <AddToListMenu storyId={storyId} />
+                <>
+                  <AddToListMenu storyId={storyId} />
+                  <ShareButton
+                    path={`/stories/${storyId}`}
+                    title={story.title}
+                    text={
+                      story.author_username
+                        ? `«${story.title}» de ${story.author_username}, en FriBuk`
+                        : `«${story.title}», en FriBuk`
+                    }
+                  />
+                </>
               )}
 
               {voteError && (

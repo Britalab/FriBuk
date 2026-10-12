@@ -4,6 +4,7 @@ import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import ProfileAbout from "../components/profile/ProfileAbout";
+import ShareButton from "../components/ShareButton";
 import ProfileSpace, { ProfileEmojis, ProfileStickers } from "../components/profile/ProfileSpace";
 import { ReportMenu } from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
@@ -377,6 +378,13 @@ export default function PublicProfile() {
                   Inicia sesión para seguir
                 </Link>
               )}
+              <ShareButton
+                path={`/usuario/${userId}`}
+                title={`@${username} en FriBuk`}
+                text={`Lee las historias de @${username} en FriBuk`}
+                label={isOwnProfile ? "Compartir mi perfil" : "Compartir perfil"}
+                className="public-profile-follow-button is-following public-profile-share-button"
+              />
             </div>
           </div>
         </header>

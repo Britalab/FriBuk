@@ -2092,6 +2092,10 @@ button {
   cursor: wait;
 }
 
+.public-profile-share-button {
+  gap: 8px;
+}
+
 .public-profile-follow-button:focus-visible,
 .public-profile-retry:focus-visible,
 .public-profile-story-link:focus-visible {

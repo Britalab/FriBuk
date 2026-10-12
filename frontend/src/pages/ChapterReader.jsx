@@ -9,6 +9,7 @@ import { anchorMatchesText, paragraphAnchor } from "../utils/textAnchors";
 import ReaderParagraph from "../components/reader/ReaderParagraph";
 import ChapterGeneralComments from "../components/reader/ChapterGeneralComments";
 import ChapterCommentsPanel from "../components/reader/ChapterCommentsPanel";
+import ShareButton from "../components/ShareButton";
 import { MAX_CHAPTER_QUOTE_LENGTH } from "../components/reader/chapterReactions";
 import "../styles/chapter-comments.css";
 
@@ -631,6 +632,16 @@ export default function ChapterReader() {
           >
             ← Ver todos los capítulos
           </Link>
+
+          {/* Al terminar de leer es cuando más ganas hay de recomendarlo. */}
+          {commentsEnabled && (
+            <ShareButton
+              path={`/stories/${storyId}/chapters/${chapterId}`}
+              title={chapter.title}
+              text={`«${chapter.title}», en FriBuk`}
+              label="Compartir capítulo"
+            />
+          )}
 
           <div className="reader-finish">
             <span>Fin del capítulo</span>
