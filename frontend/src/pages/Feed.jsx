@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "../api/client";
+import InstallButton from "../components/InstallButton";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import StoryCard from "../components/StoryCard";
@@ -319,6 +320,8 @@ export default function Feed() {
             </p>
           </div>
         </section>
+
+        <InstallButton inline />
 
         {/* Banner del inicio: lo ve todo el mundo; solo el admin lo cambia */}
         {(homeBannerUrl || isAdmin) && (

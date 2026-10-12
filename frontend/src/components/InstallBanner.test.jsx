@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import InstallBanner from "./InstallBanner";
+import InstallButton from "./InstallButton";
 import {
   detectPlatform,
   dismissInstall,
@@ -71,23 +72,22 @@ describe("recordar que se cerró la invitación", () => {
   });
 });
 
-describe("InstallBanner", () => {
-  function setDevice({ userAgent, touch = true }) {
+
+describe("instalar desde la página", () => {
+  const IN_INSTAGRAM = `${ANDROID} Instagram 350.0.0.0`;
+
+  function setDevice(userAgent, { standalone = false } = {}) {
     vi.spyOn(navigator, "userAgent", "get").mockReturnValue(userAgent);
     window.matchMedia = vi.fn((query) => ({
-      matches: query === "(pointer: coarse)" ? touch : false,
+      matches: query === "(display-mode: standalone)" ? standalone : false,
     }));
   }
 
-  function renderAt(path) {
-    return render(
-      <MemoryRouter initialEntries={[path]}>
-        <InstallBanner />
-      </MemoryRouter>
-    );
+  function renderAt(path, element) {
+    return render(<MemoryRouter initialEntries={[path]}>{element}</MemoryRouter>);
   }
 
-  // Lo que Chrome avisa en Android cuando el sitio se puede instalar.
+  // Lo que Chrome avisa cuando el sitio se puede instalar.
   function offerInstall(outcome = "accepted") {
     const event = new Event("beforeinstallprompt", { cancelable: true });
     event.prompt = vi.fn();
@@ -110,55 +110,105 @@ describe("InstallBanner", () => {
     window.matchMedia = originalMatchMedia;
   });
 
-  it("en iPhone lleva a los pasos de instalación", () => {
-    setDevice({ userAgent: IPHONE });
-    renderAt("/");
+  describe("InstallBanner", () => {
+    it("dentro de Instagram en Android ofrece abrir Chrome", () => {
+      setDevice(IN_INSTAGRAM);
+      renderAt("/stories/abc", <InstallBanner />);
 
-    expect(screen.getByRole("link", { name: "Ver cómo" }).getAttribute("href")).toBe("/instalar");
+      expect(screen.getByRole("link", { name: "Abrir en Chrome" }).getAttribute("href"))
+        .toMatch(/^intent:\/\//);
+    });
+
+    it("dentro de otra app en iPhone lleva a los pasos", () => {
+      setDevice(`${IPHONE} Instagram 350.0.0.0`);
+      renderAt("/", <InstallBanner />);
+
+      expect(screen.getByRole("link", { name: "Ver cómo" }).getAttribute("href")).toBe("/instalar");
+    });
+
+    it("en un navegador normal no aparece: basta el botón", () => {
+      for (const userAgent of [IPHONE, ANDROID, WINDOWS]) {
+        setDevice(userAgent);
+        const view = renderAt("/", <InstallBanner />);
+        expect(view.container.innerHTML).toBe("");
+        view.unmount();
+      }
+    });
+
+    it("no aparece mientras se lee un capítulo", () => {
+      setDevice(IN_INSTAGRAM);
+
+      expect(renderAt("/stories/abc/chapters/1", <InstallBanner />).container.innerHTML).toBe("");
+    });
+
+    it("al cerrarlo no vuelve a aparecer", () => {
+      setDevice(IN_INSTAGRAM);
+      const first = renderAt("/", <InstallBanner />);
+      fireEvent.click(screen.getByRole("button", { name: "Cerrar aviso" }));
+      expect(first.container.innerHTML).toBe("");
+      first.unmount();
+
+      expect(renderAt("/", <InstallBanner />).container.innerHTML).toBe("");
+    });
   });
 
-  it("dentro de Instagram en Android ofrece abrir Chrome", () => {
-    setDevice({ userAgent: `${ANDROID} Instagram 350.0.0.0` });
-    renderAt("/stories/abc");
+  describe("InstallButton", () => {
+    it("sin instalación directa lleva a los pasos", () => {
+      for (const userAgent of [IPHONE, WINDOWS]) {
+        setDevice(userAgent);
+        const view = renderAt("/stories/abc", <InstallButton />);
+        expect(screen.getByRole("link", { name: "Instalar app" }).getAttribute("href")).toBe("/instalar");
+        view.unmount();
+      }
+    });
 
-    expect(screen.getByRole("link", { name: "Abrir en Chrome" }).getAttribute("href"))
-      .toMatch(/^intent:\/\//);
-  });
+    it("no aparece al leer, al escribir ni con la app ya instalada", () => {
+      setDevice(ANDROID);
+      for (const path of [
+        "/stories/abc/chapters/1",
+        "/create-story",
+        "/stories/abc/edit",
+        "/mensajes",
+        "/instalar",
+      ]) {
+        const view = renderAt(path, <InstallButton />);
+        expect(view.container.innerHTML).toBe("");
+        view.unmount();
+      }
 
-  it("no aparece en el computador ni mientras se lee un capítulo", () => {
-    setDevice({ userAgent: WINDOWS, touch: false });
-    const desktop = renderAt("/");
-    expect(desktop.container.innerHTML).toBe("");
-    desktop.unmount();
+      setDevice(ANDROID, { standalone: true });
+      expect(renderAt("/stories/abc", <InstallButton />).container.innerHTML).toBe("");
+    });
 
-    setDevice({ userAgent: IPHONE });
-    expect(renderAt("/stories/abc/chapters/1").container.innerHTML).toBe("");
-  });
+    it("en la portada solo se muestra el que va dentro de la bienvenida", () => {
+      setDevice(ANDROID);
+      const strip = renderAt("/", <InstallButton />);
+      expect(strip.container.innerHTML).toBe("");
+      strip.unmount();
 
-  it("al cerrarla no vuelve a aparecer", () => {
-    setDevice({ userAgent: IPHONE });
-    const first = renderAt("/");
-    fireEvent.click(screen.getByRole("button", { name: "Cerrar invitación" }));
-    expect(first.container.innerHTML).toBe("");
-    first.unmount();
+      renderAt("/", <InstallButton inline />);
+      expect(screen.getByRole("link", { name: "Instalar app" })).toBeTruthy();
+    });
 
-    expect(renderAt("/").container.innerHTML).toBe("");
-  });
+    // Va al final: después de instalar, la app queda instalada para las
+    // pruebas que sigan en este archivo.
+    it("instala con un clic cuando el navegador lo permite", async () => {
+      setDevice(ANDROID);
+      const view = renderAt("/stories/abc", <InstallButton />);
+      const event = offerInstall();
 
-  it("en Android instala con un toque cuando el navegador lo permite", async () => {
-    setDevice({ userAgent: ANDROID });
-    const view = renderAt("/");
-    // Sin el aviso del navegador no hay nada que ofrecer.
-    expect(view.container.innerHTML).toBe("");
+      fireEvent.click(screen.getByRole("button", { name: "Instalar app" }));
 
-    const event = offerInstall();
-    fireEvent.click(screen.getByRole("button", { name: "Instalar" }));
+      await waitFor(() => expect(event.prompt).toHaveBeenCalled());
+      await waitFor(() => expect(showToast).toHaveBeenCalledWith(
+        expect.stringContaining("instalada")
+      ));
 
-    await waitFor(() => expect(event.prompt).toHaveBeenCalled());
-    await waitFor(() => expect(showToast).toHaveBeenCalledWith(
-      expect.stringContaining("instalada")
-    ));
-    // El aviso ya se usó: la invitación desaparece.
-    expect(view.container.innerHTML).toBe("");
+      // Al terminar, el navegador avisa y el botón desaparece.
+      act(() => {
+        window.dispatchEvent(new Event("appinstalled"));
+      });
+      expect(view.container.innerHTML).toBe("");
+    });
   });
 });

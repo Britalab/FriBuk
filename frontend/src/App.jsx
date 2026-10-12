@@ -7,6 +7,7 @@ import NotificationsProvider from "./components/NotificationsProvider";
 import Navbar from "./components/Navbar";
 import UpdateNotice from "./components/UpdateNotice";
 import InstallBanner from "./components/InstallBanner";
+import InstallButton from "./components/InstallButton";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
@@ -55,6 +56,7 @@ function App() {
         <NotificationsProvider>
 
         <Navbar />
+        <InstallButton />
         <UpdateNotice />
         <InstallBanner />
 
