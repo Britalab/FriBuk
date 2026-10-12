@@ -3,7 +3,8 @@ import SiteFooter from "../components/SiteFooter";
 import { useInstallApp } from "../hooks/useInstallApp";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useToast } from "../hooks/useToast";
-import { openInChromeLink } from "../utils/installApp";
+import { copyText } from "../utils/clipboard";
+import { openInChromeLink, openInSafariLink } from "../utils/installApp";
 import "../styles/install.css";
 
 // Pasos para instalar, según dónde esté la persona.
@@ -21,16 +22,16 @@ const GUIDES = {
     steps: [
       "Abre FriBuk en Safari. También sirve Chrome, si tu iPhone está actualizado.",
       "Toca el botón Compartir: el cuadrado con una flecha hacia arriba. En Safari está abajo; en Chrome, arriba a la derecha.",
-      "Baja en la lista y elige «Agregar a Inicio».",
-      "Toca «Agregar».",
+      "Desliza la lista hacia arriba y elige «Agregar a Inicio». En algunos iPhone dice «Añadir a pantalla de inicio».",
+      "Toca «Agregar», arriba a la derecha.",
     ],
   },
   "in-app": {
     title: "Si abriste FriBuk desde Instagram, TikTok o Facebook",
     steps: [
       "Esas apps abren los enlaces en un navegador propio, que no permite instalar.",
-      "Toca el menú (⋯ o ⋮), arriba a la derecha.",
-      "Elige «Abrir en el navegador», «Abrir en Chrome» o «Abrir en Safari».",
+      "Toca los tres puntos (⋯ o ⋮), arriba a la derecha.",
+      "Elige «Abrir en navegador externo», «Abrir en Chrome» o «Abrir en Safari».",
       "Ya en el navegador, sigue los pasos de tu teléfono.",
     ],
   },
@@ -71,6 +72,21 @@ export default function Install() {
   const currentGuide = GUIDES[currentKey];
   const otherGuides = Object.entries(GUIDES).filter(([key]) => key !== currentKey);
 
+  // Dentro del navegador de otra app: antes de instalar hay que salir de ahí.
+  const inApp = platform === "in-app-ios" || platform === "in-app-android";
+  const browser = platform === "in-app-ios" ? "Safari" : "Chrome";
+  const installUrl = `${window.location.origin}/instalar`;
+  const openInBrowserLink =
+    platform === "in-app-ios" ? openInSafariLink(installUrl) : openInChromeLink(installUrl);
+
+  const handleCopy = async () => {
+    if (await copyText(installUrl)) {
+      showToast(`Enlace copiado. Pégalo en ${browser}.`);
+    } else {
+      showToast("No se pudo copiar el enlace.", "error");
+    }
+  };
+
   const handleInstall = async () => {
     if (await install()) {
       showToast("FriBuk quedó instalada. Búscala entre tus aplicaciones.");
@@ -107,6 +123,39 @@ export default function Install() {
               <h2>FriBuk ya está instalada</h2>
               <p>La estás usando como app. No hay nada más que hacer.</p>
             </>
+          ) : inApp ? (
+            <>
+              <h2>Primero, sal de esta app</h2>
+              <p>
+                Abriste FriBuk dentro de otra aplicación (Instagram, TikTok,
+                Facebook…). Desde aquí el teléfono no permite instalar: hay
+                que abrirla en {browser}.
+              </p>
+
+              <div className="install-actions">
+                <a className="install-action" href={openInBrowserLink}>
+                  Abrir en {browser}
+                </a>
+                <button
+                  type="button"
+                  className="install-action is-secondary"
+                  onClick={handleCopy}
+                >
+                  Copiar enlace
+                </button>
+              </div>
+
+              <p>
+                <strong>Si el botón no hace nada:</strong> toca los tres
+                puntos (⋯), arriba a la derecha, y elige «Abrir en navegador
+                externo». También puedes copiar el enlace y pegarlo en{" "}
+                {browser}.
+              </p>
+              <p>
+                Ya en {browser}, vuelve a tocar «Instalar app» y sigue los
+                pasos.
+              </p>
+            </>
           ) : canPrompt ? (
             <>
               <h2>Lista para instalar</h2>
@@ -119,14 +168,6 @@ export default function Install() {
             <>
               <h2>{currentGuide.title}</h2>
               <Steps steps={currentGuide.steps} />
-              {platform === "in-app-android" && (
-                <a
-                  className="install-action"
-                  href={openInChromeLink(`${window.location.origin}/instalar`)}
-                >
-                  Abrir en Chrome
-                </a>
-              )}
             </>
           )}
         </section>

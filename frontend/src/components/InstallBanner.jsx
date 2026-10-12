@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useInstallApp } from "../hooks/useInstallApp";
-import { dismissInstall, isInstallDismissed, openInChromeLink } from "../utils/installApp";
+import {
+  dismissInstall,
+  isInstallDismissed,
+  openInChromeLink,
+  openInSafariLink,
+} from "../utils/installApp";
 import "../styles/install.css";
 
 // Páginas donde el aviso no estorba: explorar, una historia, un perfil.
@@ -30,24 +35,22 @@ export default function InstallBanner() {
     <div className="update-notice install-banner" role="region" aria-label="Instalar FriBuk">
       <p>
         <strong>Instala FriBuk.</strong>{" "}
-        {isAndroid
-          ? "Para instalarla como app, ábrela en tu navegador."
-          : "Para instalarla como app, ábrela en Safari o Chrome."}
+        Desde aquí no se puede: primero ábrela en{" "}
+        {isAndroid ? "tu navegador" : "Safari"}.{" "}
+        <Link to="/instalar">¿No funciona el botón?</Link>
       </p>
 
       <div className="update-notice-actions">
-        {isAndroid ? (
-          <a
-            href={openInChromeLink(window.location.href)}
-            className="update-notice-reload install-banner-link"
-          >
-            Abrir en Chrome
-          </a>
-        ) : (
-          <Link to="/instalar" className="update-notice-reload install-banner-link">
-            Ver cómo
-          </Link>
-        )}
+        <a
+          href={
+            isAndroid
+              ? openInChromeLink(window.location.href)
+              : openInSafariLink(window.location.href)
+          }
+          className="update-notice-reload install-banner-link"
+        >
+          {isAndroid ? "Abrir en Chrome" : "Abrir en Safari"}
+        </a>
         <button
           type="button"
           className="update-notice-close"

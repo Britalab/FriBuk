@@ -45,6 +45,13 @@ export function openInChromeLink(url) {
   );
 }
 
+// Lo mismo en iPhone: abre la página en Safari. Solo funciona desde iOS 17;
+// en versiones anteriores el enlace no hace nada, así que siempre va
+// acompañado de los pasos para hacerlo a mano.
+export function openInSafariLink(url) {
+  return url.replace(/^https?:\/\//, "x-safari-https://");
+}
+
 // El aviso del navegador puede llegar antes de que la página termine de
 // armarse, así que se guarda aquí hasta que alguien pulse "Instalar".
 let promptEvent = null;

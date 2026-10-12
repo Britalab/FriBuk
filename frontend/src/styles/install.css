@@ -110,6 +110,24 @@
   cursor: pointer;
 }
 
+.install-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.install-action.is-secondary {
+  border-color: var(--border);
+  background: var(--bg-card);
+  color: var(--burgundy);
+}
+
+.install-action.is-secondary:hover {
+  border-color: var(--orange-soft);
+  background: var(--bg-soft);
+}
+
 .install-action:hover {
   border-color: var(--burgundy-dark);
   background: var(--burgundy-dark);
@@ -122,4 +140,8 @@
 
 [data-theme="dark"] .install-action {
   color: #1c1919;
+}
+
+[data-theme="dark"] .install-action.is-secondary {
+  color: var(--burgundy);
 }

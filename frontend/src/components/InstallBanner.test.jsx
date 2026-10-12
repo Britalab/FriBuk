@@ -8,6 +8,7 @@ import {
   dismissInstall,
   isInstallDismissed,
   openInChromeLink,
+  openInSafariLink,
 } from "../utils/installApp";
 
 const showToast = vi.fn();
@@ -55,6 +56,13 @@ describe("openInChromeLink", () => {
     expect(link).toContain(
       `S.browser_fallback_url=${encodeURIComponent("https://www.fribuk.com/stories/abc?x=1")};end`
     );
+  });
+});
+
+describe("openInSafariLink", () => {
+  it("conserva la página", () => {
+    expect(openInSafariLink("https://www.fribuk.com/instalar"))
+      .toBe("x-safari-https://www.fribuk.com/instalar");
   });
 });
 
@@ -119,11 +127,14 @@ describe("instalar desde la página", () => {
         .toMatch(/^intent:\/\//);
     });
 
-    it("dentro de otra app en iPhone lleva a los pasos", () => {
+    it("dentro de Instagram en iPhone ofrece abrir Safari, con los pasos de respaldo", () => {
       setDevice(`${IPHONE} Instagram 350.0.0.0`);
       renderAt("/", <InstallBanner />);
 
-      expect(screen.getByRole("link", { name: "Ver cómo" }).getAttribute("href")).toBe("/instalar");
+      expect(screen.getByRole("link", { name: "Abrir en Safari" }).getAttribute("href"))
+        .toMatch(/^x-safari-https:\/\//);
+      expect(screen.getByRole("link", { name: "¿No funciona el botón?" }).getAttribute("href"))
+        .toBe("/instalar");
     });
 
     it("en un navegador normal no aparece: basta el botón", () => {

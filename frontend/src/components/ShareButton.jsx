@@ -1,32 +1,5 @@
 import { useToast } from "../hooks/useToast";
-
-// Copia sin la API moderna: navegadores antiguos o integrados en otras apps.
-function legacyCopy(value) {
-  const field = document.createElement("textarea");
-  field.value = value;
-  field.setAttribute("readonly", "");
-  field.style.position = "fixed";
-  field.style.opacity = "0";
-  document.body.appendChild(field);
-  field.select();
-
-  try {
-    return document.execCommand("copy");
-  } catch {
-    return false;
-  } finally {
-    field.remove();
-  }
-}
-
-async function copyText(value) {
-  try {
-    await navigator.clipboard.writeText(value);
-    return true;
-  } catch {
-    return legacyCopy(value);
-  }
-}
+import { copyText } from "../utils/clipboard";
 
 // Botón "Compartir" de una historia, un capítulo o un perfil. En el teléfono
 // abre el menú del sistema (WhatsApp, Instagram, etc.); en el computador ese
