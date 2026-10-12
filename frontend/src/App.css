@@ -8316,6 +8316,20 @@ button {
   font-weight: 500;
 }
 
+/* Tema fijado por la administración: va primero en la lista. */
+.forum-topic-card.is-pinned {
+  border-color: #d96a32;
+}
+
+.forum-topic-pinned {
+  display: block;
+  margin-bottom: 3px;
+  color: #d96a32;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
 /* TÍTULO */
 
 .forum-topic-card h2 {

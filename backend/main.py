@@ -3742,9 +3742,9 @@ def get_forum_topics():
         )
 
         # Los temas retirados por moderación no aparecen en la lista.
-        return moderation.visible_forum_topics(
+        return sort_forum_topics(moderation.visible_forum_topics(
             add_forum_user_data(response.data or [])
-        )
+        ))
 
     except Exception as e:
 
@@ -3752,6 +3752,55 @@ def get_forum_topics():
             status_code=500,
             detail=public_error_detail(e)
         )
+
+
+# ============================================================
+# TEMAS FIJADOS (ANUNCIOS)
+# ============================================================
+# Un administrador puede fijar un tema para que quede arriba del foro, con
+# la marca de anuncio. Requiere la columna de sql/forum_temas_fijados.sql;
+# sin ella el foro funciona igual, solo que nada se puede fijar.
+
+def sort_forum_topics(topics: list[dict]) -> list[dict]:
+    # Primero los fijados, el más reciente arriba; el resto conserva su
+    # orden (del más nuevo al más antiguo).
+    pinned = sorted(
+        (topic for topic in topics if topic.get("pinned_at")),
+        key=lambda topic: str(topic["pinned_at"]),
+        reverse=True,
+    )
+    return pinned + [topic for topic in topics if not topic.get("pinned_at")]
+
+
+def set_forum_topic_pin(topic_id: str, pinned_at: str | None) -> dict:
+    try:
+        response = (
+            supabase_admin
+            .table("forum_topics")
+            .update({"pinned_at": pinned_at})
+            .eq("id", topic_id)
+            .execute()
+        )
+    except Exception as e:
+        # Un id que no es un UUID: el tema no existe.
+        if getattr(e, "code", None) == "22P02":
+            raise HTTPException(status_code=404, detail="Tema no encontrado") from e
+        raise HTTPException(status_code=500, detail=public_error_detail(e)) from e
+
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Tema no encontrado")
+
+    return {"pinned_at": pinned_at}
+
+
+@app.put("/forum/topics/{topic_id}/pin")
+def pin_forum_topic(topic_id: str, admin_user=Depends(get_current_admin)):
+    return set_forum_topic_pin(topic_id, datetime.now(timezone.utc).isoformat())
+
+
+@app.delete("/forum/topics/{topic_id}/pin")
+def unpin_forum_topic(topic_id: str, admin_user=Depends(get_current_admin)):
+    return set_forum_topic_pin(topic_id, None)
 
 
 FORUM_REACTION_VALUES = (

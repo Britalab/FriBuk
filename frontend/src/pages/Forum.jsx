@@ -145,13 +145,18 @@ export default function Forum() {
               <Link
                 key={topic.id}
                 to={`/forum/${topic.id}`}
-                className="forum-topic-card"
+                className={`forum-topic-card${topic.pinned_at ? " is-pinned" : ""}`}
               >
                 <div className="forum-topic-icon">
-                  💬
+                  {topic.pinned_at ? "📌" : "💬"}
                 </div>
 
                 <div className="forum-topic-info">
+                  {/* Tema fijado arriba por la administración */}
+                  {topic.pinned_at && (
+                    <span className="forum-topic-pinned">ANUNCIO</span>
+                  )}
+
                   <h2>{topic.title}</h2>
 
                   <span className="forum-topic-user">

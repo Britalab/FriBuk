@@ -158,6 +158,7 @@ export default function ForumTopic() {
   const [topicInteractions, setTopicInteractions] = useState(null);
   const [replies, setReplies] = useState([]);
   const [topicInteractionLoading, setTopicInteractionLoading] = useState(false);
+  const [pinLoading, setPinLoading] = useState(false);
   const [replyInteractionLoading, setReplyInteractionLoading] = useState(false);
 
   const [reply, setReply] = useState("");
@@ -655,6 +656,36 @@ export default function ForumTopic() {
   const topicReactions =
     topicInteractions?.current_user?.reactions || [];
 
+  // Fijar el tema arriba del foro como anuncio. Solo administración; el
+  // backend comprueba el permiso.
+  const togglePin = async () => {
+    if (pinLoading) return;
+
+    const wasPinned = Boolean(topic.pinned_at);
+    setPinLoading(true);
+
+    try {
+      const response = wasPinned
+        ? await api.delete(`/forum/topics/${topic.id}/pin`)
+        : await api.put(`/forum/topics/${topic.id}/pin`);
+
+      setTopic((current) => ({ ...current, pinned_at: response.data.pinned_at }));
+      showToast(
+        wasPinned
+          ? "El tema ya no está fijado."
+          : "Tema fijado como anuncio. Queda arriba del foro."
+      );
+    } catch (err) {
+      console.error("Error al fijar el tema:", err);
+      showToast(
+        err.response?.data?.detail || "No se pudo guardar el cambio. Intenta nuevamente.",
+        "error"
+      );
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
   return (
     <main className="forum-topic-page">
 
@@ -668,7 +699,7 @@ export default function ForumTopic() {
         <div className="forum-post-header">
           <div>
             <span className="forum-post-label">
-              TEMA
+              {topic.pinned_at ? "📌 ANUNCIO" : "TEMA"}
             </span>
 
             <h1>{topic.title}</h1>
@@ -767,6 +798,17 @@ export default function ForumTopic() {
                   Eliminar tema
                 </button>
               </>
+            )}
+            {user?.is_admin && (
+              <button
+                type="button"
+                className="moderation-admin-button"
+                onClick={togglePin}
+                disabled={pinLoading}
+              >
+                <span aria-hidden="true">📌</span>
+                {topic.pinned_at ? "Dejar de fijar" : "Fijar como anuncio"}
+              </button>
             )}
             <RemoveButton
               targetType="forum_topic"
