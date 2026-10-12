@@ -1,0 +1,74 @@
+/* Instalación de FriBuk como app: la invitación flotante y la página
+   /instalar. La invitación reutiliza el aspecto del aviso de versión nueva
+   (.update-notice, en App.css). */
+
+/* Si coinciden, el aviso de versión nueva queda encima. */
+.install-banner {
+  z-index: 240;
+}
+
+.install-banner-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.install-current {
+  border: 1px solid var(--orange-soft);
+  border-radius: 14px;
+  padding: 20px 22px;
+  background: var(--bg-card);
+}
+
+.install-current-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--orange);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.install-steps {
+  margin: 12px 0 0;
+  padding-left: 22px;
+  line-height: 1.7;
+}
+
+.install-steps li + li {
+  margin-top: 6px;
+}
+
+.install-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 16px;
+  padding: 10px 22px;
+  border: 1px solid var(--burgundy);
+  border-radius: 11px;
+  background: var(--burgundy);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.install-action:hover {
+  border-color: var(--burgundy-dark);
+  background: var(--burgundy-dark);
+}
+
+.install-action:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+[data-theme="dark"] .install-action {
+  color: #1c1919;
+}

@@ -6,6 +6,7 @@ import NotificationsProvider from "./components/NotificationsProvider";
 
 import Navbar from "./components/Navbar";
 import UpdateNotice from "./components/UpdateNotice";
+import InstallBanner from "./components/InstallBanner";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
@@ -41,6 +42,7 @@ import Copyright from "./pages/Copyright";
 import Privacy from "./pages/Privacy";
 import Moderation from "./pages/Moderation";
 import Faq from "./pages/Faq";
+import Install from "./pages/Install";
 import MentionRedirect from "./pages/MentionRedirect";
 
 import "./App.css";
@@ -54,6 +56,7 @@ function App() {
 
         <Navbar />
         <UpdateNotice />
+        <InstallBanner />
 
         <Routes>
           <Route path="/" element={<Feed />} />
@@ -206,6 +209,7 @@ function App() {
           <Route path="/privacidad" element={<Privacy />} />
           <Route path="/moderacion" element={<Moderation />} />
           <Route path="/preguntas-frecuentes" element={<Faq />} />
+          <Route path="/instalar" element={<Install />} />
           <Route path="/u/:username" element={<MentionRedirect />} />
 
           <Route path="/support/admin" element={<SupportAdmin />} />

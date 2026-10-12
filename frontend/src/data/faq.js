@@ -18,6 +18,12 @@ export const FAQ = [
       "Sí. Crear una cuenta, leer y publicar historias en FriBuk no tiene costo.",
   },
   {
+    question: "¿FriBuk tiene app?",
+    answer:
+      "Sí. FriBuk se instala en el teléfono o el computador directamente desde el navegador: queda con su ícono en la pantalla de inicio y se abre a pantalla completa, como cualquier otra app. No está en Play Store ni en App Store, y necesita conexión a internet para cargar las historias.",
+    link: { to: "/instalar", label: "Cómo instalar FriBuk" },
+  },
+  {
     question: "¿Necesito una cuenta para leer?",
     answer:
       "No. Las historias publicadas se pueden leer sin cuenta. Necesitas una cuenta para publicar, comentar, guardar historias en favoritos, seguir a otras personas y para que FriBuk recuerde por dónde vas leyendo.",
