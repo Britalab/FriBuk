@@ -8497,6 +8497,34 @@ button {
   object-fit: cover;
 }
 
+/* La foto y el nombre llevan al perfil público. */
+.forum-avatar-link {
+  flex: 0 0 auto;
+  border-radius: 50%;
+  text-decoration: none;
+  transition: opacity 0.18s ease;
+}
+
+.forum-avatar-link:hover {
+  opacity: 0.85;
+}
+
+.forum-user-link {
+  align-self: flex-start;
+  text-decoration: none;
+}
+
+.forum-user-link:hover strong {
+  color: var(--burgundy);
+  text-decoration: underline;
+}
+
+.forum-avatar-link:focus-visible,
+.forum-user-link:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
 .forum-post-user > div:last-child {
   display: flex;
   flex-direction: column;

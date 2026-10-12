@@ -101,9 +101,18 @@ function ForumInteractionControls({
   );
 }
 
+// Perfil público de quien publicó, o null si no hay a dónde ir (una
+// cuenta eliminada conserva sus publicaciones, pero ya no tiene perfil).
+function profilePath(userId, username) {
+  if (!userId || (username || "").startsWith("eliminado_")) return null;
+  return `/usuario/${userId}`;
+}
+
 // Foto de perfil de quien publicó; si no tiene, la inicial de su nombre.
-function ForumAvatar({ username, avatarUrl }) {
-  return (
+// Lleva a su perfil público.
+function ForumAvatar({ userId, username, avatarUrl }) {
+  const path = profilePath(userId, username);
+  const avatar = (
     <div className="forum-avatar" aria-hidden="true">
       {avatarUrl ? (
         <img src={avatarUrl} alt="" loading="lazy" />
@@ -111,6 +120,30 @@ function ForumAvatar({ username, avatarUrl }) {
         (username || "U").charAt(0).toUpperCase()
       )}
     </div>
+  );
+
+  return path ? (
+    <Link
+      to={path}
+      className="forum-avatar-link"
+      aria-label={`Ver el perfil de ${username || "esta persona"}`}
+    >
+      {avatar}
+    </Link>
+  ) : (
+    avatar
+  );
+}
+
+// Nombre de quien publicó, como enlace a su perfil público.
+function ForumUserName({ userId, username }) {
+  const path = profilePath(userId, username);
+  const name = <strong>{username || "Usuario"}</strong>;
+
+  return path ? (
+    <Link to={path} className="forum-user-link">{name}</Link>
+  ) : (
+    name
   );
 }
 
@@ -644,12 +677,14 @@ export default function ForumTopic() {
 
         <div className="forum-post-user">
 
-          <ForumAvatar username={topic.username} avatarUrl={topic.avatar_url} />
+          <ForumAvatar
+            userId={topic.user_id}
+            username={topic.username}
+            avatarUrl={topic.avatar_url}
+          />
 
           <div>
-            <strong>
-              {topic.username || "Usuario"}
-            </strong>
+            <ForumUserName userId={topic.user_id} username={topic.username} />
 
             <span>
               {new Date(
@@ -831,12 +866,14 @@ export default function ForumTopic() {
 
                 <div className="forum-post-user">
 
-                  <ForumAvatar username={item.username} avatarUrl={item.avatar_url} />
+                  <ForumAvatar
+                    userId={item.user_id}
+                    username={item.username}
+                    avatarUrl={item.avatar_url}
+                  />
 
                   <div>
-                    <strong>
-                      {item.username || "Usuario"}
-                    </strong>
+                    <ForumUserName userId={item.user_id} username={item.username} />
 
                     <span>
                       {new Date(
