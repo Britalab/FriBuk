@@ -11,6 +11,18 @@ export const REPORT_REASONS = [
   { value: "other", label: "Otro" },
 ];
 
+// Reportar a una persona (no a una publicación) tiene sus propios motivos
+// y siempre pide una explicación.
+export const USER_REPORT_REASONS = [
+  { value: "harassment", label: "Acoso o amenazas" },
+  { value: "impersonation", label: "Suplantación de identidad" },
+  { value: "spam", label: "Spam o publicidad" },
+  { value: "prohibited", label: "Publica contenido prohibido" },
+  { value: "other", label: "Otro" },
+];
+
+export const USER_REPORT_DETAILS_MIN_LENGTH = 10;
+
 // Al retirar, el administrador puede usar además este motivo, que es el
 // que queda registrado en los retiros automáticos.
 export const REMOVAL_REASONS = [

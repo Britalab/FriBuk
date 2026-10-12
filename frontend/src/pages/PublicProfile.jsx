@@ -310,9 +310,14 @@ export default function PublicProfile() {
               </button>
             </div>
 
-            {/* Reportar o retirar las imágenes del perfil */}
-            {!isOwnProfile && (pageData.profile.avatar_url || bannerUrl) && (
+            {/* Reportar a la persona, y reportar o retirar sus imágenes */}
+            {!isOwnProfile && (
               <div className="moderation-actions">
+                <ReportButton
+                  targetType="user"
+                  targetId={userId}
+                  label="Reportar usuario"
+                />
                 {pageData.profile.avatar_url && (
                   <>
                     <ReportButton

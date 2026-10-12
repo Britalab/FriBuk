@@ -136,15 +136,17 @@ function ModerationCase({ item, onChanged }) {
           Ver en el sitio
         </Link>
 
+        {/* Una cuenta reportada no se retira: se revisa y, si hace falta,
+            se actúa sobre lo que publicó. */}
         {item.status === "removed" ? (
           <RestoreButton caseId={item.id} onRestored={onChanged} />
-        ) : (
+        ) : item.target_type !== "user" ? (
           <RemoveButton
             targetType={item.target_type}
             targetId={item.target_id}
             onRemoved={onChanged}
           />
-        )}
+        ) : null}
 
         {item.status === "open" && (
           <button

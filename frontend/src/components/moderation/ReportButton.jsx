@@ -6,13 +6,18 @@ import ModerationDialog from "./ModerationDialog";
 import {
   REPORT_DETAILS_MAX_LENGTH,
   REPORT_REASONS,
+  USER_REPORT_DETAILS_MIN_LENGTH,
+  USER_REPORT_REASONS,
   moderationErrorDetail,
 } from "../../utils/moderation";
 
-// Botón "Reportar" para un contenido: abre un formulario con el motivo.
-// Sirve para temas y respuestas del foro y para imágenes (foto de perfil,
-// banner y portada). El backend impide reportar dos veces lo mismo.
+// Botón "Reportar": abre un formulario con el motivo. Sirve para temas y
+// respuestas del foro, para imágenes (foto de perfil, banner y portada) y
+// para una persona (targetType "user"), que tiene sus propios motivos y
+// siempre pide una explicación. El backend impide reportar dos veces lo mismo.
 export default function ReportButton({ targetType, targetId, label = "Reportar" }) {
+  const isUser = targetType === "user";
+  const reasons = isUser ? USER_REPORT_REASONS : REPORT_REASONS;
   const { user } = useAuth();
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
@@ -43,6 +48,11 @@ export default function ReportButton({ targetType, targetId, label = "Reportar" 
       return;
     }
 
+    if (isUser && details.trim().length < USER_REPORT_DETAILS_MIN_LENGTH) {
+      setError("Cuéntanos qué ocurrió, con algo más de detalle.");
+      return;
+    }
+
     setSending(true);
     setError("");
 
@@ -51,7 +61,7 @@ export default function ReportButton({ targetType, targetId, label = "Reportar" 
         target_type: targetType,
         target_id: targetId,
         reason,
-        details: reason === "other" ? details.trim() || null : null,
+        details: isUser || reason === "other" ? details.trim() || null : null,
       });
       setReported(true);
       setOpen(false);
@@ -61,7 +71,11 @@ export default function ReportButton({ targetType, targetId, label = "Reportar" 
         // Ya lo había reportado: no hace falta volver a hacerlo.
         setReported(true);
         setOpen(false);
-        showToast("Ya habías reportado este contenido.");
+        showToast(
+          isUser
+            ? "Ya habías reportado a esta persona."
+            : "Ya habías reportado este contenido."
+        );
       } else {
         setError(moderationErrorDetail(requestError, "No se pudo enviar el reporte."));
       }
@@ -83,12 +97,17 @@ export default function ReportButton({ targetType, targetId, label = "Reportar" 
       </button>
 
       {open && (
-        <ModerationDialog title="Reportar contenido" onClose={close}>
+        <ModerationDialog
+          title={isUser ? "Reportar usuario" : "Reportar contenido"}
+          onClose={close}
+        >
           <form className="moderation-form" onSubmit={handleSubmit}>
             <fieldset className="moderation-reasons">
-              <legend>¿Por qué lo reportas?</legend>
+              <legend>
+                {isUser ? "¿Por qué reportas a esta persona?" : "¿Por qué lo reportas?"}
+              </legend>
 
-              {REPORT_REASONS.map((option) => (
+              {reasons.map((option) => (
                 <label
                   key={option.value}
                   className={`moderation-reason${
@@ -110,15 +129,26 @@ export default function ReportButton({ targetType, targetId, label = "Reportar" 
               ))}
             </fieldset>
 
-            {reason === "other" && (
+            {(isUser || reason === "other") && (
               <label className="moderation-field">
-                <span>Cuéntanos brevemente qué ocurre</span>
+                <span>
+                  {isUser
+                    ? "Cuéntanos qué ocurrió y dónde (obligatorio)"
+                    : "Cuéntanos brevemente qué ocurre"}
+                </span>
                 <textarea
                   value={details}
-                  onChange={(event) => setDetails(event.target.value)}
+                  onChange={(event) => {
+                    setDetails(event.target.value);
+                    setError("");
+                  }}
                   rows={3}
                   maxLength={REPORT_DETAILS_MAX_LENGTH}
-                  placeholder="Opcional"
+                  placeholder={
+                    isUser
+                      ? "Por ejemplo: en qué historia, tema del foro o mensaje pasó."
+                      : "Opcional"
+                  }
                 />
               </label>
             )}

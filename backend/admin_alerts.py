@@ -37,7 +37,8 @@ REPORTED_CONTENT_TEXT = {
     "forum_reply": "una respuesta del foro",
     "avatar": "una foto de perfil",
     "profile_banner": "un banner de perfil",
-    "story_cover": "la portada de una historia"
+    "story_cover": "la portada de una historia",
+    "user": "una cuenta"
 }
 
 reviewed_timestamps: deque = deque()

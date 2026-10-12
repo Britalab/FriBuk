@@ -123,6 +123,7 @@ TOPIC_ID = str(uuid.uuid4())
 REPLY_ID = str(uuid.uuid4())
 OTHER_REPLY_ID = str(uuid.uuid4())
 STORY_ID = str(uuid.uuid4())
+GONE_ID = str(uuid.uuid4())
 
 TOPIC_IMAGE_PATH = f"topics/{OWNER_ID}/imagen.png"
 TOPIC_IMAGE_URL = (
@@ -276,6 +277,142 @@ class ModerationTestCase(unittest.TestCase):
 
     def public_profile(self, user_id=OWNER_ID):
         return self.client.get(f"/users/{user_id}/public-profile").json()["user"]
+
+    # ============================================================
+    # REPORTAR A UNA PERSONA
+    # ============================================================
+
+    EXPLANATION = "Me escribe insultos en cada comentario que publico."
+
+    def report_user(self, reporter_id, target_id=OWNER_ID, reason="harassment",
+                    details=EXPLANATION):
+        return self.report(
+            reporter_id, target_type="user", target_id=target_id,
+            reason=reason, details=details
+        )
+
+    def test_user_can_be_reported_with_reason_and_explanation(self):
+        response = self.report_user(REPORTER_IDS[0])
+        self.assertEqual(response.status_code, 200, response.text)
+
+        report = self.database.tables["content_reports"][0]
+        self.assertEqual(report["target_type"], "user")
+        self.assertEqual(report["target_id"], OWNER_ID)
+        self.assertEqual(report["reason"], "harassment")
+        self.assertEqual(report["details"], self.EXPLANATION)
+
+        case = self.case("user", OWNER_ID)
+        self.assertEqual(case["status"], "open")
+        self.assertEqual(case["owner_id"], OWNER_ID)
+        self.assertEqual(case["snapshot"], {"title": "autora"})
+
+    def test_user_report_always_needs_an_explanation(self):
+        for details in (None, "", "   ", "corto"):
+            response = self.report_user(REPORTER_IDS[0], details=details)
+            self.assertEqual(response.status_code, 400, repr(details))
+
+        self.assertEqual(self.database.tables["content_reports"], [])
+
+    def test_user_report_has_its_own_reasons(self):
+        # Motivos de publicaciones que no aplican a una persona.
+        for reason in ("sexual", "graphic_violence", "copyright", "inventado"):
+            self.assertEqual(
+                self.report_user(REPORTER_IDS[0], reason=reason).status_code, 400, reason
+            )
+        # Y el de suplantación solo vale para personas.
+        self.assertEqual(
+            self.report(REPORTER_IDS[0], reason="impersonation").status_code, 400
+        )
+
+        for index, reason in enumerate(
+            ("harassment", "impersonation", "spam", "prohibited", "other")
+        ):
+            response = self.report_user(REPORTER_IDS[index], reason=reason)
+            self.assertEqual(response.status_code, 200, reason)
+
+    def test_some_accounts_cannot_be_reported(self):
+        # La propia, la de administración, una eliminada y una inexistente.
+        self.assertEqual(self.report_user(OWNER_ID).status_code, 400)
+        self.assertEqual(
+            self.report_user(REPORTER_IDS[0], target_id=ADMIN_ID).status_code, 400
+        )
+
+        self.database.tables["users"].append(
+            {"id": GONE_ID, "username": "eliminado_ab12cd34", "role": "user"}
+        )
+        self.assertEqual(
+            self.report_user(REPORTER_IDS[0], target_id=GONE_ID).status_code, 404
+        )
+        self.assertEqual(
+            self.report_user(REPORTER_IDS[0], target_id=str(uuid.uuid4())).status_code,
+            404
+        )
+        self.assertEqual(self.database.tables["content_reports"], [])
+
+    def test_user_can_only_be_reported_once_per_person(self):
+        self.assertEqual(self.report_user(REPORTER_IDS[0]).status_code, 200)
+
+        again = self.report_user(REPORTER_IDS[0], reason="spam")
+        self.assertEqual(again.status_code, 409)
+        self.assertEqual(again.json()["detail"], "Ya reportaste a esta persona.")
+        self.assertEqual(len(self.database.tables["content_reports"]), 1)
+
+    def test_many_reports_never_remove_an_account(self):
+        for reporter_id in REPORTER_IDS[:8]:
+            self.assertEqual(self.report_user(reporter_id).status_code, 200)
+
+        case = self.case("user", OWNER_ID)
+        self.assertEqual(case["status"], "open")
+        self.assertEqual(case["report_count"], 8)
+        self.assertFalse(case["removal_automatic"])
+        self.assertEqual(self.database.tables["moderation_actions"], [])
+        # El perfil y sus publicaciones siguen visibles.
+        self.assertEqual(self.public_profile()["username"], "autora")
+        self.assertEqual(self.topic().status_code, 200)
+
+    def test_account_cannot_be_removed_like_content(self):
+        self.report_user(REPORTER_IDS[0])
+
+        response = self.remove(target_type="user", target_id=OWNER_ID)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.case("user", OWNER_ID)["status"], "open")
+
+    def test_admin_sees_user_reports_and_can_close_them(self):
+        self.report_user(REPORTER_IDS[0])
+        self.report_user(REPORTER_IDS[1], reason="impersonation",
+                         details="Usa mi nombre y mi foto en su perfil.")
+
+        listed = self.cases().json()["cases"]
+        self.assertEqual(len(listed), 1)
+        case = listed[0]
+        self.assertEqual(case["target_type"], "user")
+        self.assertEqual(case["target_label"], "Cuenta de usuario")
+        self.assertEqual(case["link"], f"/usuario/{OWNER_ID}")
+        self.assertEqual(case["content"]["title"], "autora")
+        self.assertEqual(
+            sorted(reason["label"] for reason in case["reasons"]),
+            ["Acoso o amenazas", "Suplantación de identidad"]
+        )
+        self.assertEqual(len(case["explanations"]), 2)
+        # Nunca quién reportó.
+        for reporter_id in REPORTER_IDS[:2]:
+            self.assertNotIn(reporter_id, str(case))
+
+        reviewed = self.client.post(
+            f"/moderation/cases/{case['id']}/review",
+            json={"note": "Se habló con la persona."},
+            headers=auth_header(ADMIN_ID)
+        )
+        self.assertEqual(reviewed.status_code, 200, reviewed.text)
+        self.assertEqual(self.case("user", OWNER_ID)["status"], "reviewed")
+
+    def test_reported_user_is_not_told(self):
+        self.report_user(REPORTER_IDS[0])
+
+        notices = self.client.get("/me/moderation", headers=auth_header(OWNER_ID))
+        self.assertEqual(notices.status_code, 200)
+        self.assertNotIn(self.EXPLANATION, notices.text)
+        self.assertNotIn(REPORTER_IDS[0], notices.text)
 
     # ============================================================
     # REPORTAR

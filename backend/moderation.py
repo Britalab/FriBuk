@@ -39,6 +39,19 @@ REPORT_REASONS = {
     "copyright": "Copyright",
     "other": "Otro"
 }
+# Reportar a una persona (no a una publicación) tiene sus propios motivos
+# y siempre lleva una explicación: hay que saber qué hizo y dónde.
+USER_TARGET = "user"
+USER_REPORT_REASONS = {
+    "harassment": "Acoso o amenazas",
+    "impersonation": "Suplantación de identidad",
+    "spam": "Spam o publicidad",
+    "prohibited": "Publica contenido prohibido",
+    "other": "Otro"
+}
+USER_REPORT_DETAILS_MIN_LENGTH = 10
+# Para mostrar el motivo de cualquier reporte guardado.
+ALL_REPORT_REASONS = {**USER_REPORT_REASONS, **REPORT_REASONS}
 AUTOMATIC_REMOVAL_REASON = "many_reports"
 REMOVAL_REASONS = {
     **REPORT_REASONS,
@@ -62,7 +75,8 @@ TARGET_LABELS = {
     "forum_reply": "Respuesta del foro",
     "avatar": "Foto de perfil",
     "profile_banner": "Banner de perfil",
-    "story_cover": "Portada de historia"
+    "story_cover": "Portada de historia",
+    USER_TARGET: "Cuenta de usuario"
 }
 TARGET_REMOVED_TEXT = {
     "forum_topic": "Tu tema del foro fue retirado",
@@ -263,6 +277,21 @@ def load_target(target_type: str, target_id: str) -> dict:
         if target_type == "forum_topic":
             snapshot["title"] = row.get("title")
         return {"owner_id": str(row["user_id"]), "snapshot": snapshot}
+
+    if target_type == USER_TARGET:
+        response = (
+            db().table("users").select("id, username, role")
+            .eq("id", target_id).limit(1).execute()
+        )
+        row = response.data[0] if response.data else None
+        # Una cuenta eliminada ya no existe para nadie.
+        if not row or (row.get("username") or "").startswith("eliminado_"):
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        if row.get("role") == "admin":
+            raise HTTPException(
+                status_code=400, detail="Esta cuenta no se puede reportar."
+            )
+        return {"owner_id": target_id, "snapshot": {"title": row.get("username")}}
 
     if target_type in PROFILE_IMAGE_KEYS:
         auth_user = fribuk().get_public_auth_user(target_id)
@@ -734,12 +763,27 @@ def report_content(report: ContentReportCreate, current_user=Depends(get_current
     target_type = report.target_type
     target_id = normalize_target(target_type, report.target_id)
 
-    if report.reason not in REPORT_REASONS:
+    is_user_report = target_type == USER_TARGET
+    reasons = USER_REPORT_REASONS if is_user_report else REPORT_REASONS
+    already_reported = (
+        "Ya reportaste a esta persona." if is_user_report
+        else "Ya reportaste este contenido."
+    )
+
+    if report.reason not in reasons:
         raise HTTPException(status_code=400, detail="Motivo de reporte no válido")
 
-    # La explicación solo acompaña al motivo "Otro".
     details = None
-    if report.reason == "other":
+    if is_user_report:
+        # Al reportar a una persona la explicación es obligatoria.
+        details = clean_note(report.details, REPORT_DETAILS_MAX_LENGTH, "La explicación")
+        if not details or len(details) < USER_REPORT_DETAILS_MIN_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail="Cuéntanos qué ocurrió, con algo más de detalle."
+            )
+    elif report.reason == "other":
+        # En una publicación solo acompaña al motivo "Otro".
         details = clean_note(report.details, REPORT_DETAILS_MAX_LENGTH, "La explicación")
 
     try:
@@ -752,7 +796,11 @@ def report_content(report: ContentReportCreate, current_user=Depends(get_current
         target = load_target(target_type, target_id)
         if target["owner_id"] == user_id:
             raise HTTPException(
-                status_code=400, detail="No puedes reportar tu propio contenido."
+                status_code=400,
+                detail=(
+                    "No puedes reportar tu propia cuenta." if is_user_report
+                    else "No puedes reportar tu propio contenido."
+                )
             )
 
         duplicate = (
@@ -766,9 +814,7 @@ def report_content(report: ContentReportCreate, current_user=Depends(get_current
             .execute()
         )
         if duplicate.data:
-            raise HTTPException(
-                status_code=409, detail="Ya reportaste este contenido."
-            )
+            raise HTTPException(status_code=409, detail=already_reported)
 
         limit_report_requests(user_id)
 
@@ -795,9 +841,7 @@ def report_content(report: ContentReportCreate, current_user=Depends(get_current
         except Exception as error:
             # Dos envíos a la vez: la base de datos rechaza el segundo.
             if str(getattr(error, "code", "")) == "23505":
-                raise HTTPException(
-                    status_code=409, detail="Ya reportaste este contenido."
-                )
+                raise HTTPException(status_code=409, detail=already_reported)
             raise
 
         reports = case_reports(str(case["id"]))
@@ -809,16 +853,19 @@ def report_content(report: ContentReportCreate, current_user=Depends(get_current
         })
 
         # Aviso por correo a la administración: el retiro automático o, si
-        # no lo hubo, el reporte nuevo.
-        if countable_reporters(case, reports) >= AUTO_REMOVE_THRESHOLD:
+        # no lo hubo, el reporte nuevo. Una cuenta nunca se retira sola, por
+        # muchos reportes que reciba: la decisión es siempre de una persona.
+        if (
+            not is_user_report
+            and countable_reporters(case, reports) >= AUTO_REMOVE_THRESHOLD
+        ):
             case = remove_content(
                 case, AUTOMATIC_REMOVAL_REASON, actor_id=None, automatic=True
             )
             admin_alerts.alert_automatic_removal(case, TARGET_LABELS[target_type])
         else:
             admin_alerts.alert_new_report(
-                case, TARGET_LABELS[target_type],
-                REPORT_REASONS[report.reason], details
+                case, TARGET_LABELS[target_type], reasons[report.reason], details
             )
     except HTTPException:
         raise
@@ -884,7 +931,7 @@ def target_link(case: dict) -> str:
         return f"/forum/{target_id}"
     if target_type == "forum_reply":
         return f"/forum/{snapshot.get('topic_id')}"
-    if target_type in PROFILE_IMAGE_KEYS:
+    if target_type in PROFILE_IMAGE_KEYS or target_type == USER_TARGET:
         return f"/usuario/{target_id}"
     return f"/stories/{target_id}"
 
@@ -953,7 +1000,14 @@ def serialize_cases(cases: list[dict]) -> list[dict]:
             "report_count": case.get("report_count") or 0,
             # Motivos recibidos, sin identificar a quienes reportaron.
             "reasons": [
-                {"reason": reason, "label": REPORT_REASONS.get(reason, reason), "count": count}
+                {
+                    "reason": reason,
+                    "label": (
+                        USER_REPORT_REASONS if case["target_type"] == USER_TARGET
+                        else REPORT_REASONS
+                    ).get(reason, ALL_REPORT_REASONS.get(reason, reason)),
+                    "count": count
+                }
                 for reason, count in reason_counts.items()
             ],
             "explanations": [
@@ -1034,6 +1088,13 @@ def remove_reported_content(
 ):
     target_type = removal.target_type
     target_id = normalize_target(target_type, removal.target_id)
+
+    # Una cuenta no es un contenido que se retire: se actúa sobre lo que
+    # publicó o, en un caso grave, se elimina desde el panel de soporte.
+    if target_type == USER_TARGET:
+        raise HTTPException(
+            status_code=400, detail="Una cuenta no se puede retirar desde aquí."
+        )
 
     if removal.reason not in REMOVAL_REASONS:
         raise HTTPException(status_code=400, detail="Motivo de retiro no válido")
