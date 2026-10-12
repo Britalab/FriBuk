@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import ProfileAbout from "../components/profile/ProfileAbout";
 import ProfileSpace, { ProfileEmojis, ProfileStickers } from "../components/profile/ProfileSpace";
-import ReportButton from "../components/moderation/ReportButton";
+import { ReportMenu } from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
 import "../styles/reading-lists.css";
 import "../styles/moderation.css";
@@ -310,43 +310,37 @@ export default function PublicProfile() {
               </button>
             </div>
 
-            {/* Reportar a la persona, y reportar o retirar sus imágenes */}
+            {/* Un solo "Reportar" que despliega qué reportar: la persona,
+                su foto o su banner. Retirar imágenes es de administración. */}
             {!isOwnProfile && (
               <div className="moderation-actions">
-                <ReportButton
-                  targetType="user"
+                <ReportMenu
                   targetId={userId}
-                  label="Reportar usuario"
+                  options={[
+                    { targetType: "user", label: "Usuario" },
+                    ...(pageData.profile.avatar_url
+                      ? [{ targetType: "avatar", label: "Foto" }]
+                      : []),
+                    ...(bannerUrl
+                      ? [{ targetType: "profile_banner", label: "Banner" }]
+                      : []),
+                  ]}
                 />
                 {pageData.profile.avatar_url && (
-                  <>
-                    <ReportButton
-                      targetType="avatar"
-                      targetId={userId}
-                      label="Reportar foto"
-                    />
-                    <RemoveButton
-                      targetType="avatar"
-                      targetId={userId}
-                      label="Retirar foto"
-                      onRemoved={() => setReloadKey((key) => key + 1)}
-                    />
-                  </>
+                  <RemoveButton
+                    targetType="avatar"
+                    targetId={userId}
+                    label="Retirar foto"
+                    onRemoved={() => setReloadKey((key) => key + 1)}
+                  />
                 )}
                 {bannerUrl && (
-                  <>
-                    <ReportButton
-                      targetType="profile_banner"
-                      targetId={userId}
-                      label="Reportar banner"
-                    />
-                    <RemoveButton
-                      targetType="profile_banner"
-                      targetId={userId}
-                      label="Retirar banner"
-                      onRemoved={() => setReloadKey((key) => key + 1)}
-                    />
-                  </>
+                  <RemoveButton
+                    targetType="profile_banner"
+                    targetId={userId}
+                    label="Retirar banner"
+                    onRemoved={() => setReloadKey((key) => key + 1)}
+                  />
                 )}
               </div>
             )}

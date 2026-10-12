@@ -35,6 +35,56 @@
   cursor: default;
 }
 
+/* "Reportar" con opciones desplegables (perfil público). */
+.moderation-report-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.moderation-report-options {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  box-shadow: 0 10px 28px rgba(40, 30, 25, 0.18);
+}
+
+.moderation-report-options button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.moderation-report-options button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--burgundy);
+}
+
+.moderation-report-options button:disabled {
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.moderation-report-options button:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: -2px;
+}
+
 .moderation-admin-button {
   border-color: var(--burgundy);
   color: var(--burgundy);
