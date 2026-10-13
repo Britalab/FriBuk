@@ -203,6 +203,51 @@
   box-shadow: 0 1px 4px rgba(40, 30, 25, 0.1);
 }
 
+/* Buscador de seguidores, bajo las pestañas. */
+.messages-search {
+  position: relative;
+  margin: 0 14px 10px;
+}
+
+.messages-search svg {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  width: 17px;
+  height: 17px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.messages-search input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 12px 9px 38px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font: inherit;
+  /* 16px evita que el iPhone amplíe la página al enfocar el campo. */
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.messages-search input::placeholder {
+  color: var(--placeholder);
+}
+
+.messages-search input:focus {
+  border-color: var(--burgundy);
+  box-shadow: 0 0 0 3px rgba(114, 47, 63, 0.1);
+}
+
 .messages-list {
   flex: 1;
   min-height: 0;

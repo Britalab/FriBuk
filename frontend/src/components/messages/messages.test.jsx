@@ -453,6 +453,43 @@ describe("MessagesInbox", () => {
       screen.getByRole("link", { name: /Mis mensajes a seguidores/ }).getAttribute("href")
     ).toBe("/mensajes/autores/ana-id");
   });
+
+  it("busca entre los seguidores y enlaza la conversación con cada uno", async () => {
+    const CARLA = { id: "carla-id", username: "Cárla", avatar_url: null };
+    mockGet({ "/users/ana-id/followers": [BOB, CARLA] });
+
+    renderInRouter(
+      <MessagesInbox
+        tab="private"
+        onTabChange={() => {}}
+        inbox={inbox}
+        currentUser={ANA}
+        onRetry={() => {}}
+      />
+    );
+
+    const search = screen.getByRole("searchbox", {
+      name: "Buscar entre tus seguidores",
+    });
+    fireEvent.focus(search);
+    fireEvent.change(search, { target: { value: "@carla" } });
+
+    // Sin conversación previa: se ofrece escribirle.
+    const result = await screen.findByRole("link", { name: /@Cárla/ });
+    expect(result.getAttribute("href")).toBe("/mensajes/privados/carla-id");
+    expect(screen.getByText("Enviar un mensaje")).not.toBeNull();
+    expect(screen.queryByRole("link", { name: /@bob/ })).toBeNull();
+    expect(api.get).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(search, { target: { value: "zzz" } });
+    expect(
+      screen.getByText("Ninguno de tus seguidores coincide con «zzz».")
+    ).not.toBeNull();
+
+    // Al borrar la búsqueda vuelve la bandeja.
+    fireEvent.change(search, { target: { value: "" } });
+    expect(screen.getByRole("link", { name: /@bob/ })).not.toBeNull();
+  });
 });
 
 describe("MessageSettings", () => {
