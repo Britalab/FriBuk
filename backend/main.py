@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr
 from email_service import send_welcome_email
 import admin_alerts
+from rate_limits import limit_publish_requests
 from chapter_anchors import build_paragraph_anchor, relocate_anchor
 from profile_catalog import (
     DEFAULT_PROFILE_THEME,
@@ -2109,6 +2110,7 @@ def create_story(
             raise HTTPException(status_code=401, detail="Token inválido")
 
         current_user = response_user.user
+        limit_publish_requests("story", str(current_user.id))
 
         # 2. Crear la historia
         story_data = {
@@ -2492,6 +2494,7 @@ def create_support_request(
             )
 
         current_user = response_user.user
+        limit_publish_requests("support", str(current_user.id))
 
         # 2. Preparar la solicitud
         support_data = {
@@ -2684,6 +2687,7 @@ def create_comment(
             raise HTTPException(status_code=401, detail="Token inválido")
 
         current_user = response_user.user
+        limit_publish_requests("story_comment", str(current_user.id))
 
         # 2. Armar los datos, con author_id tomado del token verificado
         comment_data = {
@@ -3168,6 +3172,7 @@ def create_chapter(
             raise HTTPException(status_code=401, detail="Token inválido")
 
         current_user = response_user.user
+        limit_publish_requests("chapter", str(current_user.id))
 
         # Verificar que la historia sea del usuario autenticado
         story = (
@@ -3687,6 +3692,7 @@ def create_forum_topic(
 ):
     ensure_max_length(title, 120, "El título")
     ensure_max_length(content, 20000, "El contenido")
+    limit_publish_requests("forum_topic", str(current_user.id))
 
     image_url = None
     uploaded_path = None
@@ -4510,6 +4516,7 @@ def create_forum_reply(
     image: UploadFile | None = File(default=None),
     current_user=Depends(get_current_user)
 ):
+    limit_publish_requests("forum_reply", str(current_user.id))
     uploaded_path = None
 
     try:
