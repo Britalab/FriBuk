@@ -405,6 +405,29 @@
 
 /* ---------- Emojis ---------- */
 
+.customize-emoji-categories {
+  margin-bottom: 14px;
+}
+
+.customize-decor-chip.is-category {
+  padding: 6px 11px;
+}
+
+/* En el celular las categorías van en una sola fila que se desliza. */
+@media (max-width: 600px) {
+  .customize-emoji-categories {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+  }
+
+  .customize-decor-chip.is-category {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
 .customize-emoji-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));

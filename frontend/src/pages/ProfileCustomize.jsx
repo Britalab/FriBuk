@@ -128,6 +128,8 @@ export default function ProfileCustomize() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
+  // Categoría de emojis a la vista; vacío las muestra todas.
+  const [emojiCategory, setEmojiCategory] = useState(EMOJI_CATEGORIES[0].id);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -177,17 +179,22 @@ export default function ProfileCustomize() {
   const selectedAmbient = draft.decorations.find(isAmbient);
   const stickersOn = draft.decorations.includes(STICKERS_ID);
 
+  // Al buscar se revisan todas las categorías; sin búsqueda, solo la elegida.
   const emojiGroups = useMemo(() => {
     const query = normalizeSearch(search.trim());
-    return EMOJI_CATEGORIES.map((category) => ({
-      ...category,
-      items: EMOJIS.filter(
-        (item) =>
-          item.category === category.id &&
-          (!query || normalizeSearch(item.name).includes(query))
-      ),
-    })).filter((category) => category.items.length > 0);
-  }, [search]);
+    return EMOJI_CATEGORIES.filter(
+      (category) => query || !emojiCategory || category.id === emojiCategory
+    )
+      .map((category) => ({
+        ...category,
+        items: EMOJIS.filter(
+          (item) =>
+            item.category === category.id &&
+            (!query || normalizeSearch(item.name).includes(query))
+        ),
+      }))
+      .filter((category) => category.items.length > 0);
+  }, [search, emojiCategory]);
 
   const updateDraft = (changes) => {
     setError("");
@@ -384,6 +391,30 @@ export default function ProfileCustomize() {
                   Quitar emojis
                 </button>
               </div>
+
+              {!search.trim() && (
+                <div className="customize-decor-list customize-emoji-categories">
+                  <button
+                    type="button"
+                    className="customize-decor-chip is-category"
+                    aria-pressed={!emojiCategory}
+                    onClick={() => setEmojiCategory("")}
+                  >
+                    Todos
+                  </button>
+                  {EMOJI_CATEGORIES.map((category) => (
+                    <button
+                      type="button"
+                      key={category.id}
+                      className="customize-decor-chip is-category"
+                      aria-pressed={emojiCategory === category.id}
+                      onClick={() => setEmojiCategory(category.id)}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {emojiGroups.length === 0 ? (
                 <p className="customize-hint">No encontramos emojis con ese nombre.</p>
