@@ -42,12 +42,29 @@ function BadgeCard({ badge, children, extra }) {
         </p>
         <p className="badge-card-description">{badge.description}</p>
         {extra}
-        <ProgressBar progress={badge.progress} />
+        {!(earned && badge.temporary) && <ProgressBar progress={badge.progress} />}
         {children}
       </div>
     </li>
   );
 }
+
+function BadgeGroup({ title, badges, renderCard }) {
+  if (badges.length === 0) return null;
+
+  return (
+    <>
+      <h3 className="achievements-group-title">{title}</h3>
+      <ul className="badge-grid">
+        {badges.map((badge) =>
+          renderCard ? renderCard(badge) : <BadgeCard key={badge.id} badge={badge} />
+        )}
+      </ul>
+    </>
+  );
+}
+
+const byGroup = (badges, group) => badges.filter((badge) => badge.group === group);
 
 // Perfil público: solo lo ganado, sin progreso.
 export function PublicAchievements({ badges }) {
@@ -57,23 +74,30 @@ export function PublicAchievements({ badges }) {
 
   return (
     <div className="achievements">
-      {titles.length > 0 && (
-        <>
-          <h3 className="achievements-group-title">Títulos</h3>
-          <ul className="badge-grid">
-            {titles.map((badge) => <BadgeCard key={badge.id} badge={badge} />)}
-          </ul>
-        </>
-      )}
-      {insignias.length > 0 && (
-        <>
-          <h3 className="achievements-group-title">Insignias de escritor</h3>
-          <ul className="badge-grid">
-            {insignias.map((badge) => <BadgeCard key={badge.id} badge={badge} />)}
-          </ul>
-        </>
-      )}
+      <BadgeGroup title="Títulos" badges={titles} />
+      <BadgeGroup title="Insignias de escritor" badges={byGroup(insignias, "escritor")} />
+      <BadgeGroup title="Insignias de lector" badges={byGroup(insignias, "lector")} />
     </div>
+  );
+}
+
+// Lo que falta para Lector Fundador: una historia leída completa y 3 comentarios.
+function ReaderFounderNote({ data }) {
+  const founders = data?.founders?.reader;
+  const progress = data?.reader_progress;
+  if (!founders) return null;
+
+  return (
+    <p className="badge-card-note">
+      Quedan {founders.remaining} de {founders.total} cupos.
+      {progress && (
+        <>
+          {" "}Historias leídas completas: {Math.min(progress.finished_stories, 1)}/1 ·
+          comentarios: {Math.min(progress.visible_comments, progress.comments_needed)}/
+          {progress.comments_needed}.
+        </>
+      )}
+    </p>
   );
 }
 
@@ -90,7 +114,6 @@ export default function AchievementsPanel({ data, onChange }) {
   const earnedTitles = titles.filter((badge) => badge.earned);
   const featuredIds = (data?.featured || []).map((badge) => badge.id);
   const chosenFeatured = data?.display?.featured || [];
-  const founders = data?.founders?.author;
 
   const saveDisplay = async (display) => {
     setSaving(true);
@@ -120,9 +143,40 @@ export default function AchievementsPanel({ data, onChange }) {
     saveDisplay({ main_title: data?.display?.main_title || null, featured: next });
   };
 
-  const titleCards = data?.has_published
-    ? titles
-    : titles.filter((badge) => badge.earned);
+  // Quien nunca publicó no ve los títulos de escritor que no ganó.
+  const titleCards = titles.filter(
+    (badge) => badge.group === "lector" || data?.has_published || badge.earned
+  );
+
+  const titleExtra = (badge) => {
+    if (badge.earned) return null;
+    if (badge.id === "autor_fundador" && data?.founders?.author) {
+      const founders = data.founders.author;
+      return (
+        <p className="badge-card-note">
+          Quedan {founders.remaining} de {founders.total} cupos.
+        </p>
+      );
+    }
+    if (badge.id === "lector_fundador") return <ReaderFounderNote data={data} />;
+    return null;
+  };
+
+  const insigniaCard = (badge) => (
+    <BadgeCard key={badge.id} badge={badge}>
+      {badge.earned && (
+        <label className="badge-card-feature">
+          <input
+            type="checkbox"
+            checked={featuredIds.includes(badge.id)}
+            disabled={saving}
+            onChange={() => toggleFeatured(badge.id)}
+          />
+          Destacar en mi perfil
+        </label>
+      )}
+    </BadgeCard>
+  );
 
   return (
     <section className="profile-section achievements" role="tabpanel">
@@ -164,45 +218,18 @@ export default function AchievementsPanel({ data, onChange }) {
         </label>
       )}
 
-      {titleCards.length > 0 && (
-        <>
-          <h3 className="achievements-group-title">Títulos</h3>
-          <ul className="badge-grid">
-            {titleCards.map((badge) => (
-              <BadgeCard
-                key={badge.id}
-                badge={badge}
-                extra={
-                  badge.id === "autor_fundador" && !badge.earned && founders ? (
-                    <p className="badge-card-note">
-                      Quedan {founders.remaining} de {founders.total} cupos.
-                    </p>
-                  ) : null
-                }
-              />
-            ))}
-          </ul>
-        </>
-      )}
+      <BadgeGroup
+        title="Títulos"
+        badges={titleCards}
+        renderCard={(badge) => (
+          <BadgeCard key={badge.id} badge={badge} extra={titleExtra(badge)} />
+        )}
+      />
 
       <h3 className="achievements-group-title">Insignias de escritor</h3>
       {data?.has_published ? (
         <ul className="badge-grid">
-          {insignias.map((badge) => (
-            <BadgeCard key={badge.id} badge={badge}>
-              {badge.earned && (
-                <label className="badge-card-feature">
-                  <input
-                    type="checkbox"
-                    checked={featuredIds.includes(badge.id)}
-                    disabled={saving}
-                    onChange={() => toggleFeatured(badge.id)}
-                  />
-                  Destacar en mi perfil
-                </label>
-              )}
-            </BadgeCard>
-          ))}
+          {byGroup(insignias, "escritor").map(insigniaCard)}
         </ul>
       ) : (
         <div className="achievements-invite">
@@ -216,9 +243,13 @@ export default function AchievementsPanel({ data, onChange }) {
         </div>
       )}
 
-      <h3 className="achievements-group-title">Insignias de lector</h3>
+      <BadgeGroup
+        title="Insignias de lector"
+        badges={byGroup(insignias, "lector")}
+        renderCard={insigniaCard}
+      />
       <p className="achievements-soon">
-        Muy pronto: Lector Fundador, Primer Lector, Maratonista y más.
+        Muy pronto: Lector Beta y Descubridor de Historias.
       </p>
     </section>
   );

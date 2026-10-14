@@ -4786,6 +4786,8 @@ def follow_user(
         ) from e
 
     run_notification_task(notify_follow, target_id, follower_id)
+    # Muchos seguidores nuevos en poco tiempo: Autor en Ascenso.
+    badges.schedule_refresh(target_id)
 
     return {
         "message": "Ahora sigues a este usuario",
@@ -7341,6 +7343,9 @@ def create_chapter_comment(
     )
 
     run_notification_task(notify_chapter_comment, chapter["id"], user_id)
+    # El primer comentario de quien ya leyó el capítulo: Primer Lector.
+    if not is_reply:
+        badges.schedule_first_reader(chapter, user_id, response.data[0]["id"])
     # Avisa a quienes se nombró con @ en el comentario.
     if "@" in comment_data["content"]:
         run_notification_task(
@@ -7475,6 +7480,10 @@ def react_to_chapter_comment(
         .execute()
     )
 
+    # Si reacciona el autor de la historia, suma para Comentarista.
+    if str(comment.get("user_id")) != user_id:
+        badges.schedule_refresh(comment.get("user_id"))
+
     return get_chapter_comment_reaction_summary(str(comment["id"]), user_id)
 
 
@@ -7566,3 +7575,14 @@ app.include_router(mentions.router)
 import badges  # noqa: E402
 
 app.include_router(badges.router)
+
+
+
+# ============================================================
+# REGISTRO DE LECTURAS
+# ============================================================
+
+# Tiempo leído por capítulo y días de lectura: ver reading.py.
+import reading  # noqa: E402
+
+app.include_router(reading.router)

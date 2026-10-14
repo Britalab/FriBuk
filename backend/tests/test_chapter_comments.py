@@ -745,6 +745,8 @@ class ChapterCommentsTestCase(unittest.TestCase):
         self.create_comment_id()
         self.create_comment_id(content="En general, bien", general=True)
 
+        # Al comentar también se revisa Primer Lector: aquí solo importa el aviso.
+        scheduled = [item for item in scheduled if item[0] is main.notify_chapter_comment]
         self.assertEqual(scheduled, [
             (main.notify_chapter_comment, (CHAPTER_ID, ALICE_ID)),
             (main.notify_chapter_comment, (CHAPTER_ID, ALICE_ID))

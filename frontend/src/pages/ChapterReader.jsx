@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useChapterComments } from "../hooks/useChapterComments";
+import useReadingTime from "../hooks/useReadingTime";
 import { anchorMatchesText, paragraphAnchor } from "../utils/textAnchors";
 import ReaderParagraph from "../components/reader/ReaderParagraph";
 import ChapterGeneralComments from "../components/reader/ChapterGeneralComments";
@@ -110,6 +111,8 @@ export default function ChapterReader() {
   // Panel de comentarios abierto: un párrafo o la lista de texto editado.
   const [panelState, setPanelState] = useState(null);
   const textRef = useRef(null);
+  // Marca el final del texto: verla cuenta como haber llegado al final.
+  const textEndRef = useRef(null);
 
   useEffect(() => {
     api
@@ -154,6 +157,9 @@ export default function ChapterReader() {
 
   // El progreso solo se guarda para lectores con sesión y capítulos publicados.
   const tracksProgress = Boolean(user) && commentsEnabled;
+  // Tiempo leído, para los reconocimientos de lector y Autor Popular.
+  useReadingTime({ chapterId, enabled: tracksProgress, endRef: textEndRef });
+
   // Capítulo cuyo punto guardado ya se consultó: recién entonces se empieza
   // a guardar, para no pisar el progreso anterior antes de retomarlo.
   const [progressReadyFor, setProgressReadyFor] = useState(null);
@@ -538,6 +544,7 @@ export default function ChapterReader() {
               />
             ))}
           </div>
+          <div ref={textEndRef} aria-hidden="true" />
 
         </div>
 
