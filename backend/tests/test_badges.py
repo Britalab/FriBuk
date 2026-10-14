@@ -90,8 +90,8 @@ class BadgesTestCase(unittest.TestCase):
 
     # ---------- Autor Fundador ----------
 
-    def test_founder_needs_three_chapters_and_three_thousand_words(self):
-        self.add_story(chapters=3, words_per_chapter=1000)
+    def test_founder_needs_two_chapters_and_three_thousand_words(self):
+        self.add_story(chapters=2, words_per_chapter=1500)
         badges.refresh_user_badges(AUTHOR_ID)
 
         self.assertEqual(self.levels().get("autor_fundador"), 1)
@@ -99,8 +99,8 @@ class BadgesTestCase(unittest.TestCase):
 
     def test_founder_requires_both_conditions(self):
         # Muchas palabras pero pocos capítulos, y al revés.
-        self.add_story(chapters=2, words_per_chapter=5000)
-        self.add_story(chapters=3, words_per_chapter=999)
+        self.add_story(chapters=1, words_per_chapter=5000)
+        self.add_story(chapters=2, words_per_chapter=1499)
         badges.refresh_user_badges(AUTHOR_ID)
 
         self.assertNotIn("autor_fundador", self.levels())
@@ -113,7 +113,7 @@ class BadgesTestCase(unittest.TestCase):
         self.assertNotIn("autor_fundador", self.levels())
 
     def test_draft_chapters_do_not_count(self):
-        story_id = self.add_story(chapters=3, words_per_chapter=1000)
+        story_id = self.add_story(chapters=2, words_per_chapter=2000)
         self.database.tables["chapters"][0]["status"] = "draft"
         badges.refresh_user_badges(AUTHOR_ID)
 
