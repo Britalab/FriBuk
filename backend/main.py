@@ -869,7 +869,18 @@ def get_stories():
 
         else:
 
+            general_ratings = []
             story["general_rating"] = None
+
+        story["rating_count"] = len(general_ratings)
+        story["is_featured"] = badges.is_featured_story(general_ratings)
+
+    # Título del autor (con su "+N") para las tarjetas de historias.
+    summaries = badges.summaries_for(author_ids)
+    for story in stories:
+        story["author_title"] = badges.author_title_chip(
+            summaries.get(str(story.get("author_id")))
+        )
 
     return stories
 
@@ -1054,6 +1065,25 @@ def get_story(
 
         story["tags"] = get_story_tags([story["id"]]).get(str(story["id"]), [])
 
+        # Reconocimientos: si fallan, la historia se muestra sin ellos.
+        story["author_title"] = badges.author_title_chip(
+            badges.summaries_for([story["author_id"]]).get(str(story["author_id"]))
+        )
+        try:
+            ratings = (
+                supabase_admin
+                .table("ratings")
+                .select("plot, spelling")
+                .eq("story_id", story["id"])
+                .execute()
+            ).data or []
+            story["is_featured"] = badges.is_featured_story([
+                (rating["plot"] + rating["spelling"]) / 2 for rating in ratings
+            ])
+        except Exception as e:
+            print("No se pudo comprobar si la historia es destacada:", repr(e))
+            story["is_featured"] = False
+
         return story
 
     except HTTPException:
@@ -1192,7 +1222,17 @@ def add_public_story_card_data(stories: list[dict]) -> list[dict]:
                 1
             )
         else:
+            general_ratings = []
             story["general_rating"] = None
+
+        story["rating_count"] = len(general_ratings)
+        story["is_featured"] = badges.is_featured_story(general_ratings)
+
+    summaries = badges.summaries_for(author_ids)
+    for story in stories:
+        story["author_title"] = badges.author_title_chip(
+            summaries.get(str(story.get("author_id")))
+        )
 
     return stories
 
@@ -2288,6 +2328,9 @@ def update_story(
         if new_tags is not None:
             replace_story_tags(story_id, new_tags)
 
+        # Terminar una historia puede dar el cupo de Autor Fundador.
+        badges.schedule_refresh(current_user.id)
+
         return {
             "message": "Historia actualizada correctamente",
             "story": response.data[0]
@@ -3225,6 +3268,7 @@ def create_chapter(
 
         # Avisa a quienes tienen la historia en Favoritos, solo si queda publicado.
         run_notification_task(notify_chapter_published, response.data[0], None)
+        badges.schedule_refresh(current_user.id)
 
         return {
             "message": "Capítulo creado correctamente",
@@ -3392,6 +3436,7 @@ def update_chapter(
             response.data[0],
             existing_chapter.get("status")
         )
+        badges.schedule_refresh(current_user.id)
 
         return {
             "message": "Capítulo actualizado correctamente",
@@ -3936,6 +3981,7 @@ def set_forum_vote(
                 raise
             interaction = update_forum_vote(existing["id"], vote_value)
 
+    badges.schedule_refresh_for_forum_target(target_table, target_id)
     return {"message": "Voto guardado correctamente", "interaction": interaction}
 
 
@@ -4015,6 +4061,7 @@ def add_forum_reaction(
             "created": False
         }
 
+    badges.schedule_refresh_for_forum_target(target_table, target_id)
     return {
         "message": "Reacción agregada correctamente",
         "interaction": interaction,
@@ -7508,3 +7555,14 @@ app.include_router(accounts.router)
 import mentions  # noqa: E402
 
 app.include_router(mentions.router)
+
+
+
+# ============================================================
+# RECONOCIMIENTOS: TÍTULOS E INSIGNIAS
+# ============================================================
+
+# Títulos, insignias y cupos de Autor Fundador: ver badges.py.
+import badges  # noqa: E402
+
+app.include_router(badges.router)

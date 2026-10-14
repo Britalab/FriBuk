@@ -6,6 +6,8 @@ import ProfileAbout from "../components/profile/ProfileAbout";
 import ProfileInfoForm from "../components/profile/ProfileInfoForm";
 import ReadingListsPanel from "../components/profile/ReadingListsPanel";
 import { MyModerationNotices } from "../components/moderation/ModerationNotices";
+import AuthorTitle, { FeaturedBadges } from "../components/badges/AuthorTitle";
+import AchievementsPanel from "../components/badges/AchievementsPanel";
 
 const EMPTY_PROFILE_INFO = { display_name: null, bio: null, website_url: null };
 
@@ -109,6 +111,8 @@ export default function Profile() {
   const [readingLists, setReadingLists] = useState([]);
   const [maxReadingLists, setMaxReadingLists] = useState(20);
   const [readingListsError, setReadingListsError] = useState("");
+  const [badges, setBadges] = useState(null);
+  const [badgesError, setBadgesError] = useState("");
 
   const applyProfileData = (profileData) => {
     setStories(profileData.stories);
@@ -132,6 +136,36 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
+  }, [userId]);
+
+  // Los logros se cargan aparte: si fallan, el resto del perfil se ve igual.
+  const loadBadges = useCallback(async () => {
+    setBadgesError("");
+    try {
+      const response = await api.get("/me/badges");
+      setBadges(response.data);
+    } catch (error) {
+      console.error("Error al cargar los logros:", error);
+      setBadgesError("No pudimos cargar tus logros.");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return undefined;
+
+    let isActive = true;
+    api.get("/me/badges")
+      .then((response) => {
+        if (isActive) setBadges(response.data);
+      })
+      .catch((error) => {
+        console.error("Error al cargar los logros:", error);
+        if (isActive) setBadgesError("No pudimos cargar tus logros.");
+      });
+
+    return () => {
+      isActive = false;
+    };
   }, [userId]);
 
   useEffect(() => {
@@ -418,6 +452,14 @@ const handleDeleteStory = async (storyId, storyTitle) => {
             <p className="profile-display-name">{profileInfo.display_name}</p>
           )}
           <p className="profile-username">@{username}</p>
+          {/* Reconocimientos en su propia línea: no tocan el nombre ni los
+              botones de personalización. */}
+          {(badges?.main_title || badges?.featured?.length > 0) && (
+            <div className="profile-badges-line">
+              <AuthorTitle title={badges} />
+              <FeaturedBadges badges={badges.featured} />
+            </div>
+          )}
           <ProfileAbout bio={profileInfo.bio} websiteUrl={profileInfo.website_url} />
           <p className="profile-private-note">
             Esta página es solo tuya. Aquí gestionas tu cuenta y tus obras.
@@ -586,6 +628,18 @@ const handleDeleteStory = async (storyId, storyTitle) => {
             >
               Listas <span>{readingLists.length}</span>
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeSection === "achievements"}
+              className={activeSection === "achievements" ? "active" : ""}
+              onClick={() => setActiveSection("achievements")}
+            >
+              Logros{" "}
+              <span>
+                {(badges?.titles?.length || 0) + (badges?.insignias?.length || 0)}
+              </span>
+            </button>
           </div>
         </header>
 
@@ -668,6 +722,19 @@ const handleDeleteStory = async (storyId, storyTitle) => {
               </div>
             )}
           </section>
+        ) : activeSection === "achievements" ? (
+          badges ? (
+            <AchievementsPanel data={badges} onChange={setBadges} />
+          ) : (
+            <div className="profile-state" role={badgesError ? "alert" : undefined}>
+              <p>{badgesError || "Cargando tus logros..."}</p>
+              {badgesError && (
+                <button type="button" onClick={loadBadges}>
+                  Reintentar
+                </button>
+              )}
+            </div>
+          )
         ) : activeSection === "lists" ? (
           <ReadingListsPanel
             lists={readingLists}

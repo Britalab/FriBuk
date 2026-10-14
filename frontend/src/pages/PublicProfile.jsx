@@ -8,6 +8,8 @@ import ShareButton from "../components/ShareButton";
 import ProfileSpace, { ProfileEmojis, ProfileStickers } from "../components/profile/ProfileSpace";
 import { ReportMenu } from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
+import AuthorTitle, { FeaturedBadges, FeaturedStoryChip } from "../components/badges/AuthorTitle";
+import { PublicAchievements } from "../components/badges/AchievementsPanel";
 import "../styles/reading-lists.css";
 import "../styles/moderation.css";
 
@@ -31,6 +33,7 @@ function StoryCard({ story, favorite = false }) {
       <div className="public-profile-story-info">
         <p className="public-profile-story-genre">{story.genre || "Sin género"}</p>
         <h3>{story.title}</h3>
+        <FeaturedStoryChip story={story} />
         {story.description && <p className="public-profile-story-description">{story.description}</p>}
         <div className="public-profile-story-meta">
           <span>{story.chapter_count || 0} capítulos</span>
@@ -61,6 +64,7 @@ function emptyPageData(userId) {
     stories: [],
     favorites: [],
     readingLists: [],
+    badges: null,
     followersCount: 0,
     followingCount: 0,
     isFollowing: false,
@@ -91,6 +95,11 @@ export default function PublicProfile() {
         console.error("Error al cargar las listas públicas:", error);
         return null;
       }),
+      // Igual con los reconocimientos.
+      api.get(`/users/${userId}/badges`).catch((error) => {
+        console.error("Error al cargar los reconocimientos:", error);
+        return null;
+      }),
     ])
       .then(([
         profileResponse,
@@ -98,6 +107,7 @@ export default function PublicProfile() {
         favoritesResponse,
         followStatsResponse,
         readingListsResponse,
+        badgesResponse,
       ]) => {
         if (!isActive) return;
 
@@ -110,6 +120,7 @@ export default function PublicProfile() {
           stories: storiesResponse.data.stories || [],
           favorites: favoritesResponse.data.favorites || [],
           readingLists: readingListsResponse?.data?.lists || [],
+          badges: badgesResponse?.data || null,
           followersCount: followStats.followers || 0,
           followingCount: followStats.following || 0,
           isFollowing: Boolean(user?.id && followStats.is_following),
@@ -295,6 +306,14 @@ export default function PublicProfile() {
                 <ProfileEmojis customization={customization} />
               </h1>
             )}
+            {/* Reconocimientos en su propia línea, fuera del nombre: no se
+                mezclan con los emojis de «Mi espacio». */}
+            {(pageData.badges?.main_title || pageData.badges?.featured?.length > 0) && (
+              <div className="profile-badges-line">
+                <AuthorTitle title={pageData.badges} />
+                <FeaturedBadges badges={pageData.badges.featured} />
+              </div>
+            )}
             <ProfileAbout
               bio={pageData.profile.bio}
               websiteUrl={pageData.profile.website_url}
@@ -411,6 +430,18 @@ export default function PublicProfile() {
             </div>
           )}
         </section>
+
+        {(pageData.badges?.titles?.length > 0 || pageData.badges?.insignias?.length > 0) && (
+          <section className="public-profile-section">
+            <div className="public-profile-section-heading">
+              <div>
+                <p className="public-profile-eyebrow">RECONOCIMIENTOS</p>
+                <h2>Logros</h2>
+              </div>
+            </div>
+            <PublicAchievements badges={pageData.badges} />
+          </section>
+        )}
 
         <section className="public-profile-section">
           <div className="public-profile-section-heading">

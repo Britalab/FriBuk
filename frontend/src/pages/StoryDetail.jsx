@@ -10,6 +10,7 @@ import { contentWarningLabels } from "../utils/contentWarnings";
 import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
 import ReportButton from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
+import AuthorTitle, { FeaturedStoryChip } from "../components/badges/AuthorTitle";
 import "../styles/moderation.css";
 
 export default function StoryDetail() {
@@ -599,6 +600,8 @@ export default function StoryDetail() {
                 {statusLabel}
               </span>
 
+              <FeaturedStoryChip story={story} />
+
             </div>
 
             {/* TÍTULO */}
@@ -636,6 +639,14 @@ export default function StoryDetail() {
                 </>
               )}
             </p>
+
+            {/* TÍTULO DEL AUTOR: el principal y un "+N" con los demás */}
+
+            {story.author_title && (
+              <p className="story-detail-author-title">
+                <AuthorTitle title={story.author_title} />
+              </p>
+            )}
 
             {/* ORIGEN DE LA OBRA */}
 

@@ -1,0 +1,272 @@
+/* =========================================================
+   Reconocimientos: títulos, insignias y logros
+   ---------------------------------------------------------
+   Solo usa las variables de color de App.css, que cada tema de
+   «Mi espacio» redefine: así se leen bien con cualquier tema y
+   color de acento. Todo va en el flujo normal de la página (sin
+   posiciones absolutas sobre la cabecera), para no tapar las
+   pegatinas ni los botones de personalización.
+   ========================================================= */
+
+.badges-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Etiqueta de título y "+N" ---------- */
+
+.author-title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.badge-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.badge-chip.is-title {
+  border-color: var(--orange);
+}
+
+.badge-chip.is-featured-story {
+  border-color: var(--orange);
+  color: var(--text-main);
+}
+
+.author-title-more {
+  position: relative;
+  display: inline-flex;
+}
+
+.author-title-more-button {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.author-title-more-button:hover,
+.author-title-more-button[aria-expanded="true"] {
+  color: var(--text-main);
+  border-color: var(--orange);
+}
+
+.author-title-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.author-title-list li {
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+/* Línea propia bajo el @usuario en los perfiles. */
+.profile-badges-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+/* ---------- Insignias destacadas ---------- */
+
+.featured-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.featured-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-soft);
+  font-size: 1rem;
+}
+
+/* ---------- Pestaña y sección Logros ---------- */
+
+.achievements-group-title {
+  margin: 24px 0 12px;
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+
+.badge-card.is-locked {
+  opacity: 0.55;
+}
+
+.badge-card.is-locked .badge-card-emoji {
+  filter: grayscale(1);
+}
+
+.badge-card-emoji {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.badge-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.badge-card-name {
+  margin: 0;
+  font-weight: 700;
+}
+
+.badge-card-locked {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.badge-card-description,
+.badge-card-note {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.badge-card-feature {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.badge-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.badge-progress-track {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg-hover);
+}
+
+.badge-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--orange);
+}
+
+.badge-progress-text {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.achievements-main-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.achievements-main-title select {
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+}
+
+.achievements-invite {
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  color: var(--text-main);
+}
+
+.achievements-invite p {
+  margin: 0 0 12px;
+}
+
+.achievements-saved,
+.achievements-soon {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ---------- Página de la historia ---------- */
+
+.story-detail-author-title {
+  margin: 8px 0 0;
+}

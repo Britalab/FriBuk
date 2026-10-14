@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
+import AuthorTitle, { FeaturedStoryChip } from "./badges/AuthorTitle";
 
 // Etiquetas que caben en la tarjeta sin recargarla.
 const CARD_TAG_LIMIT = 3;
@@ -44,6 +45,7 @@ export default function StoryCard({ story }) {
                 {story.title}
               </Link>
             </h3>
+            <FeaturedStoryChip story={story} />
           </div>
 
           <span className="story-status">
@@ -100,6 +102,12 @@ export default function StoryCard({ story }) {
             </Link>
           ) : (
             <strong>{story.author_username || "Autor de FriBuk"}</strong>
+          )}
+          {story.author_title && (
+            <>
+              {" "}
+              <AuthorTitle title={story.author_title} />
+            </>
           )}
         </p>
 
