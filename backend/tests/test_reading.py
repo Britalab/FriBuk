@@ -70,6 +70,8 @@ class ReadingTestCase(unittest.TestCase):
             "user_badge_display": [],
             "popular_authors": [],
             "temporary_titles": [],
+            "recommendation_snapshots": [],
+            "votes": [],
             "forum_topics": [],
             "forum_replies": [],
             "forum_interactions": [],
@@ -330,6 +332,68 @@ class ReadingTestCase(unittest.TestCase):
         title = self.client.get(f"/users/{top}/badges").json()["main_title"]
         self.assertEqual(title["id"], "autor_popular")
         self.assertEqual(title["period"], badges.month_label(last_month))
+
+    # ---------- Lector Versátil ----------
+
+    def test_versatile_reader_counts_genres_of_finished_chapters(self):
+        romance_story, romance_chapter = str(uuid.uuid4()), str(uuid.uuid4())
+        self.database.tables["stories"].append(
+            {"id": romance_story, "author_id": OTHER_ID, "status": "published", "genre": "Romance"}
+        )
+        self.database.tables["chapters"].append(
+            {"id": romance_chapter, "story_id": romance_story, "chapter_number": 1,
+             "status": "published", "content": words(500)}
+        )
+
+        self.finish_chapter(CHAPTER_1)
+        # Abrir un capítulo sin terminarlo no suma el género.
+        self.read(romance_chapter, seconds=20)
+        self.assertEqual(badges.genres_read(READER_ID), 1)
+
+        self.rewind()
+        self.read(romance_chapter, seconds=20, reached_end=True)
+        badges.refresh_user_badges(READER_ID)
+
+        self.assertEqual(badges.genres_read(READER_ID), 2)
+        self.assertEqual(self.levels().get("lector_versatil"), 1)
+
+    # ---------- Descubridor ----------
+
+    def add_readers(self, count):
+        for _ in range(count):
+            self.database.tables["chapter_reads"].append(
+                {"user_id": str(uuid.uuid4()), "chapter_id": CHAPTER_1, "story_id": STORY_ID}
+            )
+
+    def test_recommending_saves_the_readers_of_the_moment(self):
+        self.add_readers(40)
+        badges.record_recommendation(READER_ID, STORY_ID)
+
+        snapshot = self.database.tables["recommendation_snapshots"][0]
+        self.assertEqual(snapshot["author_readers"], 40)
+        self.assertEqual(snapshot["author_id"], AUTHOR_ID)
+
+        # El autor no puede descubrirse a sí mismo.
+        badges.record_recommendation(AUTHOR_ID, STORY_ID)
+        self.assertEqual(len(self.database.tables["recommendation_snapshots"]), 1)
+
+        badges.forget_recommendation(READER_ID, STORY_ID)
+        self.assertEqual(self.database.tables["recommendation_snapshots"], [])
+
+    def test_discoverer_needs_the_author_to_reach_100(self):
+        self.database.tables["recommendation_snapshots"] = [
+            {"user_id": READER_ID, "story_id": STORY_ID, "author_id": AUTHOR_ID, "author_readers": 40},
+            # Recomendado cuando ya era conocido: no cuenta.
+            {"user_id": READER_ID, "story_id": str(uuid.uuid4()), "author_id": OTHER_ID, "author_readers": 150},
+        ]
+        self.add_readers(99)
+        self.assertEqual(badges.discoveries(READER_ID), 0)
+
+        # El lector número 100 recalcula a quien lo descubrió.
+        self.finish_chapter(CHAPTER_2, OTHER_ID)
+
+        self.assertEqual(badges.discoveries(READER_ID), 1)
+        self.assertEqual(self.levels().get("descubridor"), 1)
 
     # ---------- perfil propio ----------
 

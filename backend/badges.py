@@ -6,6 +6,7 @@
 # existen (historias, capítulos, valoraciones y foro).
 # Fase 2: los de lector, Autor Popular y Autor en Ascenso, que usan el
 # registro de lecturas (ver reading.py).
+# Fase 3: Lector Versátil y Descubridor de Historias.
 #
 # - Los niveles ganados se guardan en user_badges y solo suben: lo ganado no
 #   se pierde aunque después se borre una historia.
@@ -140,6 +141,22 @@ BADGES = {
         "description": "Semanas seguidas leyendo al menos 5 días, siguiendo a algún autor.",
         "levels": (4, 26, 52),
     },
+    "lector_versatil": {
+        "kind": "insignia",
+        "group": "lector",
+        "name": "Lector Versátil",
+        "emoji": "🎭",
+        "description": "Leyó al menos un capítulo completo de historias de géneros distintos.",
+        "levels": (2, 4, 6),
+    },
+    "descubridor": {
+        "kind": "insignia",
+        "group": "lector",
+        "name": "Descubridor de Historias",
+        "emoji": "🔎",
+        "description": "Recomendó a autores con menos de 100 lectores que después llegaron a 100.",
+        "levels": (1, 5, 15),
+    },
 }
 
 FOUNDER_AUTHOR_KIND = "author"
@@ -155,6 +172,7 @@ FEATURED_STORY_MIN_AVERAGE = 4.5
 FEATURED_STORY_MIN_RATINGS = 31  # "más de 30 valoraciones"
 
 POPULAR_TOP = 10
+DISCOVERY_READERS = 100
 RISING_FOLLOWERS = 100
 RISING_DAYS = 30
 LOYAL_DAYS_PER_WEEK = 5
@@ -325,14 +343,21 @@ def new_followers(user_id: str, days: int = RISING_DAYS) -> int:
 # MÉTRICAS DE LECTOR
 # ============================================================
 
-def finished_stories(user_id: str) -> int:
+def completed_reads(user_id: str) -> list:
+    return [
+        row for row in fetch_all(
+            lambda: db().table("chapter_reads")
+            .select("chapter_id, story_id, completed_at")
+            .eq("user_id", user_id)
+        )
+        if row.get("completed_at")
+    ]
+
+
+def finished_stories(user_id: str, reads: list | None = None) -> int:
     # Historias terminadas de las que leyó completos todos los capítulos
     # publicados. Las propias no cuentan (no se registran sus lecturas).
-    reads = fetch_all(
-        lambda: db().table("chapter_reads")
-        .select("chapter_id, story_id, completed_at")
-        .eq("user_id", user_id)
-    )
+    reads = completed_reads(user_id) if reads is None else reads
     completed_chapters = {str(row["chapter_id"]) for row in reads if row.get("completed_at")}
     story_ids = {str(row["story_id"]) for row in reads if row.get("completed_at")}
     if not story_ids:
@@ -352,6 +377,104 @@ def finished_stories(user_id: str) -> int:
         1 for chapters in chapters_by_story.values()
         if chapters and chapters <= completed_chapters
     )
+
+
+def genres_read(user_id: str, reads: list | None = None) -> int:
+    # 🎭 Lector Versátil: géneros de las historias de las que leyó al menos
+    # un capítulo completo.
+    reads = completed_reads(user_id) if reads is None else reads
+    stories = select_in("stories", "id, genre", "id", {row["story_id"] for row in reads})
+    return len({
+        (story.get("genre") or "").strip().lower()
+        for story in stories
+        if (story.get("genre") or "").strip()
+    })
+
+
+def author_readers(author_id: str) -> int:
+    # Lectores únicos de todas las historias del autor (sin contarlo a él).
+    story_ids = [
+        row["id"] for row in (
+            db().table("stories").select("id").eq("author_id", author_id).execute()
+        ).data or []
+    ]
+    return len({
+        str(row["user_id"])
+        for row in select_in("chapter_reads", "user_id", "story_id", story_ids)
+        if str(row["user_id"]) != str(author_id)
+    })
+
+
+def discoveries(user_id: str) -> int:
+    # 🔎 Descubridor: recomendaciones hechas cuando el autor tenía menos de
+    # 100 lectores, cuyo autor ya llegó a 100.
+    snapshots = [
+        row for row in (
+            db().table("recommendation_snapshots").select("author_id, author_readers")
+            .eq("user_id", user_id).execute()
+        ).data or []
+        if row.get("author_readers", DISCOVERY_READERS) < DISCOVERY_READERS
+    ]
+    readers_now = {}
+    count = 0
+    for row in snapshots:
+        author_id = str(row["author_id"])
+        if author_id not in readers_now:
+            readers_now[author_id] = author_readers(author_id)
+        if readers_now[author_id] >= DISCOVERY_READERS:
+            count += 1
+    return count
+
+
+def record_recommendation(user_id: str, story_id: str) -> None:
+    # Al recomendar se anota cuántos lectores tenía el autor en ese momento.
+    stories = (
+        db().table("stories").select("author_id").eq("id", story_id).execute()
+    ).data or []
+    if not stories or str(stories[0]["author_id"]) == str(user_id):
+        return
+    author_id = str(stories[0]["author_id"])
+    (
+        db().table("recommendation_snapshots")
+        .upsert(
+            {
+                "user_id": str(user_id),
+                "story_id": str(story_id),
+                "author_id": author_id,
+                "author_readers": author_readers(author_id),
+            },
+            on_conflict="user_id,story_id",
+        )
+        .execute()
+    )
+
+
+def reward_discoverers(author_id: str) -> None:
+    # Cuando el autor llega justo a 100 lectores, se recalcula a quienes lo
+    # recomendaron antes. Si no, lo verán la próxima vez que abran sus logros.
+    if author_readers(author_id) != DISCOVERY_READERS:
+        return
+    for row in (
+        db().table("recommendation_snapshots").select("user_id, author_readers")
+        .eq("author_id", author_id).execute()
+    ).data or []:
+        if row.get("author_readers", DISCOVERY_READERS) < DISCOVERY_READERS:
+            schedule_refresh(row["user_id"])
+
+
+def schedule_recommendation(user_id: str, story_id: str) -> None:
+    fribuk().run_notification_task(record_recommendation, str(user_id), str(story_id))
+
+
+def forget_recommendation(user_id: str, story_id: str) -> None:
+    # Quitar la recomendación también quita lo que contaba para Descubridor.
+    try:
+        (
+            db().table("recommendation_snapshots").delete()
+            .eq("user_id", str(user_id)).eq("story_id", str(story_id)).execute()
+        )
+    except Exception as error:
+        print("No se pudo quitar la recomendación de Descubridor:", repr(error))
 
 
 def visible_comment_count(user_id: str) -> int:
@@ -438,8 +561,11 @@ def first_reader_count(user_id: str) -> int:
 
 
 def reader_metrics(user_id: str) -> dict:
+    reads = completed_reads(user_id)
     return {
-        "finished_stories": finished_stories(user_id),
+        "finished_stories": finished_stories(user_id, reads),
+        "genres_read": genres_read(user_id, reads),
+        "discoveries": discoveries(user_id),
         "visible_comments": visible_comment_count(user_id),
         "author_reactions": author_reactions_received(user_id),
         "loyal_weeks": best_loyal_streak(user_id),
@@ -574,6 +700,8 @@ def refresh_user_badges(user_id: str) -> dict:
         "comentarista": level_for("comentarista", metrics["author_reactions"]),
         "maratonista": level_for("maratonista", metrics["finished_stories"]),
         "lector_fiel": level_for("lector_fiel", metrics["loyal_weeks"]),
+        "lector_versatil": level_for("lector_versatil", metrics["genres_read"]),
+        "descubridor": level_for("descubridor", metrics["discoveries"]),
     }
     existing = load_badge_rows([user_id]).get(user_id, {})
 
@@ -934,6 +1062,8 @@ def get_my_badges(current_user=Depends(get_current_user)):
         "comentarista": metrics["author_reactions"],
         "maratonista": metrics["finished_stories"],
         "lector_fiel": metrics["loyal_weeks"],
+        "lector_versatil": metrics["genres_read"],
+        "descubridor": metrics["discoveries"],
     }
     catalog = []
     for badge_id in BADGES:

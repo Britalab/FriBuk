@@ -2857,6 +2857,8 @@ def create_vote(
         run_notification_task(
             notify_story_event, "story_vote", vote.story_id, str(current_user.id)
         )
+        # Cuántos lectores tenía el autor al recomendarlo: Descubridor.
+        badges.schedule_recommendation(current_user.id, vote.story_id)
 
         return {
             "message": "Voto registrado correctamente",
@@ -2889,6 +2891,8 @@ def remove_vote(
             .eq("user_id", str(current_user.id)) \
             .eq("story_id", story_id) \
             .execute()
+
+        badges.forget_recommendation(current_user.id, story_id)
 
         return {"message": "Voto eliminado correctamente"}
 

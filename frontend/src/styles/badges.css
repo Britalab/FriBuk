@@ -259,8 +259,7 @@
   margin: 0 0 12px;
 }
 
-.achievements-saved,
-.achievements-soon {
+.achievements-saved {
   color: var(--text-secondary);
   font-size: 0.9rem;
 }

@@ -248,9 +248,6 @@ export default function AchievementsPanel({ data, onChange }) {
         badges={byGroup(insignias, "lector")}
         renderCard={insigniaCard}
       />
-      <p className="achievements-soon">
-        Muy pronto: Lector Beta y Descubridor de Historias.
-      </p>
     </section>
   );
 }

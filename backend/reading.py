@@ -136,6 +136,12 @@ def record_reading(
     if seconds > 0:
         add_daily_activity(user_id, str(chapter["story_id"]), seconds, now)
 
+    # Un lector nuevo puede llevar al autor a 100: premia a sus descubridores.
+    if existing is None:
+        fribuk().run_notification_task(
+            badges.reward_discoverers, chapter["story_author_id"]
+        )
+
     # Terminar un capítulo puede completar una historia (Maratonista,
     # Lector Fundador).
     if newly_completed:
