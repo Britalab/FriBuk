@@ -114,6 +114,13 @@ export default function ChapterReader() {
   // Marca el final del texto: verla cuenta como haber llegado al final.
   const textEndRef = useRef(null);
 
+  // Al cambiar de capítulo la página es la misma y el navegador conserva el
+  // desplazamiento: se vuelve al comienzo. Si había un punto guardado de
+  // este capítulo, se retoma después, al cargar el progreso.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [chapterId]);
+
   useEffect(() => {
     api
       .get(`/stories/${storyId}/chapters`)
