@@ -6256,6 +6256,113 @@ def notify_chapter_comment(chapter_id: str, actor_user_id: str) -> None:
     )
 
 
+def notify_chapter_comment_reply(
+    chapter_id: str, actor_user_id: str, parent_id: str, content: str | None
+) -> None:
+    # Avisa a quien escribió el comentario respondido y a quienes ya habían
+    # respondido en esa conversación. Quien escribe la historia ya recibe el
+    # aviso del comentario, y a quien se nombra con @ le llega la mención.
+    actor_user_id = str(actor_user_id)
+
+    parent_response = (
+        supabase_admin
+        .table("chapter_comments")
+        .select("id, user_id, chapter_id")
+        .eq("id", str(parent_id))
+        .limit(1)
+        .execute()
+    )
+    if not parent_response.data:
+        return
+    parent = parent_response.data[0]
+
+    chapter_response = (
+        supabase_admin
+        .table("chapters")
+        .select("id, story_id, title")
+        .eq("id", chapter_id)
+        .limit(1)
+        .execute()
+    )
+    if not chapter_response.data:
+        return
+    chapter = chapter_response.data[0]
+
+    story_response = (
+        supabase_admin
+        .table("stories")
+        .select("id, author_id, title")
+        .eq("id", str(chapter["story_id"]))
+        .limit(1)
+        .execute()
+    )
+    if not story_response.data:
+        return
+    story = story_response.data[0]
+    story_id = str(story["id"])
+
+    replies = (
+        supabase_admin
+        .table("chapter_comments")
+        .select("user_id, status")
+        .eq("parent_id", str(parent["id"]))
+        .execute()
+    ).data or []
+
+    parent_author_id = str(parent["user_id"]) if parent.get("user_id") else None
+    participants = [parent_author_id] + [
+        str(row["user_id"]) for row in replies
+        if row.get("user_id") and row.get("status") == "visible"
+    ]
+
+    skipped = {actor_user_id, str(story.get("author_id"))}
+    skipped.update(
+        str(account["id"])
+        for account in mentions.find_users(mentions.mentioned_names(content)).values()
+    )
+
+    for recipient_id in dict.fromkeys(participants):
+        if not recipient_id or recipient_id in skipped:
+            continue
+        if mentions.blocked_between(actor_user_id, recipient_id):
+            continue
+
+        # Varias respuestas seguidas en la misma conversación: un solo aviso
+        # mientras el anterior siga sin leer.
+        pending = (
+            supabase_admin
+            .table("notifications")
+            .select("id, data")
+            .eq("recipient_user_id", recipient_id)
+            .eq("type", "story_comment")
+            .eq("actor_user_id", actor_user_id)
+            .eq("story_id", story_id)
+            .eq("is_read", False)
+            .execute()
+        ).data or []
+        if any(
+            (row.get("data") or {}).get("parent_id") == str(parent["id"])
+            for row in pending
+        ):
+            continue
+
+        create_notification(
+            recipient_id,
+            "story_comment",
+            actor_user_id=actor_user_id,
+            story_id=story_id,
+            data={
+                "story_title": story.get("title"),
+                "chapter_id": str(chapter["id"]),
+                "chapter_title": chapter.get("title"),
+                "parent_id": str(parent["id"]),
+                # "own": respondieron tu comentario; "thread": una
+                # conversación donde también respondiste.
+                "reply": "own" if recipient_id == parent_author_id else "thread"
+            }
+        )
+
+
 def notify_forum_reply(topic_id: str, actor_user_id: str, reply: dict) -> None:
     topic_response = (
         supabase_admin
@@ -7355,6 +7462,11 @@ def create_chapter_comment(
     )
 
     run_notification_task(notify_chapter_comment, chapter["id"], user_id)
+    if is_reply:
+        run_notification_task(
+            notify_chapter_comment_reply,
+            chapter["id"], user_id, comment_data["parent_id"], comment_data["content"]
+        )
     # El primer comentario de quien ya leyó el capítulo: Primer Lector.
     if not is_reply:
         badges.schedule_first_reader(chapter, user_id, response.data[0]["id"])

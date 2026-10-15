@@ -52,6 +52,17 @@ export function getNotificationContent(notification) {
             : `/stories/${notification.story_id}`,
         };
       }
+      // Respuesta a tu comentario, o en una conversación donde respondiste.
+      if (data.reply) {
+        return {
+          icon: "↩️",
+          actor,
+          text: ` respondió ${data.reply === "own" ? "tu comentario" : "un comentario donde participas"} en ${quoted(data.chapter_title, "un capítulo")}, de ${quoted(data.story_title, "una historia")}.`,
+          to: data.chapter_id
+            ? `/stories/${notification.story_id}/chapters/${data.chapter_id}`
+            : `/stories/${notification.story_id}`,
+        };
+      }
       // Comentario en un capítulo: dice quién y dónde, sin el texto.
       if (data.chapter_id) {
         return {

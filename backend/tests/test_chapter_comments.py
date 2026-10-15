@@ -738,6 +738,84 @@ class ChapterCommentsTestCase(unittest.TestCase):
         main.notify_chapter_comment(CHAPTER_ID, AUTHOR_ID)
         self.assertEqual(self.chapter_comment_notifications(), [])
 
+    # ---------- aviso de respuestas ----------
+
+    def reply_notifications(self):
+        return [
+            row for row in self.chapter_comment_notifications()
+            if (row.get("data") or {}).get("reply")
+        ]
+
+    def reply(self, user_id, parent_id, content="Respuesta"):
+        # Publica la respuesta y ejecuta su aviso en el acto.
+        reply_id = self.create_comment_id(user_id=user_id, content=content, parent_id=parent_id)
+        main.notify_chapter_comment_reply(CHAPTER_ID, user_id, parent_id, content)
+        for notification in self.chapter_comment_notifications():
+            notification.setdefault("is_read", False)
+        return reply_id
+
+    def test_replying_notifies_the_author_of_the_comment(self):
+        self.database.tables["notifications"] = []
+        comment_id = self.create_comment_id(user_id=ALICE_ID)
+
+        # La autora de la historia responde: a Alice le llega el aviso.
+        self.reply(AUTHOR_ID, comment_id)
+
+        notifications = self.reply_notifications()
+        self.assertEqual(len(notifications), 1)
+        self.assertEqual(notifications[0]["recipient_user_id"], ALICE_ID)
+        self.assertEqual(notifications[0]["actor_user_id"], AUTHOR_ID)
+        self.assertEqual(notifications[0]["data"]["reply"], "own")
+        self.assertEqual(notifications[0]["data"]["chapter_id"], CHAPTER_ID)
+
+    def test_people_who_replied_before_are_notified_too(self):
+        self.database.tables["notifications"] = []
+        comment_id = self.create_comment_id(user_id=ALICE_ID)
+        self.reply(BOB_ID, comment_id)
+        self.database.tables["notifications"] = []
+
+        self.reply(ADMIN_ID, comment_id)
+
+        by_recipient = {
+            row["recipient_user_id"]: row["data"]["reply"] for row in self.reply_notifications()
+        }
+        # La autora de la historia ya recibe el aviso normal del comentario.
+        self.assertEqual(by_recipient, {ALICE_ID: "own", BOB_ID: "thread"})
+
+    def test_replying_to_yourself_does_not_notify(self):
+        self.database.tables["notifications"] = []
+        comment_id = self.create_comment_id(user_id=ALICE_ID)
+
+        self.reply(ALICE_ID, comment_id)
+        self.assertEqual(self.reply_notifications(), [])
+
+    def test_a_mentioned_person_gets_only_the_mention(self):
+        self.database.tables["notifications"] = []
+        comment_id = self.create_comment_id(user_id=ALICE_ID)
+
+        self.reply(BOB_ID, comment_id, content="@alice mira esto")
+        self.assertEqual(self.reply_notifications(), [])
+
+    def test_several_replies_in_a_row_notify_once(self):
+        self.database.tables["notifications"] = []
+        comment_id = self.create_comment_id(user_id=ALICE_ID)
+
+        for _ in range(3):
+            self.reply(BOB_ID, comment_id)
+        self.assertEqual(len(self.reply_notifications()), 1)
+
+    def test_publishing_a_reply_schedules_its_notification(self):
+        comment_id = self.create_comment_id(user_id=ALICE_ID)
+        scheduled = []
+        main.run_notification_task = lambda task, *args: scheduled.append((task, args))
+
+        self.create_comment_id(user_id=BOB_ID, content="Gracias", parent_id=comment_id)
+
+        self.assertIn(
+            (main.notify_chapter_comment_reply, (CHAPTER_ID, BOB_ID, comment_id, "Gracias")),
+            scheduled,
+        )
+
     def test_publishing_a_comment_schedules_the_notification(self):
         scheduled = []
         main.run_notification_task = lambda task, *args: scheduled.append((task, args))

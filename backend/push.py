@@ -154,6 +154,13 @@ def notification_message(row: dict, actor_username: str | None) -> dict:
                 "body": f"{actor} te mencionó en un comentario de {where}{of_story}.",
                 "url": chapter_url,
             }
+        if data.get("reply"):
+            where = quoted(data.get("chapter_title"), "un capítulo")
+            what = "tu comentario" if data.get("reply") == "own" else "un comentario donde participas"
+            return {
+                "body": f"{actor} respondió {what} en {where}, de {quoted(data.get('story_title'), 'una historia')}.",
+                "url": chapter_url,
+            }
         if chapter_id:
             return {
                 "body": f"{actor} comentó {quoted(data.get('chapter_title'), 'un capítulo')} de tu historia {story}.",

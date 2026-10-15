@@ -258,6 +258,12 @@ class PushTestCase(unittest.TestCase):
                 "@may comentó «Uno» de tu historia «Luna».", "/stories/s/chapters/c",
             ),
             (
+                {"type": "story_comment", "story_id": "s", "actor_user_id": "a",
+                 "data": {"chapter_id": "c", "chapter_title": "Uno", "story_title": "Luna",
+                          "reply": "own"}},
+                "@may respondió tu comentario en «Uno», de «Luna».", "/stories/s/chapters/c",
+            ),
+            (
                 {"type": "story_vote", "story_id": "s", "actor_user_id": "a", "actor_count": 3,
                  "data": {"story_title": "Luna"}},
                 "@may y 2 personas más recomendaron tu historia «Luna».", "/stories/s",
