@@ -57,7 +57,7 @@ export default function PushSettings() {
 
   const texts = {
     on: "Recibes avisos en este dispositivo aunque FriBuk esté cerrada.",
-    off: "Entérate de comentarios, seguidores y capítulos nuevos aunque FriBuk esté cerrada.",
+    off: "Entérate de mensajes, comentarios, seguidores y capítulos nuevos aunque FriBuk esté cerrada.",
     denied:
       "Bloqueaste los avisos de FriBuk. Para activarlos, permite las notificaciones en los ajustes de tu navegador o de tu teléfono.",
   };

@@ -7,8 +7,9 @@
 # - Cada dispositivo que acepta los avisos guarda su suscripción en
 #   push_subscriptions (una fila por navegador; un usuario puede tener varias).
 # - Cada vez que se crea una notificación, se envía también como push a
-#   todos los dispositivos de quien la recibe, con el número de pendientes
-#   para el ícono de la app.
+#   todos los dispositivos de quien la recibe. Lo mismo con cada mensaje
+#   privado. Cada aviso lleva el número de pendientes (notificaciones más
+#   mensajes) para el ícono de la app.
 # - Las suscripciones que el navegador da por terminadas (404 o 410) se
 #   borran solas.
 #
@@ -35,6 +36,7 @@ MAX_KEY_LENGTH = 200
 # Si el dispositivo está apagado, el aviso espera como mucho un día.
 PUSH_TTL_SECONDS = 86400
 PUSH_TIMEOUT_SECONDS = 10
+MESSAGE_PREVIEW_LENGTH = 120
 GONE_STATUSES = {404, 410}
 
 SUPPORT_STATUS_LABELS = {
@@ -207,6 +209,44 @@ def send_webpush(subscription: dict, payload: str, settings: dict) -> int | None
         return getattr(response, "status_code", None) or 0
 
 
+def unread_total(user_id: str) -> int | None:
+    # Lo mismo que suman la campana y Mensajes en la barra de navegación.
+    try:
+        import messages
+        return (
+            fribuk().count_unread_notifications(user_id)
+            + messages.unread_summary(user_id)["total_unread"]
+        )
+    except Exception:
+        return None
+
+
+def subscriptions_of(user_ids: list[str]) -> dict[str, list[dict]]:
+    subscriptions = (
+        db().table("push_subscriptions").select("*")
+        .in_("user_id", user_ids).execute()
+    ).data or []
+
+    by_user: dict[str, list[dict]] = {}
+    for subscription in subscriptions:
+        by_user.setdefault(str(subscription["user_id"]), []).append(subscription)
+    return by_user
+
+
+def deliver(devices: list[dict], message: dict, settings: dict) -> None:
+    payload = json.dumps(message, ensure_ascii=False)
+
+    for device in devices:
+        status = send_webpush(device, payload, settings)
+        if status in GONE_STATUSES:
+            # El navegador dio la suscripción por terminada.
+            db().table("push_subscriptions").delete().eq(
+                "endpoint", device["endpoint"]
+            ).execute()
+        elif status is not None:
+            print("No se pudo enviar el aviso push:", status)
+
+
 def actor_usernames(rows: list[dict]) -> dict[str, str]:
     actor_ids = list({str(row["actor_user_id"]) for row in rows if row.get("actor_user_id")})
     if not actor_ids:
@@ -224,16 +264,9 @@ def send_notifications(rows: list[dict]) -> None:
     if not recipient_ids:
         return
 
-    subscriptions = (
-        db().table("push_subscriptions").select("*")
-        .in_("user_id", recipient_ids).execute()
-    ).data or []
-    if not subscriptions:
+    by_user = subscriptions_of(recipient_ids)
+    if not by_user:
         return
-
-    by_user: dict[str, list[dict]] = {}
-    for subscription in subscriptions:
-        by_user.setdefault(str(subscription["user_id"]), []).append(subscription)
 
     usernames = actor_usernames(rows)
 
@@ -246,29 +279,42 @@ def send_notifications(rows: list[dict]) -> None:
         message = notification_message(
             row, usernames.get(str(row.get("actor_user_id")))
         )
-        try:
-            unread = fribuk().count_unread_notifications(recipient_id)
-        except Exception:
-            unread = None
-
-        payload = json.dumps({
+        deliver(devices, {
             "title": "FriBuk",
             "body": message["body"],
             "url": message["url"],
             # Misma etiqueta = el aviso agrupado reemplaza al anterior.
             "tag": f"notificacion-{row['id']}" if row.get("id") else None,
-            "unread": unread,
-        }, ensure_ascii=False)
+            "unread": unread_total(recipient_id),
+        }, settings)
 
-        for device in devices:
-            status = send_webpush(device, payload, settings)
-            if status in GONE_STATUSES:
-                # El navegador dio la suscripción por terminada.
-                db().table("push_subscriptions").delete().eq(
-                    "endpoint", device["endpoint"]
-                ).execute()
-            elif status is not None:
-                print("No se pudo enviar el aviso push:", status)
+
+def send_private_message(recipient_id: str, sender_id: str, content: str) -> None:
+    settings = vapid_settings()
+    if not settings:
+        return
+
+    devices = subscriptions_of([str(recipient_id)]).get(str(recipient_id))
+    if not devices:
+        return
+
+    users = (
+        db().table("users").select("username").eq("id", str(sender_id)).execute()
+    ).data or []
+    username = users[0].get("username") if users else None
+
+    text = " ".join((content or "").split())
+    if len(text) > MESSAGE_PREVIEW_LENGTH:
+        text = text[:MESSAGE_PREVIEW_LENGTH - 1].rstrip() + "…"
+
+    deliver(devices, {
+        "title": f"Mensaje de @{username}" if username else "Mensaje nuevo",
+        "body": text or "Te enviaron un mensaje.",
+        "url": f"/mensajes/privados/{sender_id}",
+        # Varios mensajes seguidos de la misma persona: queda el último.
+        "tag": f"mensaje-{sender_id}",
+        "unread": unread_total(str(recipient_id)),
+    }, settings)
 
 
 def run_in_background(task, *args) -> None:
@@ -289,6 +335,11 @@ def schedule_notifications(rows: list[dict] | None) -> None:
     # para no demorar ni romper nada si un servicio de avisos tarda.
     if rows and vapid_settings():
         run_in_background(send_notifications, [dict(row) for row in rows])
+
+
+def schedule_private_message(recipient_id: str, sender_id: str, content: str) -> None:
+    if vapid_settings():
+        run_in_background(send_private_message, str(recipient_id), str(sender_id), content)
 
 
 # ------------------------------------------------------------

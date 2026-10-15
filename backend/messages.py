@@ -24,6 +24,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 import admin_alerts
+import push
 
 router = APIRouter()
 security = HTTPBearer()
@@ -548,6 +549,9 @@ def send_private_message(
             status_code=400, detail=fribuk().public_error_detail(error)
         )
 
+    # Aviso push a quien lo recibe, aunque tenga FriBuk cerrada.
+    push.schedule_private_message(other_id, user_id, content)
+
     return {"message": serialize_private_message(created_message, user_id)}
 
 
@@ -987,29 +991,30 @@ def list_author_channels(current_user=Depends(get_current_user)):
         ) from error
 
 
-@router.get("/messages/summary")
-def get_messages_summary(current_user=Depends(get_current_user)):
-    # Contadores para la barra de navegación. Si fallan, se muestran en cero.
-    user_id = str(current_user.id)
-
-    try:
-        private_unread = sum(
-            unread_private_counts(user_id, my_conversations(user_id)).values()
-        )
-        channels = author_channels(user_id)
-        authors_unread = (
-            sum(channel["unread_count"] for channel in channels["channels"])
-            + channels["own"]["unread_count"]
-        )
-    except Exception as error:
-        print("No se pudo calcular el resumen de Mensajes:", repr(error))
-        return {"private_unread": 0, "authors_unread": 0, "total_unread": 0}
-
+def unread_summary(user_id: str) -> dict:
+    private_unread = sum(
+        unread_private_counts(user_id, my_conversations(user_id)).values()
+    )
+    channels = author_channels(user_id)
+    authors_unread = (
+        sum(channel["unread_count"] for channel in channels["channels"])
+        + channels["own"]["unread_count"]
+    )
     return {
         "private_unread": private_unread,
         "authors_unread": authors_unread,
         "total_unread": private_unread + authors_unread
     }
+
+
+@router.get("/messages/summary")
+def get_messages_summary(current_user=Depends(get_current_user)):
+    # Contadores para la barra de navegación. Si fallan, se muestran en cero.
+    try:
+        return unread_summary(str(current_user.id))
+    except Exception as error:
+        print("No se pudo calcular el resumen de Mensajes:", repr(error))
+        return {"private_unread": 0, "authors_unread": 0, "total_unread": 0}
 
 
 def ensure_channel_access(author_user_id: str, user_id: str) -> tuple[str, bool]:

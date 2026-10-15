@@ -3,12 +3,21 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 import { useMessagesSummary } from "../hooks/useMessagesSummary";
+import { useNotifications } from "../hooks/useNotifications";
+import { updateAppBadge } from "../utils/appBadge";
 import { formatUnreadCount, rememberMessagesReturnPath } from "../utils/messages";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const unreadMessages = useMessagesSummary();
+  const { unreadCount } = useNotifications();
   const location = useLocation();
+
+  // Número sobre el ícono de la app instalada (donde el sistema lo admite):
+  // notificaciones más mensajes sin leer. Sin sesión o sin pendientes, se quita.
+  useEffect(() => {
+    updateAppBadge(unreadCount + unreadMessages);
+  }, [unreadCount, unreadMessages]);
 
   // Para que "cerrar" en Mensajes vuelva a donde estaba la persona.
   useEffect(() => {

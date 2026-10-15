@@ -192,6 +192,23 @@ class PushTestCase(unittest.TestCase):
         self.assertEqual(len(self.sent), 1)
         self.assertEqual(self.database.tables["push_subscriptions"], [])
 
+    def test_a_private_message_reaches_the_recipient(self):
+        self.subscribe(AUTHOR_ID)
+
+        push.send_private_message(AUTHOR_ID, READER_ID, "Hola,   me encantó\n tu historia " + "!" * 200)
+
+        self.assertEqual(len(self.sent), 1)
+        payload = self.sent[0][1]
+        self.assertEqual(payload["title"], "Mensaje de @lectora")
+        self.assertTrue(payload["body"].startswith("Hola, me encantó tu historia !"))
+        self.assertEqual(len(payload["body"]), push.MESSAGE_PREVIEW_LENGTH)
+        self.assertEqual(payload["url"], f"/mensajes/privados/{READER_ID}")
+        self.assertEqual(payload["tag"], f"mensaje-{READER_ID}")
+
+    def test_a_private_message_to_someone_without_devices_sends_nothing(self):
+        push.send_private_message(AUTHOR_ID, READER_ID, "Hola")
+        self.assertEqual(self.sent, [])
+
     # ---------- textos ----------
 
     def test_messages_match_the_activity_center(self):
