@@ -50,7 +50,7 @@ export const FAQ = [
   {
     question: "¿Cómo publico mi historia?",
     answer:
-      "Con tu sesión iniciada, pulsa «Crear historia», completa el título, la sinopsis y el género, y luego agrega capítulos. Puedes guardar la historia y cada capítulo como borrador: mientras estén en borrador solo tú puedes verlos.",
+      "Con tu sesión iniciada, pulsa «Crear historia», completa el título, la sinopsis y el género, y luego agrega capítulos. La historia se publica al crearla. Cada capítulo puedes guardarlo como borrador: mientras esté en borrador solo tú puedes verlo. Si prefieres ocultar la historia, cámbiala a «Borrador» desde «Editar historia».",
   },
   {
     question: "¿Cuál es la diferencia entre mi perfil y mi perfil público?",

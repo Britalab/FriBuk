@@ -95,7 +95,7 @@ export default function CreateStory() {
         cover_url: finalCoverUrl,
         genre: genre.trim() || null,
         tags,
-        status: "draft",
+        status: "published",
         work_type: workType,
         original_work: originalWork.trim() || null,
         original_author: originalAuthor.trim() || null,
@@ -105,7 +105,7 @@ export default function CreateStory() {
 
       const createdStory = response.data.story;
 
-      showToast("Borrador de historia guardado correctamente.");
+      showToast("Historia publicada correctamente.");
       navigate(`/stories/${createdStory.id}`);
     } catch (err) {
       console.error("Error al crear la historia:", err);
