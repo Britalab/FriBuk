@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { NotificationsContext } from "../context/NotificationsContext";
+import { useAppPresence } from "../hooks/useAppPresence";
 
 const REFRESH_INTERVAL_MS = 60000;
 
@@ -12,6 +13,9 @@ export default function NotificationsProvider({ children }) {
   const { user } = useAuth();
   const userId = user?.id || null;
   const [state, setState] = useState({ userId: null, count: 0 });
+
+  // Sin avisos push mientras la persona está usando FriBuk.
+  useAppPresence(userId);
 
   const refreshUnreadCount = useCallback(async () => {
     if (!userId) return;

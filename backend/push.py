@@ -12,6 +12,10 @@
 #   mensajes) para el ícono de la app.
 # - Las suscripciones que el navegador da por terminadas (404 o 410) se
 #   borran solas.
+# - Quien está usando FriBuk en ese momento (la app avisa cada 30 segundos
+#   mientras está en pantalla) no recibe avisos: ya ve la campana y los
+#   mensajes. Se decide aquí y no en el teléfono porque iPhone cancela la
+#   suscripción si llega un aviso que no se muestra.
 #
 # Necesita las claves VAPID en las variables de entorno VAPID_PUBLIC_KEY,
 # VAPID_PRIVATE_KEY y VAPID_SUBJECT. Sin ellas, todo lo demás funciona igual
@@ -19,6 +23,8 @@
 
 import json
 import os
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -38,6 +44,10 @@ PUSH_TTL_SECONDS = 86400
 PUSH_TIMEOUT_SECONDS = 10
 MESSAGE_PREVIEW_LENGTH = 120
 GONE_STATUSES = {404, 410}
+# La app avisa cada 30 segundos mientras está en pantalla; con margen para
+# la demora de la red.
+PRESENCE_SECONDS = 45
+MAX_TRACKED_PRESENCE = 20000
 
 SUPPORT_STATUS_LABELS = {
     "pending": "pendiente",
@@ -72,6 +82,31 @@ def vapid_settings() -> dict | None:
     if not (public_key and private_key and subject):
         return None
     return {"public_key": public_key, "private_key": private_key, "subject": subject}
+
+
+# ------------------------------------------------------------
+# Quién está usando FriBuk ahora (en memoria: el backend es un solo proceso)
+# ------------------------------------------------------------
+
+active_until: dict[str, float] = {}
+presence_lock = threading.Lock()
+
+
+def mark_presence(user_id: str, active: bool) -> None:
+    now = time.monotonic()
+    with presence_lock:
+        if not active:
+            active_until.pop(user_id, None)
+            return
+        if len(active_until) >= MAX_TRACKED_PRESENCE:
+            for key in [key for key, until in active_until.items() if until <= now]:
+                del active_until[key]
+        active_until[user_id] = now + PRESENCE_SECONDS
+
+
+def is_using_app(user_id: str) -> bool:
+    with presence_lock:
+        return active_until.get(str(user_id), 0) > time.monotonic()
 
 
 # ------------------------------------------------------------
@@ -273,7 +308,7 @@ def send_notifications(rows: list[dict]) -> None:
     for row in rows:
         recipient_id = str(row.get("recipient_user_id"))
         devices = by_user.get(recipient_id)
-        if not devices:
+        if not devices or is_using_app(recipient_id):
             continue
 
         message = notification_message(
@@ -291,7 +326,7 @@ def send_notifications(rows: list[dict]) -> None:
 
 def send_private_message(recipient_id: str, sender_id: str, content: str) -> None:
     settings = vapid_settings()
-    if not settings:
+    if not settings or is_using_app(recipient_id):
         return
 
     devices = subscriptions_of([str(recipient_id)]).get(str(recipient_id))
@@ -358,6 +393,10 @@ class SubscriptionCreate(BaseModel):
 
 class SubscriptionRemove(BaseModel):
     endpoint: str
+
+
+class Presence(BaseModel):
+    active: bool
 
 
 def clean_endpoint(endpoint: str) -> str:
@@ -434,3 +473,9 @@ def remove_subscription(
         .execute()
     )
     return {"subscribed": False}
+
+
+@router.post("/push/presence")
+def update_presence(presence: Presence, current_user=Depends(get_current_user)):
+    mark_presence(str(current_user.id), presence.active)
+    return {"active": presence.active}

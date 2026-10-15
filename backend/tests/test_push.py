@@ -83,6 +83,7 @@ class PushTestCase(unittest.TestCase):
 
         push.run_in_background = lambda task, *args: task(*args)
         push.send_webpush = fake_send
+        push.active_until.clear()
 
         self.env = mock.patch.dict(os.environ, VAPID_ENV)
         self.env.start()
@@ -208,6 +209,44 @@ class PushTestCase(unittest.TestCase):
     def test_a_private_message_to_someone_without_devices_sends_nothing(self):
         push.send_private_message(AUTHOR_ID, READER_ID, "Hola")
         self.assertEqual(self.sent, [])
+
+    def presence(self, active, user_id=AUTHOR_ID):
+        return self.client.post(
+            "/push/presence", json={"active": active}, headers=auth_header(user_id)
+        )
+
+    def test_nothing_is_sent_while_using_the_app(self):
+        self.subscribe(AUTHOR_ID)
+        self.assertEqual(self.presence(True).status_code, 200)
+
+        comment_on_story()
+        push.send_private_message(AUTHOR_ID, READER_ID, "Hola")
+        self.assertEqual(self.sent, [])
+        # La notificación se guarda igual: la ve en la campana.
+        self.assertEqual(len(self.database.tables["notifications"]), 1)
+
+    def test_pushes_return_when_leaving_the_app(self):
+        self.subscribe(AUTHOR_ID)
+        self.presence(True)
+        self.presence(False)
+
+        comment_on_story()
+        self.assertEqual(len(self.sent), 1)
+
+    def test_presence_expires_without_news_from_the_app(self):
+        self.subscribe(AUTHOR_ID)
+        self.presence(True)
+
+        with mock.patch.object(push.time, "monotonic", return_value=push.time.monotonic() + 60):
+            comment_on_story()
+        self.assertEqual(len(self.sent), 1)
+
+    def test_someone_else_using_the_app_does_not_matter(self):
+        self.subscribe(AUTHOR_ID)
+        self.presence(True, user_id=READER_ID)
+
+        comment_on_story()
+        self.assertEqual(len(self.sent), 1)
 
     # ---------- textos ----------
 
