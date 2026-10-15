@@ -120,7 +120,10 @@ def notify_mentions(
 
 
 def notify_chapter_comment_mentions(
-    chapter_id: str, actor_user_id: str, content: str | None
+    chapter_id: str,
+    actor_user_id: str,
+    content: str | None,
+    comment_id: str | None = None
 ) -> None:
     main = fribuk()
     chapter_response = (
@@ -157,7 +160,8 @@ def notify_chapter_comment_mentions(
         data={
             "story_title": story.get("title"),
             "chapter_id": str(chapter["id"]),
-            "chapter_title": chapter.get("title")
+            "chapter_title": chapter.get("title"),
+            **({"comment_id": str(comment_id)} if comment_id else {})
         },
         # Quien escribe la historia ya recibe el aviso del comentario.
         skip_user_ids=(story.get("author_id"),)

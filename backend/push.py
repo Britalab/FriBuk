@@ -147,6 +147,10 @@ def notification_message(row: dict, actor_username: str | None) -> dict:
             f"/stories/{story_id}/chapters/{chapter_id}" if chapter_id
             else f"/stories/{story_id}"
         )
+        # Lleva directo al comentario cuando se sabe cuál es.
+        comment_id = data.get("comment_id") or data.get("parent_id")
+        if chapter_id and comment_id:
+            chapter_url += f"?comentario={comment_id}"
         if data.get("mention"):
             where = quoted(data.get("chapter_title"), "un capítulo")
             of_story = f", de {quoted(data.get('story_title'), '')}" if data.get("story_title") else ""

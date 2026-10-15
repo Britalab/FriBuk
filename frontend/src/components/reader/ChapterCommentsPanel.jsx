@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useToast } from "../../hooks/useToast";
 import {
   CHAPTER_REACTIONS,
@@ -343,7 +343,10 @@ function CommentItem({ comment, actions, isAuthenticated, onReply }) {
   };
 
   return (
-    <article className={`reader-comment${comment.parent_id ? " is-reply" : ""}`}>
+    <article
+      className={`reader-comment${comment.parent_id ? " is-reply" : ""}`}
+      data-comment-id={comment.id}
+    >
       <header className="reader-comment-meta">
         <Link to={`/usuario/${comment.user_id}`} className="reader-comment-author">
           {comment.username}
@@ -392,8 +395,15 @@ function CommentItem({ comment, actions, isAuthenticated, onReply }) {
 }
 
 export function CommentThread({ comment, replies, actions, isAuthenticated }) {
-  const [replying, setReplying] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [searchParams] = useSearchParams();
+  // Respuesta en curso: a quién se contesta. Las respuestas no se anidan:
+  // contestar una respuesta agrega otra a la misma conversación.
+  const [replying, setReplying] = useState(null);
+  // Si un aviso lleva a una respuesta antigua, la conversación se abre entera.
+  const [expanded, setExpanded] = useState(() => {
+    const target = searchParams.get("comentario");
+    return Boolean(target) && replies.some((reply) => reply.id === target);
+  });
 
   const hiddenCount = expanded ? 0 : Math.max(0, replies.length - COLLAPSED_REPLIES);
   const visibleReplies = hiddenCount > 0 ? replies.slice(-COLLAPSED_REPLIES) : replies;
@@ -404,7 +414,7 @@ export function CommentThread({ comment, replies, actions, isAuthenticated }) {
         comment={comment}
         actions={actions}
         isAuthenticated={isAuthenticated}
-        onReply={isAuthenticated ? () => setReplying(true) : null}
+        onReply={isAuthenticated ? () => setReplying({ to: comment, prefix: "" }) : null}
       />
 
       {(replies.length > 0 || replying) && (
@@ -425,19 +435,30 @@ export function CommentThread({ comment, replies, actions, isAuthenticated }) {
               comment={reply}
               actions={actions}
               isAuthenticated={isAuthenticated}
+              onReply={
+                isAuthenticated
+                  ? () => setReplying({
+                      to: reply,
+                      // Se nombra a quien escribió la respuesta, para que le llegue.
+                      prefix: reply.is_own ? "" : `@${reply.username} `,
+                    })
+                  : null
+              }
             />
           ))}
 
           {replying && (
             <CommentForm
-              label={`Responder a ${comment.username}`}
-              placeholder={`Responder a ${comment.username}...`}
+              key={replying.to.id}
+              label={`Responder a ${replying.to.username}`}
+              placeholder={`Responder a ${replying.to.username}...`}
               submitLabel="Responder"
-              onCancel={() => setReplying(false)}
+              initialValue={replying.prefix}
+              onCancel={() => setReplying(null)}
               onSubmit={async (content) => {
                 await actions.createReply(comment.id, content);
                 setExpanded(true);
-                setReplying(false);
+                setReplying(null);
               }}
             />
           )}

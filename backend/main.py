@@ -6188,9 +6188,12 @@ def notify_story_event(
     )
 
 
-def notify_chapter_comment(chapter_id: str, actor_user_id: str) -> None:
+def notify_chapter_comment(
+    chapter_id: str, actor_user_id: str, comment_id: str | None = None
+) -> None:
     # Avisa a quien escribe la historia que alguien comentó un capítulo.
-    # Solo dice quién y dónde: no incluye el texto del comentario.
+    # Solo dice quién y dónde: no incluye el texto del comentario. Con
+    # comment_id, el aviso lleva directo a ese comentario.
     chapter_response = (
         supabase_admin
         .table("chapters")
@@ -6243,21 +6246,29 @@ def notify_chapter_comment(chapter_id: str, actor_user_id: str) -> None:
     ):
         return
 
+    data = {
+        "story_title": story.get("title"),
+        "chapter_id": str(chapter["id"]),
+        "chapter_title": chapter.get("title")
+    }
+    if comment_id:
+        data["comment_id"] = str(comment_id)
+
     create_notification(
         author_id,
         "story_comment",
         actor_user_id=actor_user_id,
         story_id=story_id,
-        data={
-            "story_title": story.get("title"),
-            "chapter_id": str(chapter["id"]),
-            "chapter_title": chapter.get("title")
-        }
+        data=data
     )
 
 
 def notify_chapter_comment_reply(
-    chapter_id: str, actor_user_id: str, parent_id: str, content: str | None
+    chapter_id: str,
+    actor_user_id: str,
+    parent_id: str,
+    content: str | None,
+    comment_id: str | None = None
 ) -> None:
     # Avisa a quien escribió el comentario respondido y a quienes ya habían
     # respondido en esa conversación. Quien escribe la historia ya recibe el
@@ -6356,6 +6367,8 @@ def notify_chapter_comment_reply(
                 "chapter_id": str(chapter["id"]),
                 "chapter_title": chapter.get("title"),
                 "parent_id": str(parent["id"]),
+                # La respuesta: el aviso lleva directo a ella.
+                "comment_id": str(comment_id) if comment_id else str(parent["id"]),
                 # "own": respondieron tu comentario; "thread": una
                 # conversación donde también respondiste.
                 "reply": "own" if recipient_id == parent_author_id else "thread"
@@ -7461,11 +7474,13 @@ def create_chapter_comment(
         .execute()
     )
 
-    run_notification_task(notify_chapter_comment, chapter["id"], user_id)
+    new_comment_id = str(response.data[0]["id"])
+    run_notification_task(notify_chapter_comment, chapter["id"], user_id, new_comment_id)
     if is_reply:
         run_notification_task(
             notify_chapter_comment_reply,
-            chapter["id"], user_id, comment_data["parent_id"], comment_data["content"]
+            chapter["id"], user_id, comment_data["parent_id"], comment_data["content"],
+            new_comment_id
         )
     # El primer comentario de quien ya leyó el capítulo: Primer Lector.
     if not is_reply:
@@ -7474,7 +7489,7 @@ def create_chapter_comment(
     if "@" in comment_data["content"]:
         run_notification_task(
             mentions.notify_chapter_comment_mentions,
-            chapter["id"], user_id, comment_data["content"]
+            chapter["id"], user_id, comment_data["content"], new_comment_id
         )
 
     return {

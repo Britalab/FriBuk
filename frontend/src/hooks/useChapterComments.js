@@ -133,6 +133,8 @@ export function useChapterComments(chapterId, enabled, userId) {
 
   return {
     comments,
+    // Ya llegaron los comentarios de este capítulo (aunque sean cero).
+    loaded: Boolean(key) && state.key === key,
     createComment,
     createGeneralComment,
     createReply,

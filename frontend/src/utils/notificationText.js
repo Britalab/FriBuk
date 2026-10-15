@@ -23,6 +23,17 @@ function plural(notification, singular, pluralForm) {
   return (notification.actor_count || 1) > 1 ? pluralForm : singular;
 }
 
+// Capítulo de un comentario; con su id, abre directamente ese comentario.
+function commentLink(notification, data) {
+  if (!data.chapter_id) return `/stories/${notification.story_id}`;
+  const chapter = `/stories/${notification.story_id}/chapters/${data.chapter_id}`;
+  // Los avisos de respuesta anteriores solo guardaban el comentario respondido.
+  const commentId = data.comment_id || data.parent_id;
+  return commentId
+    ? `${chapter}?comentario=${encodeURIComponent(commentId)}`
+    : chapter;
+}
+
 export function getNotificationContent(notification) {
   const data = notification.data || {};
   const story = quoted(data.story_title, "tu historia");
@@ -47,9 +58,7 @@ export function getNotificationContent(notification) {
           icon: "@",
           actor,
           text: ` te mencionó en un comentario de ${quoted(data.chapter_title, "un capítulo")}${data.story_title ? `, de ${quoted(data.story_title, "")}` : ""}.`,
-          to: data.chapter_id
-            ? `/stories/${notification.story_id}/chapters/${data.chapter_id}`
-            : `/stories/${notification.story_id}`,
+          to: commentLink(notification, data),
         };
       }
       // Respuesta a tu comentario, o en una conversación donde respondiste.
@@ -58,9 +67,7 @@ export function getNotificationContent(notification) {
           icon: "↩️",
           actor,
           text: ` respondió ${data.reply === "own" ? "tu comentario" : "un comentario donde participas"} en ${quoted(data.chapter_title, "un capítulo")}, de ${quoted(data.story_title, "una historia")}.`,
-          to: data.chapter_id
-            ? `/stories/${notification.story_id}/chapters/${data.chapter_id}`
-            : `/stories/${notification.story_id}`,
+          to: commentLink(notification, data),
         };
       }
       // Comentario en un capítulo: dice quién y dónde, sin el texto.
@@ -69,7 +76,7 @@ export function getNotificationContent(notification) {
           icon: "💬",
           actor,
           text: ` comentó ${quoted(data.chapter_title, "un capítulo")} de tu historia ${story}.`,
-          to: `/stories/${notification.story_id}/chapters/${data.chapter_id}`,
+          to: commentLink(notification, data),
         };
       }
       return {

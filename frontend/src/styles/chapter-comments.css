@@ -706,7 +706,19 @@
   }
 }
 
+/* El comentario al que llevó un aviso se resalta un momento. */
+.reader-comment {
+  border-radius: 10px;
+  transition: background-color 0.6s ease, box-shadow 0.6s ease;
+}
+
+.reader-comment.is-highlighted {
+  background: var(--bg-hover);
+  box-shadow: 0 0 0 8px var(--bg-hover), 0 0 0 10px var(--orange);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .reader-comment,
   .reader-comment-indicator,
   .reader-orphans-button,
   .reader-reaction {

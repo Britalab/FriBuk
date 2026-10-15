@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
@@ -100,6 +100,9 @@ function organizeComments(comments, paragraphs) {
 
 export default function ChapterReader() {
   const { storyId, chapterId } = useParams();
+  // Un aviso puede llevar a un comentario concreto: ?comentario=<id>.
+  const [searchParams] = useSearchParams();
+  const targetCommentId = searchParams.get("comentario");
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -147,7 +150,7 @@ export default function ChapterReader() {
     chapter?.id === chapterId && chapter?.status === "published";
 
   const commentActions = useChapterComments(chapterId, commentsEnabled, user?.id);
-  const { comments, createComment } = commentActions;
+  const { comments, loaded: commentsLoaded, createComment } = commentActions;
 
   const paragraphs = useMemo(
     () => (chapter?.content ? chapter.content.split("\n") : []),
@@ -180,7 +183,8 @@ export default function ChapterReader() {
       .get(`/stories/${storyId}/progress`)
       .then((response) => {
         const saved = response.data.progress;
-        if (!isActive || saved?.chapter_id !== chapterId) return;
+        // Si se viene a ver un comentario, no se salta al punto guardado.
+        if (!isActive || targetCommentId || saved?.chapter_id !== chapterId) return;
         if (!(saved.paragraph_index > 0)) return;
 
         const paragraph = textRef.current
@@ -201,10 +205,11 @@ export default function ChapterReader() {
     return () => {
       isActive = false;
     };
-  }, [tracksProgress, storyId, chapterId, showToast]);
+  }, [tracksProgress, storyId, chapterId, showToast, targetCommentId]);
 
   useEffect(() => {
-    if (!tracksProgress || progressReadyFor !== chapterId) return undefined;
+    // Ir a ver un comentario no cambia el punto donde va la lectura.
+    if (!tracksProgress || targetCommentId || progressReadyFor !== chapterId) return undefined;
 
     let lastSaved = null;
     let pending = null;
@@ -277,7 +282,7 @@ export default function ChapterReader() {
       // Al salir se guarda lo último que se alcanzó a leer.
       save();
     };
-  }, [tracksProgress, progressReadyFor, storyId, chapterId]);
+  }, [tracksProgress, targetCommentId, progressReadyFor, storyId, chapterId]);
 
   // El panel pertenece a un capítulo: al cambiar de capítulo se cierra.
   const panel = panelState?.chapterId === chapterId ? panelState : null;
@@ -363,6 +368,53 @@ export default function ChapterReader() {
     ));
     scrollToParagraph(index);
   }, [commentsEnabled, paragraphs, chapterId, user, scrollToParagraph]);
+
+  // Abre el comentario al que lleva un aviso: el panel de su párrafo, la
+  // lista de texto editado o el apartado de comentarios generales. Luego lo
+  // centra en pantalla y lo resalta un momento.
+  const openedTargetRef = useRef(null);
+  useEffect(() => {
+    if (!targetCommentId || !commentsLoaded) return undefined;
+
+    const targetKey = `${chapterId}:${targetCommentId}`;
+    if (openedTargetRef.current === targetKey) return undefined;
+    openedTargetRef.current = targetKey;
+
+    const comment = comments.find((item) => item.id === targetCommentId);
+    const root = comment?.parent_id
+      ? comments.find((item) => item.id === comment.parent_id)
+      : comment;
+
+    if (!comment || !root) {
+      showToast("Ese comentario ya no está disponible.", "error");
+      return undefined;
+    }
+
+    if (!root.is_general) {
+      if (orphanThreads.some((thread) => thread.id === root.id)) {
+        setPanelState({ chapterId, mode: "orphans", index: null, draft: null });
+      } else {
+        setPanelState({ chapterId, mode: "paragraph", index: root.paragraph_index, draft: null });
+        scrollToParagraph(root.paragraph_index);
+      }
+    }
+
+    // Se espera a que el panel o la lista estén dibujados.
+    setTimeout(() => {
+      const element = document.querySelector(
+        `[data-comment-id="${CSS.escape(targetCommentId)}"]`
+      );
+      if (!element) return;
+
+      element.scrollIntoView({ block: "center" });
+      element.classList.add("is-highlighted");
+      setTimeout(() => element.classList.remove("is-highlighted"), 2500);
+    }, 400);
+    return undefined;
+  }, [
+    targetCommentId, commentsLoaded, comments, chapterId, orphanThreads,
+    scrollToParagraph, showToast,
+  ]);
 
   const tapRef = useRef({ start: null, last: null });
 

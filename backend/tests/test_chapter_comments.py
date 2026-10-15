@@ -767,6 +767,7 @@ class ChapterCommentsTestCase(unittest.TestCase):
         self.assertEqual(notifications[0]["actor_user_id"], AUTHOR_ID)
         self.assertEqual(notifications[0]["data"]["reply"], "own")
         self.assertEqual(notifications[0]["data"]["chapter_id"], CHAPTER_ID)
+        self.assertEqual(notifications[0]["data"]["comment_id"], comment_id)
 
     def test_people_who_replied_before_are_notified_too(self):
         self.database.tables["notifications"] = []
@@ -809,10 +810,12 @@ class ChapterCommentsTestCase(unittest.TestCase):
         scheduled = []
         main.run_notification_task = lambda task, *args: scheduled.append((task, args))
 
-        self.create_comment_id(user_id=BOB_ID, content="Gracias", parent_id=comment_id)
+        reply_id = self.create_comment_id(user_id=BOB_ID, content="Gracias", parent_id=comment_id)
 
+        # El aviso lleva el id de la respuesta, para abrirla directamente.
         self.assertIn(
-            (main.notify_chapter_comment_reply, (CHAPTER_ID, BOB_ID, comment_id, "Gracias")),
+            (main.notify_chapter_comment_reply,
+             (CHAPTER_ID, BOB_ID, comment_id, "Gracias", reply_id)),
             scheduled,
         )
 
@@ -820,15 +823,23 @@ class ChapterCommentsTestCase(unittest.TestCase):
         scheduled = []
         main.run_notification_task = lambda task, *args: scheduled.append((task, args))
 
-        self.create_comment_id()
-        self.create_comment_id(content="En general, bien", general=True)
+        first_id = self.create_comment_id()
+        second_id = self.create_comment_id(content="En general, bien", general=True)
 
         # Al comentar también se revisa Primer Lector: aquí solo importa el aviso.
         scheduled = [item for item in scheduled if item[0] is main.notify_chapter_comment]
         self.assertEqual(scheduled, [
-            (main.notify_chapter_comment, (CHAPTER_ID, ALICE_ID)),
-            (main.notify_chapter_comment, (CHAPTER_ID, ALICE_ID))
+            (main.notify_chapter_comment, (CHAPTER_ID, ALICE_ID, first_id)),
+            (main.notify_chapter_comment, (CHAPTER_ID, ALICE_ID, second_id))
         ])
+
+    def test_the_notification_links_to_the_comment(self):
+        self.database.tables["notifications"] = []
+
+        main.notify_chapter_comment(CHAPTER_ID, ALICE_ID, "comentario-1")
+
+        notification = self.chapter_comment_notifications()[0]
+        self.assertEqual(notification["data"]["comment_id"], "comentario-1")
 
     def test_author_delete_removes_replies_and_reactions(self):
         comment_id = self.create_comment_id()
