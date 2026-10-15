@@ -23,6 +23,23 @@
   color: var(--text-main);
 }
 
+/* Teclado del teléfono abierto: el chat ocupa exactamente la parte visible,
+   por encima de la barra de navegación, como en una app de mensajería. */
+.messages-page.is-keyboard-open {
+  position: fixed;
+  top: var(--messages-top, 0);
+  right: 0;
+  left: 0;
+  z-index: 150;
+  padding: 0;
+}
+
+.messages-page.is-keyboard-open .messages-layout {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .messages-layout {
   width: min(100%, 1120px);
   height: 100%;

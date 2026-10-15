@@ -102,7 +102,7 @@ export default function PrivateThread({ userId }) {
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
   const [blocking, setBlocking] = useState(false);
-  const endRef = useRef(null);
+  const scrollRef = useRef(null);
   const lastMessageIdRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -140,14 +140,44 @@ export default function PrivateThread({ userId }) {
   }, [load]);
 
   // Baja al último mensaje solo cuando llega uno nuevo, no en cada consulta.
+  // Se desplaza solo la conversación, nunca la página entera.
   const messages = thread?.messages;
+  const ready = !loading && Boolean(thread);
   useEffect(() => {
+    const box = scrollRef.current;
+    if (!box) return;
+
     const lastId = messages?.length ? messages[messages.length - 1].id : null;
     if (lastId && lastId !== lastMessageIdRef.current) {
-      endRef.current?.scrollIntoView({ block: "end" });
+      box.scrollTop = box.scrollHeight;
     }
     lastMessageIdRef.current = lastId;
-  }, [messages]);
+  }, [messages, ready]);
+
+  // Al abrirse el teclado la conversación se achica: si se estaba viendo el
+  // final, sigue a la vista.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return undefined;
+
+    let wasAtEnd = true;
+    const remember = () => {
+      const box = scrollRef.current;
+      if (box) wasAtEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    };
+    const keepEnd = () => {
+      const box = scrollRef.current;
+      if (box && wasAtEnd) box.scrollTop = box.scrollHeight;
+    };
+
+    const box = scrollRef.current;
+    box?.addEventListener("scroll", remember);
+    viewport.addEventListener("resize", keepEnd);
+    return () => {
+      box?.removeEventListener("scroll", remember);
+      viewport.removeEventListener("resize", keepEnd);
+    };
+  }, [ready]);
 
   const handleSend = async (content) => {
     const response = await api.post(`/messages/private/${userId}`, { content });
@@ -282,6 +312,7 @@ export default function PrivateThread({ userId }) {
 
       <div
         className="messages-scroll"
+        ref={scrollRef}
         role="log"
         aria-label={`Conversación con @${user.username}`}
         tabIndex={0}
@@ -335,7 +366,6 @@ export default function PrivateThread({ userId }) {
             </section>
           ))
         )}
-        <div ref={endRef} />
       </div>
 
       {thread.can_send ? (

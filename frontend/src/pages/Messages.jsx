@@ -10,6 +10,8 @@ import { MESSAGES_CHANGED_EVENT, apiErrorDetail } from "../utils/messages";
 import "../styles/messages.css";
 
 const REFRESH_INTERVAL_MS = 30000;
+// Si el alto visible baja más que esto, es el teclado del teléfono.
+const KEYBOARD_MIN_HEIGHT = 120;
 
 const EMPTY_INBOX = {
   loading: true,
@@ -72,27 +74,42 @@ export default function Messages({ view = "inbox" }) {
     };
   }, [loadInbox]);
 
-  // La página ocupa justo el alto visible bajo la barra de navegación. Se
-  // usa el alto visual para que, en el teléfono, el teclado no tape el
-  // cuadro de texto.
+  // La página ocupa justo el alto visible bajo la barra de navegación.
+  // Con el teclado del teléfono abierto, el chat se fija sobre la parte que
+  // queda a la vista: iPhone desplaza la pantalla al abrir el teclado y, sin
+  // esto, deja el cuadro de texto fuera de la vista.
   useLayoutEffect(() => {
     const updateHeight = () => {
       const page = pageRef.current;
       if (!page) return;
 
+      const viewport = window.visualViewport;
+      const visible = viewport?.height || window.innerHeight;
+      const keyboardOpen =
+        Boolean(viewport) && window.innerHeight - viewport.height > KEYBOARD_MIN_HEIGHT;
+
+      page.classList.toggle("is-keyboard-open", keyboardOpen);
+
+      if (keyboardOpen) {
+        page.style.setProperty("--messages-top", `${Math.round(viewport.offsetTop)}px`);
+        page.style.setProperty("--messages-height", `${Math.round(visible)}px`);
+        return;
+      }
+
       const navbar = document.querySelector(".navbar");
       const top = navbar ? Math.round(navbar.getBoundingClientRect().height) : 0;
-      const visible = window.visualViewport?.height || window.innerHeight;
       page.style.setProperty("--messages-height", `${Math.max(320, visible - top)}px`);
     };
 
     updateHeight();
     window.addEventListener("resize", updateHeight);
     window.visualViewport?.addEventListener("resize", updateHeight);
+    window.visualViewport?.addEventListener("scroll", updateHeight);
 
     return () => {
       window.removeEventListener("resize", updateHeight);
       window.visualViewport?.removeEventListener("resize", updateHeight);
+      window.visualViewport?.removeEventListener("scroll", updateHeight);
     };
   }, []);
 
