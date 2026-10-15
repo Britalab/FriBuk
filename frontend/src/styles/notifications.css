@@ -417,6 +417,40 @@
 
 /* ---------- Centro de actividad ---------- */
 
+.push-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+}
+
+.push-settings-icon {
+  font-size: 1.4rem;
+}
+
+.push-settings-text {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.push-settings-text h2 {
+  margin: 0 0 3px;
+  color: var(--text-main);
+  font-size: 0.98rem;
+}
+
+.push-settings-text p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
 .activity-toolbar {
   display: flex;
   flex-wrap: wrap;

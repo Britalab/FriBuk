@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { NotificationsContext } from "../context/NotificationsContext";
+import { updateAppBadge } from "../utils/appBadge";
 
 const REFRESH_INTERVAL_MS = 60000;
 
@@ -52,6 +53,12 @@ export default function NotificationsProvider({ children }) {
 
   // El contador solo vale para el usuario al que pertenece.
   const unreadCount = state.userId === userId ? state.count : 0;
+
+  // Muestra el número también sobre el ícono de la app instalada, en los
+  // sistemas que lo permiten. Sin sesión o sin pendientes, lo quita.
+  useEffect(() => {
+    updateAppBadge(unreadCount);
+  }, [unreadCount]);
 
   const value = useMemo(
     () => ({ unreadCount, refreshUnreadCount, setUnreadCount }),

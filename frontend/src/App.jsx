@@ -8,6 +8,7 @@ import Navbar from "./components/Navbar";
 import UpdateNotice from "./components/UpdateNotice";
 import InstallBanner from "./components/InstallBanner";
 import InstallButton from "./components/InstallButton";
+import PushNavigation from "./components/PushNavigation";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
@@ -59,6 +60,7 @@ function App() {
         <InstallButton />
         <UpdateNotice />
         <InstallBanner />
+        <PushNavigation />
 
         <Routes>
           <Route path="/" element={<Feed />} />

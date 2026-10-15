@@ -6076,7 +6076,8 @@ def create_notification(
     }
 
     if notification_type not in GROUPED_NOTIFICATION_TYPES or not actor_user_id:
-        supabase_admin.table("notifications").insert(row).execute()
+        response = supabase_admin.table("notifications").insert(row).execute()
+        push.schedule_notifications(response.data)
         return
 
     def find_group_rows(only_unread: bool) -> list[dict]:
@@ -6117,7 +6118,7 @@ def create_notification(
             return
 
         actor_ids = list(dict.fromkeys(known_actors(group_row) + [actor_user_id]))
-        supabase_admin.table("notifications").update({
+        changes = {
             "actor_user_id": actor_user_id,
             "actor_count": int(group_row.get("actor_count") or 1) + 1,
             "data": {
@@ -6126,9 +6127,14 @@ def create_notification(
                 "actor_ids": actor_ids[-NOTIFICATION_RECENT_ACTORS:]
             },
             "updated_at": utc_timestamp(now)
-        }).eq("id", group_row["id"]).eq(
+        }
+        supabase_admin.table("notifications").update(changes).eq(
+            "id", group_row["id"]
+        ).eq(
             "recipient_user_id", recipient_user_id
         ).execute()
+        # El aviso del grupo reemplaza al anterior en el dispositivo.
+        push.schedule_notifications([{**row, **changes, "id": group_row["id"]}])
 
     open_groups = find_group_rows(only_unread=True)
 
@@ -6137,10 +6143,11 @@ def create_notification(
         return
 
     try:
-        supabase_admin.table("notifications").insert({
+        response = supabase_admin.table("notifications").insert({
             **row,
             "data": {**notification_data, "actor_ids": [actor_user_id]}
         }).execute()
+        push.schedule_notifications(response.data)
     except Exception:
         # Otra acción simultánea abrió el grupo: se suma a ese.
         open_groups = find_group_rows(only_unread=True)
@@ -6395,9 +6402,10 @@ def notify_chapter_published(chapter: dict, previous_status: str | None) -> None
     ]
 
     for start in range(0, len(rows), NOTIFICATION_INSERT_CHUNK):
-        supabase_admin.table("notifications").insert(
+        response = supabase_admin.table("notifications").insert(
             rows[start:start + NOTIFICATION_INSERT_CHUNK]
         ).execute()
+        push.schedule_notifications(response.data)
 
 
 def count_unread_notifications(user_id: str) -> int:
@@ -7590,3 +7598,14 @@ app.include_router(badges.router)
 import reading  # noqa: E402
 
 app.include_router(reading.router)
+
+
+
+# ============================================================
+# NOTIFICACIONES PUSH
+# ============================================================
+
+# Avisos en el dispositivo aunque FriBuk esté cerrada: ver push.py.
+import push  # noqa: E402
+
+app.include_router(push.router)

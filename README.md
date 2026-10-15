@@ -138,6 +138,9 @@ Variables de entorno del backend:
 | `RESEND_API_KEY` | Clave de Resend para el correo de bienvenida |
 | `EMAIL_FROM` | Remitente, con un dominio verificado en Resend |
 | `ADMIN_ALERT_EMAIL` | Opcional. Destino de los avisos a la administración; sin ella van al correo de cada cuenta admin |
+| `VAPID_PUBLIC_KEY` | Clave pública de las notificaciones push |
+| `VAPID_PRIVATE_KEY` | Clave privada de las notificaciones push. Nunca va en el frontend |
+| `VAPID_SUBJECT` | Contacto para los servicios de avisos: `https://www.fribuk.com` |
 
 ### Frontend en Cloudflare Pages
 

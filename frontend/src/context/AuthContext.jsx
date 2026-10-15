@@ -6,6 +6,7 @@ import {
   getAccessToken,
   storeSession,
 } from "../api/session";
+import { forgetPushDevice } from "../utils/push";
 
 const AuthContext = createContext();
 
@@ -31,7 +32,10 @@ export function AuthProvider({ children }) {
 
   // La sesión ya no se pudo renovar: se cierra también en la pantalla.
   useEffect(() => {
-    const handleSessionExpired = () => setUser(null);
+    const handleSessionExpired = () => {
+      forgetPushDevice(null);
+      setUser(null);
+    };
 
     window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
     return () =>
@@ -56,6 +60,8 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    // Este dispositivo deja de recibir los avisos de la cuenta que se va.
+    forgetPushDevice(getAccessToken());
     clearSession();
     setUser(null);
   };

@@ -1,9 +1,12 @@
 // Service worker de FriBuk.
 //
-// Hace una sola cosa: si alguien abre FriBuk sin conexión, muestra un aviso
-// propio en vez del error del navegador. A propósito NO guarda copias del
-// sitio ni de las historias: todo se sigue pidiendo a internet, así nadie se
-// queda viendo una versión antigua.
+// Hace dos cosas:
+// - Si alguien abre FriBuk sin conexión, muestra un aviso propio en vez del
+//   error del navegador. A propósito NO guarda copias del sitio ni de las
+//   historias: todo se sigue pidiendo a internet, así nadie se queda viendo
+//   una versión antigua.
+// - Muestra los avisos push que envía el backend (ver backend/push.py) y,
+//   al tocarlos, abre FriBuk en lo que avisan.
 
 const OFFLINE_PAGE = `<!doctype html>
 <html lang="es">
@@ -70,5 +73,61 @@ self.addEventListener("fetch", (event) => {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         })
     )
+  );
+});
+
+// ---------- Avisos push ----------
+
+self.addEventListener("push", (event) => {
+  let message = {};
+  try {
+    message = event.data ? event.data.json() : {};
+  } catch {
+    message = { body: event.data ? event.data.text() : "" };
+  }
+
+  const tasks = [
+    self.registration.showNotification(message.title || "FriBuk", {
+      body: message.body || "Tienes una notificación nueva.",
+      icon: "/icons/icon-192.png",
+      lang: "es",
+      tag: message.tag || undefined,
+      data: { url: message.url || "/actividad" },
+    }),
+  ];
+
+  // Número de pendientes sobre el ícono de la app, donde el sistema lo admite.
+  if (typeof message.unread === "number" && "setAppBadge" in self.navigator) {
+    tasks.push(
+      (message.unread > 0
+        ? self.navigator.setAppBadge(message.unread)
+        : self.navigator.clearAppBadge()
+      ).catch(() => {})
+    );
+  }
+
+  event.waitUntil(Promise.all(tasks));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const target = new URL(event.notification.data?.url || "/actividad", self.location.origin);
+  const path = target.pathname + target.search + target.hash;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windows) => {
+        const open = windows.find(
+          (client) => new URL(client.url).origin === self.location.origin
+        );
+        // FriBuk ya está abierta: se trae al frente y la app navega sola.
+        if (open) {
+          open.postMessage({ type: "fribuk:navigate", path });
+          return open.focus();
+        }
+        return self.clients.openWindow(path);
+      })
   );
 });

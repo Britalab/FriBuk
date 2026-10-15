@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import NotificationItem from "../components/NotificationItem";
+import PushSettings from "../components/PushSettings";
 import { useNotificationFeed } from "../hooks/useNotificationFeed";
 import { useNotifications } from "../hooks/useNotifications";
 import "../styles/notifications.css";
@@ -69,6 +70,8 @@ export default function Activity() {
             </p>
           </div>
         </header>
+
+        <PushSettings />
 
         {isReady && feed.items.length > 0 && (
           <div className="activity-toolbar">
