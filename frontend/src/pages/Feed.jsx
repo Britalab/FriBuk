@@ -88,8 +88,12 @@ export default function Feed() {
     } catch (error) {
       console.error("Error al cargar historias:", error);
       setStories([]);
+      // Sin respuesta del servidor es un problema de conexión; con respuesta,
+      // el error es nuestro y no de la persona.
       setLoadError(
-        "Revisa tu conexión e inténtalo nuevamente."
+        error.response
+          ? "Tuvimos un problema en FriBuk. Inténtalo nuevamente en unos minutos."
+          : "Revisa tu conexión e inténtalo nuevamente."
       );
     } finally {
       setLoading(false);
