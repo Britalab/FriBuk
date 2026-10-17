@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -6,10 +6,12 @@ import { useToast } from "../hooks/useToast";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useChapterComments } from "../hooks/useChapterComments";
 import useReadingTime from "../hooks/useReadingTime";
+import useHideOnScroll from "../hooks/useHideOnScroll";
 import { anchorMatchesText, paragraphAnchor } from "../utils/textAnchors";
 import ReaderParagraph from "../components/reader/ReaderParagraph";
 import ChapterGeneralComments from "../components/reader/ChapterGeneralComments";
 import ChapterCommentsPanel from "../components/reader/ChapterCommentsPanel";
+import ChapterSwitcher from "../components/reader/ChapterSwitcher";
 import ShareButton from "../components/ShareButton";
 import { MAX_CHAPTER_QUOTE_LENGTH } from "../components/reader/chapterReactions";
 import "../styles/chapter-comments.css";
@@ -416,6 +418,29 @@ export default function ChapterReader() {
     scrollToParagraph, showToast,
   ]);
 
+  // La barra del lector queda fija bajo la de navegación: se esconde al
+  // bajar leyendo y vuelve al subir, salvo con el índice abierto.
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const topbarHidden = useHideOnScroll(!switcherOpen);
+  const topbarRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const navbar = document.querySelector(".navbar");
+    const topbar = topbarRef.current;
+    if (!navbar || !topbar) return undefined;
+
+    // En teléfonos la barra de navegación cambia de alto al girar.
+    const placeBelowNavbar = () => {
+      topbar.style.setProperty(
+        "--reader-topbar-top",
+        `${Math.round(navbar.getBoundingClientRect().height)}px`
+      );
+    };
+    placeBelowNavbar();
+    window.addEventListener("resize", placeBelowNavbar);
+    return () => window.removeEventListener("resize", placeBelowNavbar);
+  }, [loading, chapter]);
+
   const tapRef = useRef({ start: null, last: null });
 
   const handleTextPointerDown = (event) => {
@@ -548,14 +573,25 @@ export default function ChapterReader() {
     <main className={`reader-page${panel ? " has-comments-panel" : ""}`}>
 
       {/* Barra superior */}
-      <div className="reader-topbar">
+      <div
+        className={`reader-topbar${topbarHidden ? " is-hidden" : ""}`}
+        ref={topbarRef}
+      >
 
         <Link
           to={`/stories/${storyId}`}
           className="reader-back-link"
+          aria-label="Volver a la historia"
         >
-          ← Volver a la historia
+          ← <span className="reader-back-label">Volver a la historia</span>
         </Link>
+
+        <ChapterSwitcher
+          storyId={storyId}
+          chapters={chapters}
+          currentIndex={currentIndex}
+          onOpenChange={setSwitcherOpen}
+        />
 
         <span className="reader-brand">
           FriBuk
@@ -607,47 +643,6 @@ export default function ChapterReader() {
 
         </div>
 
-        {/* Comentarios */}
-        {commentsEnabled && (
-          <div className="reader-comments-footer">
-            <p className="reader-comments-hint">
-              <span className="reader-comments-hint-mouse">
-                Haz doble clic en un párrafo para comentarlo.
-              </span>
-              <span className="reader-comments-hint-touch">
-                Toca dos veces un párrafo para comentarlo.
-              </span>
-            </p>
-
-            {orphanCount > 0 && (
-              <button
-                type="button"
-                className="reader-orphans-button"
-                onClick={() => setPanelState(
-                  panel?.mode === "orphans"
-                    ? null
-                    : { chapterId, mode: "orphans", index: null, draft: null }
-                )}
-                aria-expanded={panel?.mode === "orphans"}
-              >
-                <span aria-hidden="true">💬</span>
-                {orphanCount === 1
-                  ? "1 comentario sobre texto editado"
-                  : `${orphanCount} comentarios sobre texto editado`}
-              </button>
-            )}
-          </div>
-        )}
-
-        {commentsEnabled && (
-          <ChapterGeneralComments
-            threads={generalThreads}
-            repliesByParent={repliesByParent}
-            isAuthenticated={Boolean(user)}
-            actions={commentActions}
-          />
-        )}
-
         {/* Navegación */}
         <nav className="chapter-navigation">
 
@@ -688,6 +683,47 @@ export default function ChapterReader() {
           )}
 
         </nav>
+
+        {/* Comentarios */}
+        {commentsEnabled && (
+          <div className="reader-comments-footer">
+            <p className="reader-comments-hint">
+              <span className="reader-comments-hint-mouse">
+                Haz doble clic en un párrafo para comentarlo.
+              </span>
+              <span className="reader-comments-hint-touch">
+                Toca dos veces un párrafo para comentarlo.
+              </span>
+            </p>
+
+            {orphanCount > 0 && (
+              <button
+                type="button"
+                className="reader-orphans-button"
+                onClick={() => setPanelState(
+                  panel?.mode === "orphans"
+                    ? null
+                    : { chapterId, mode: "orphans", index: null, draft: null }
+                )}
+                aria-expanded={panel?.mode === "orphans"}
+              >
+                <span aria-hidden="true">💬</span>
+                {orphanCount === 1
+                  ? "1 comentario sobre texto editado"
+                  : `${orphanCount} comentarios sobre texto editado`}
+              </button>
+            )}
+          </div>
+        )}
+
+        {commentsEnabled && (
+          <ChapterGeneralComments
+            threads={generalThreads}
+            repliesByParent={repliesByParent}
+            isAuthenticated={Boolean(user)}
+            actions={commentActions}
+          />
+        )}
 
         {/* Fin */}
         <footer className="reader-footer">
