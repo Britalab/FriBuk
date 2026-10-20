@@ -196,6 +196,31 @@ export default function Feed() {
     }
   };
 
+  // La tarjeta se quita al tiro; si el servidor falla, vuelve a su lugar.
+  const handleContinueReadingRemove = async (item) => {
+    setContinueReading((current) =>
+      current.filter((entry) => entry.story_id !== item.story_id)
+    );
+
+    try {
+      await api.delete(`/me/reading-progress/${item.story_id}`);
+      showToast("Quitada de Seguir leyendo.");
+    } catch (error) {
+      console.error("Error al quitar la lectura en curso:", error);
+      setContinueReading((current) =>
+        current.some((entry) => entry.story_id === item.story_id)
+          ? current
+          : [...current, item].sort((a, b) =>
+              String(b.updated_at).localeCompare(String(a.updated_at))
+            )
+      );
+      showToast(
+        error.response?.data?.detail || "No se pudo quitar de Seguir leyendo.",
+        "error"
+      );
+    }
+  };
+
   // Filtrar historias
   const filteredStories = stories.filter((story) => {
     const matchesGenre =
@@ -380,30 +405,41 @@ export default function Feed() {
 
             <div className="continue-reading-list">
               {continueReading.map((item) => (
-                <Link
-                  key={item.story_id}
-                  to={`/stories/${item.story_id}/chapters/${item.chapter_id}`}
-                  className="continue-reading-card"
-                >
-                  <img src={item.cover_url || "/logo-fribuk.jpg"} alt="" />
+                <div key={item.story_id} className="continue-reading-item">
+                  <Link
+                    to={`/stories/${item.story_id}/chapters/${item.chapter_id}`}
+                    className="continue-reading-card"
+                  >
+                    <img src={item.cover_url || "/logo-fribuk.jpg"} alt="" />
 
-                  <span className="continue-reading-info">
-                    <strong>{item.story_title}</strong>
-                    <span>
-                      Capítulo {item.chapter_position} de {item.chapter_total}
+                    <span className="continue-reading-info">
+                      <strong>{item.story_title}</strong>
+                      <span>
+                        Capítulo {item.chapter_position} de {item.chapter_total}
+                      </span>
+                      <span className="continue-reading-bar" aria-hidden="true">
+                        <span
+                          style={{
+                            width: `${Math.round(
+                              (item.chapter_position / item.chapter_total) * 100
+                            )}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="continue-reading-cta">Continuar →</span>
                     </span>
-                    <span className="continue-reading-bar" aria-hidden="true">
-                      <span
-                        style={{
-                          width: `${Math.round(
-                            (item.chapter_position / item.chapter_total) * 100
-                          )}%`,
-                        }}
-                      />
-                    </span>
-                    <span className="continue-reading-cta">Continuar →</span>
-                  </span>
-                </Link>
+                  </Link>
+
+                  <button
+                    type="button"
+                    className="continue-reading-remove"
+                    aria-label={`Quitar «${item.story_title}» de Seguir leyendo`}
+                    title="Quitar de Seguir leyendo"
+                    onClick={() => handleContinueReadingRemove(item)}
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </div>
           </section>

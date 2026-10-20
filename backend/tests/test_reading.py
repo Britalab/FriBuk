@@ -408,6 +408,30 @@ class ReadingTestCase(unittest.TestCase):
         self.assertEqual(data["founders"]["reader"]["remaining"], 500)
         self.assertFalse(data["has_published"])
 
+    # ---------- seguir leyendo ----------
+
+    def test_removing_a_story_from_continue_reading_only_touches_my_row(self):
+        self.database.tables["reading_progress"] = [
+            {"user_id": READER_ID, "story_id": STORY_ID, "chapter_id": CHAPTER_2,
+             "paragraph_index": 3, "updated_at": "2026-10-01T00:00:00+00:00"},
+            {"user_id": OTHER_ID, "story_id": STORY_ID, "chapter_id": CHAPTER_1,
+             "paragraph_index": 0, "updated_at": "2026-10-01T00:00:00+00:00"},
+        ]
+
+        response = self.client.delete(
+            f"/me/reading-progress/{STORY_ID}", headers=auth_header(READER_ID)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row["user_id"] for row in self.database.tables["reading_progress"]],
+            [OTHER_ID],
+        )
+        items = self.client.get(
+            "/me/reading-progress", headers=auth_header(READER_ID)
+        ).json()["items"]
+        self.assertEqual(items, [])
+
 
 if __name__ == "__main__":
     unittest.main()

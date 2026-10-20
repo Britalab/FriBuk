@@ -5579,6 +5579,27 @@ def get_my_reading_progress(current_user=Depends(get_current_user)):
         return {"items": []}
 
 
+@app.delete("/me/reading-progress/{story_id}")
+def delete_my_reading_progress(story_id: str, current_user=Depends(get_current_user)):
+    # Quita la historia de "Seguir leyendo". Se pierde el punto donde quedó;
+    # si el lector vuelve a abrirla, se guarda un avance nuevo y reaparece.
+    normalized_story_id = normalize_uuid_or_404(story_id, "Historia no encontrada")
+
+    try:
+        (
+            supabase_admin
+            .table("reading_progress")
+            .delete()
+            .eq("user_id", str(current_user.id))
+            .eq("story_id", normalized_story_id)
+            .execute()
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=public_error_detail(e))
+
+    return {"deleted": True}
+
+
 # ============================================================
 # PERSONALIZACIÓN DEL PERFIL ("MI ESPACIO")
 # ============================================================
