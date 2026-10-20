@@ -1,0 +1,8 @@
+# Headers de seguridad básicos para todo el sitio (Cloudflare Pages).
+# HSTS se activa desde el panel de Cloudflare, no aquí.
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
