@@ -14,7 +14,7 @@ export default function Privacy() {
           <span className="legal-label">POLÍTICA</span>
           <h1>Política de Privacidad</h1>
           <p className="legal-date">
-            Última actualización: septiembre de 2026
+            Última actualización: octubre de 2026
           </p>
         </header>
 
@@ -254,6 +254,17 @@ export default function Privacy() {
           <p>
             Por ejemplo, pueden utilizarse para conservar información técnica
             relacionada con la sesión de autenticación del usuario.
+          </p>
+
+          <p>
+            FriBuk utiliza el Píxel de Meta (empresa de Facebook e Instagram)
+            para medir las visitas que llegan desde sus anuncios en esas
+            plataformas. El píxel registra las páginas visitadas e información
+            técnica del navegador, y puede guardar cookies propias de Meta. No
+            se envían a Meta mensajes privados, contraseñas ni el contenido de
+            los formularios, y no se carga en los enlaces de recuperación de
+            contraseña. Meta trata esta información según su propia política
+            de privacidad.
           </p>
 
           <p>
