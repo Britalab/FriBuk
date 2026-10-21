@@ -268,6 +268,13 @@ export default function Privacy() {
           </p>
 
           <p>
+            Además, FriBuk utiliza Cloudflare Web Analytics para conocer de
+            forma general cuántas visitas recibe, qué páginas se consultan y
+            desde qué países. Esta medición no utiliza cookies ni sigue a las
+            personas entre distintos sitios web.
+          </p>
+
+          <p>
             El uso de estas tecnologías podrá cambiar a medida que evolucionen
             las funcionalidades de FriBuk.
           </p>
