@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr
 from email_service import send_welcome_email
 import admin_alerts
+import images
 from rate_limits import limit_publish_requests
 from chapter_anchors import build_paragraph_anchor, relocate_anchor
 from profile_catalog import (
@@ -778,6 +779,30 @@ def read_validated_image(file: UploadFile, allowed_types: tuple) -> tuple[bytes,
         )
 
     return file_bytes, extension
+
+
+def read_optimized_image(
+    file: UploadFile, allowed_types: tuple, profile: images.ImageProfile
+) -> tuple[bytes, str, str]:
+    # Valida la imagen y la devuelve achicada: (contenido, tipo, extensión).
+    file_bytes, _extension = read_validated_image(file, allowed_types)
+    try:
+        return images.optimize_image(file_bytes, profile)
+    except images.InvalidImage:
+        raise HTTPException(
+            status_code=400,
+            detail="No se pudo leer la imagen. Prueba con otro archivo."
+        )
+
+
+def image_upload_options(content_type: str, upsert: bool = False) -> dict:
+    options = {
+        "content-type": content_type,
+        "cache-control": images.CACHE_CONTROL
+    }
+    if upsert:
+        options["x-upsert"] = "true"
+    return options
 
 # ============================================================
 # RUTA PRINCIPAL
@@ -2039,8 +2064,8 @@ def upload_avatar(
     current_user=Depends(get_current_user)
 ):
     try:
-        file_bytes, _extension = read_validated_image(
-            file, ("image/jpeg", "image/png")
+        file_bytes, content_type, _extension = read_optimized_image(
+            file, ("image/jpeg", "image/png"), images.AVATAR
         )
 
         avatar_path = f"avatars/{current_user.id}/avatar"
@@ -2048,13 +2073,11 @@ def upload_avatar(
         storage.upload(
             avatar_path,
             file_bytes,
-            {
-                "content-type": file.content_type,
-                "cache-control": "0",
-                "x-upsert": "true"
-            }
+            image_upload_options(content_type, upsert=True)
         )
-        avatar_url = storage.get_public_url(avatar_path)
+        # La ruta es fija: el parámetro de versión hace que el navegador
+        # muestre la imagen nueva en lugar de la que tenía guardada.
+        avatar_url = f"{storage.get_public_url(avatar_path)}?v={int(time.time())}"
 
         user_metadata = dict(current_user.user_metadata or {})
         user_metadata["avatar_url"] = avatar_url
@@ -2077,8 +2100,8 @@ def upload_banner(
     current_user=Depends(get_current_user)
 ):
     try:
-        file_bytes, _extension = read_validated_image(
-            file, ("image/jpeg", "image/png")
+        file_bytes, content_type, _extension = read_optimized_image(
+            file, ("image/jpeg", "image/png"), images.PROFILE_BANNER
         )
 
         banner_path = f"banners/{current_user.id}/banner"
@@ -2086,11 +2109,7 @@ def upload_banner(
         storage.upload(
             banner_path,
             file_bytes,
-            {
-                "content-type": file.content_type,
-                "cache-control": "0",
-                "x-upsert": "true"
-            }
+            image_upload_options(content_type, upsert=True)
         )
         # La ruta es fija: el parámetro de versión hace que el navegador
         # muestre la imagen nueva en lugar de la que tenía guardada.
@@ -2208,9 +2227,9 @@ def upload_cover(
 
         current_user = response_user.user
 
-        # Validar tipo, tamaño y contenido real de la imagen
-        file_bytes, extension = read_validated_image(
-            file, ("image/jpeg", "image/png")
+        # Validar tipo, tamaño y contenido real de la imagen, y achicarla
+        file_bytes, content_type, extension = read_optimized_image(
+            file, ("image/jpeg", "image/png"), images.STORY_COVER
         )
 
         # Nombre único. La extensión sale del tipo validado,
@@ -2225,9 +2244,7 @@ def upload_cover(
             .upload(
                 file_name,
                 file_bytes,
-                {
-                    "content-type": file.content_type
-                }
+                image_upload_options(content_type)
             )
         )
 
@@ -2477,19 +2494,15 @@ def upload_home_banner(
     admin_user=Depends(get_current_admin)
 ):
     try:
-        file_bytes, _extension = read_validated_image(
-            file, ("image/jpeg", "image/png")
+        file_bytes, content_type, _extension = read_optimized_image(
+            file, ("image/jpeg", "image/png"), images.HOME_BANNER
         )
 
         storage = supabase_admin.storage.from_(HOME_BANNER_BUCKET)
         storage.upload(
             HOME_BANNER_PATH,
             file_bytes,
-            {
-                "content-type": file.content_type,
-                "cache-control": "0",
-                "x-upsert": "true"
-            }
+            image_upload_options(content_type, upsert=True)
         )
         banner_url = (
             f"{storage.get_public_url(HOME_BANNER_PATH)}?v={int(time.time())}"
@@ -3680,7 +3693,7 @@ def upload_forum_image(
             detail="Solo se permiten imágenes JPEG, PNG o WebP",
         )
 
-    extension, matches_content = image_type
+    _extension, matches_content = image_type
     image_data = image.file.read(MAX_FORUM_IMAGE_SIZE + 1)
     if len(image_data) > MAX_FORUM_IMAGE_SIZE:
         raise HTTPException(
@@ -3694,13 +3707,22 @@ def upload_forum_image(
             status_code=400,
             detail="El contenido no coincide con el tipo de imagen permitido",
         )
+    try:
+        image_data, content_type, extension = images.optimize_image(
+            image_data, images.FORUM_IMAGE
+        )
+    except images.InvalidImage:
+        raise HTTPException(
+            status_code=400,
+            detail="No se pudo leer la imagen. Prueba con otro archivo.",
+        )
 
     storage_path = f"{image_group}/{user_id}/{uuid.uuid4()}.{extension}"
     storage = supabase_admin.storage.from_(FORUM_IMAGE_BUCKET)
     storage.upload(
         storage_path,
         image_data,
-        {"content-type": mime_type},
+        image_upload_options(content_type),
     )
     public_url = storage.get_public_url(storage_path)
     return public_url, storage_path

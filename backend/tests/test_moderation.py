@@ -10,6 +10,7 @@ import sys
 import unittest
 import uuid
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -17,12 +18,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fastapi.testclient import TestClient  # noqa: E402
+from PIL import Image  # noqa: E402
 
 import main  # noqa: E402
 import moderation  # noqa: E402
 from test_chapter_comments import FakeAuth, FakeDatabase, FakeQuery  # noqa: E402
 
-PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+
+def png_bytes(color="red"):
+    output = BytesIO()
+    Image.new("RGB", (8, 8), color).save(output, "PNG")
+    return output.getvalue()
+
+
+PNG_BYTES = png_bytes()
 JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"\x00" * 32
 XSS_TEXT = '<script>alert("x")</script><img src=x onerror=alert(1)>'
 
@@ -918,15 +927,14 @@ class ModerationTestCase(unittest.TestCase):
         self.remove(target_type="avatar", target_id=OWNER_ID)
 
         # La persona sube otra foto mientras la anterior está retirada.
-        self.upload("/me/avatar", OWNER_ID, data=PNG_BYTES + b"nueva")
+        self.upload("/me/avatar", OWNER_ID, data=png_bytes("blue"))
+        avatar_key = ("story-covers", f"avatars/{OWNER_ID}/avatar")
+        new_avatar = self.database.storage.files[avatar_key]
         new_url = self.public_profile()["avatar_url"]
 
         self.assertEqual(self.restore(self.case("avatar", OWNER_ID)["id"]).status_code, 200)
         self.assertEqual(self.public_profile()["avatar_url"], new_url)
-        self.assertEqual(
-            self.database.storage.files[("story-covers", f"avatars/{OWNER_ID}/avatar")],
-            PNG_BYTES + b"nueva"
-        )
+        self.assertEqual(self.database.storage.files[avatar_key], new_avatar)
         # La imagen retirada sigue guardada para el historial.
         self.assertEqual(len(self.database.storage.paths("story-covers")), 2)
 
