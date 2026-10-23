@@ -8,8 +8,38 @@ import ReadingListsPanel from "../components/profile/ReadingListsPanel";
 import { MyModerationNotices } from "../components/moderation/ModerationNotices";
 import AuthorTitle, { FeaturedBadges } from "../components/badges/AuthorTitle";
 import AchievementsPanel from "../components/badges/AchievementsPanel";
+import { emptyCustomization, normalizeCustomization } from "../profile/catalog";
 
 const EMPTY_PROFILE_INFO = { display_name: null, bio: null, website_url: null };
+
+// Quien cierra la invitación a personalizar no la vuelve a ver en ese navegador.
+function customizeInviteKey(userId) {
+  return `fribuk-customize-invite-dismissed:${userId}`;
+}
+
+function isCustomizeInviteDismissed(userId) {
+  try {
+    return localStorage.getItem(customizeInviteKey(userId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function dismissCustomizeInvite(userId) {
+  try {
+    localStorage.setItem(customizeInviteKey(userId), "1");
+  } catch {
+    // Sin almacenamiento, la invitación solo se oculta hasta recargar.
+  }
+}
+
+// Un espacio sin tocar tiene el tema por defecto, sin decoraciones ni colores.
+function isDefaultCustomization(customization) {
+  return (
+    JSON.stringify(normalizeCustomization(customization)) ===
+    JSON.stringify(emptyCustomization())
+  );
+}
 
 function StoryCover({ story }) {
   return (
@@ -41,6 +71,7 @@ async function fetchProfileData(userId) {
     followStatsResponse,
     profileResponse,
     readingListsResponse,
+    customizationResponse,
   ] =
     await Promise.all([
       api.get("/my-stories"),
@@ -55,9 +86,16 @@ async function fetchProfileData(userId) {
         console.error("Error al cargar las listas de lectura:", error);
         return null;
       }),
+      // Solo sirve para decidir si se invita a personalizar el espacio.
+      api.get("/me/customization").catch(() => null),
     ]);
 
+  const customization = customizationResponse?.data?.customization;
+
   return {
+    hasDefaultCustomization: customizationResponse
+      ? isDefaultCustomization(customization)
+      : false,
     readingLists: readingListsResponse?.data?.lists || [],
     maxReadingLists: readingListsResponse?.data?.max_lists || 20,
     readingListsError: readingListsResponse
@@ -113,6 +151,10 @@ export default function Profile() {
   const [readingListsError, setReadingListsError] = useState("");
   const [badges, setBadges] = useState(null);
   const [badgesError, setBadgesError] = useState("");
+  const [hasDefaultCustomization, setHasDefaultCustomization] = useState(false);
+  const [customizeInviteDismissed, setCustomizeInviteDismissed] = useState(
+    () => isCustomizeInviteDismissed(userId)
+  );
 
   const applyProfileData = (profileData) => {
     setStories(profileData.stories);
@@ -122,6 +164,7 @@ export default function Profile() {
     setReadingLists(profileData.readingLists);
     setMaxReadingLists(profileData.maxReadingLists);
     setReadingListsError(profileData.readingListsError);
+    setHasDefaultCustomization(profileData.hasDefaultCustomization);
   };
 
   const loadProfile = useCallback(async () => {
@@ -380,6 +423,13 @@ const handleDeleteStory = async (storyId, storyTitle) => {
   };
 
   const username = user?.username || user?.email?.split("@")[0] || "usuario";
+  const showCustomizeInvite =
+    !loading && hasDefaultCustomization && !customizeInviteDismissed;
+
+  const handleDismissCustomizeInvite = () => {
+    dismissCustomizeInvite(userId);
+    setCustomizeInviteDismissed(true);
+  };
 
   return (
     <main className="profile-page">
@@ -464,6 +514,31 @@ const handleDeleteStory = async (storyId, storyTitle) => {
           <p className="profile-private-note">
             Esta página es solo tuya. Aquí gestionas tu cuenta y tus obras.
           </p>
+          {/* Solo aparece mientras el espacio sigue con el aspecto por defecto. */}
+          {showCustomizeInvite && (
+            <div className="profile-customize-invite" role="note">
+              <p>
+                <strong>
+                  <span aria-hidden="true">✦</span>{" "}
+                  {stories.length > 0
+                    ? "Haz tuyo tu espacio de escritura."
+                    : "Haz tuyo tu rincón de lectura."}
+                </strong>{" "}
+                Pulsa «Personalizar mi espacio» para elegir el tema, los colores y
+                los emojis con los que te verán en tu perfil público.
+              </p>
+              <div className="profile-customize-invite-actions">
+                <Link to="/perfil/personalizar">Personalizar mi espacio</Link>
+                <button
+                  type="button"
+                  onClick={handleDismissCustomizeInvite}
+                  aria-label="Ocultar invitación"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
           <div className="profile-header-actions">
             <Link to={`/usuario/${userId}`} className="profile-header-action">
               {/* El mismo ojo del campo de contraseña. */}
