@@ -7786,8 +7786,16 @@ app.include_router(push.router)
 # RECORDATORIOS PARA AUTORES
 # ============================================================
 
-# Aviso para publicar el primer capítulo de una historia: ver reminders.py.
+# Días de escritura de cada historia: ver schedules.py.
+import schedules  # noqa: E402
+
+app.include_router(schedules.router)
+
+# Avisos para publicar el primer capítulo, por inactividad y en los días de
+# escritura: ver reminders.py.
 import reminders  # noqa: E402
+
+app.include_router(reminders.router)
 
 app.router.add_event_handler("startup", reminders.start)
 app.router.add_event_handler("shutdown", reminders.stop)

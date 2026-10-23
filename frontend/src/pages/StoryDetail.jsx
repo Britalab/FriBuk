@@ -7,6 +7,7 @@ import { usePageTitle } from "../hooks/usePageTitle";
 import AddToListMenu from "../components/profile/AddToListMenu";
 import ShareButton from "../components/ShareButton";
 import { contentWarningLabels } from "../utils/contentWarnings";
+import { formatScheduleDays } from "../utils/writingSchedule";
 import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
 import ReportButton from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
@@ -19,6 +20,7 @@ export default function StoryDetail() {
   const { showToast } = useToast();
 
   const [story, setStory] = useState(null);
+  const [scheduleDays, setScheduleDays] = useState([]);
   usePageTitle(story?.title);
   const [chapters, setChapters] = useState([]);
   // Capítulo en borrador que se está publicando desde la lista.
@@ -171,6 +173,14 @@ export default function StoryDetail() {
       setChapters(chaptersResponse.data);
       setVoteCount(votesResponse.data.votes);
       setRatingAverage(ratingsResponse.data);
+
+      // Los días de escritura son un extra: si fallan, la historia se ve igual.
+      api.get(`/stories/${storyId}/schedule`)
+        .then((response) => setScheduleDays(response.data.schedule?.days || []))
+        .catch((scheduleError) => {
+          console.error("Error al cargar los días de escritura:", scheduleError);
+          setScheduleDays([]);
+        });
     } catch (err) {
       console.error("Error al cargar la historia:", err);
       setError("No se pudo cargar la historia.");
@@ -639,6 +649,15 @@ export default function StoryDetail() {
                 </>
               )}
             </p>
+
+            {/* DÍAS DE ESCRITURA: solo si el autor decidió mostrarlos */}
+
+            {story.status === "published" && scheduleDays.length > 0 && (
+              <p className="story-detail-schedule">
+                <span aria-hidden="true">📅</span> Nuevo capítulo{" "}
+                {formatScheduleDays(scheduleDays)}
+              </p>
+            )}
 
             {/* TÍTULO DEL AUTOR: el principal y un "+N" con los demás */}
 

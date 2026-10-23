@@ -4183,6 +4183,23 @@ button {
   line-height: 1.75;
 }
 
+.story-detail-schedule {
+  margin: 10px 0 0;
+  color: var(--burgundy);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.writing-schedule-hour {
+  display: grid;
+  gap: 6px;
+  max-width: 220px;
+  margin: 16px 0 14px;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .story-detail-author {
   margin: 18px 0 0;
 

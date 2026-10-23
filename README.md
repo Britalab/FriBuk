@@ -141,6 +141,16 @@ Variables de entorno del backend:
 | `VAPID_PUBLIC_KEY` | Clave pública de las notificaciones push |
 | `VAPID_PRIVATE_KEY` | Clave privada de las notificaciones push. Nunca va en el frontend |
 | `VAPID_SUBJECT` | Contacto para los servicios de avisos: `https://www.fribuk.com` |
+| `REMINDERS_CRON_SECRET` | Clave larga y aleatoria que el cron de recordatorios envía en `X-Cron-Secret`. Sin ella, `/internal/reminders/run` queda desactivado |
+
+### Cron de recordatorios
+
+Los recordatorios para autores (primer capítulo, inactividad y días de escritura) se revisan cada 15 minutos. En el plan gratuito, Render duerme el backend cuando no recibe visitas, así que un cron externo (cron-job.org) lo despierta y corre la revisión:
+
+- **URL:** `https://api.fribuk.com/internal/reminders/run`
+- **Método:** `POST`
+- **Encabezado:** `X-Cron-Secret` con el mismo valor que `REMINDERS_CRON_SECRET`
+- **Frecuencia:** cada 15 minutos
 
 ### Frontend en Cloudflare Pages
 

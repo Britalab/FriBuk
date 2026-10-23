@@ -5,6 +5,7 @@
 #
 #     python -m unittest discover -s tests
 
+import os
 import sys
 import unittest
 import uuid
@@ -13,6 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from fastapi.testclient import TestClient  # noqa: E402
 
 import main  # noqa: E402
 import push  # noqa: E402
@@ -262,6 +265,71 @@ class InactivityReminderTests(unittest.TestCase):
             "Tus lectores siguen esperando el próximo capítulo de «Mi historia» ✨",
         )
         self.assertEqual(message["url"], "/stories/s/create-chapter")
+
+
+class CronEndpointTests(unittest.TestCase):
+    def setUp(self):
+        self.database = FakeDatabase()
+        self.database.tables = {
+            "stories": [{
+                "id": str(uuid.uuid4()),
+                "author_id": AUTHOR_ID,
+                "title": "Mi historia",
+                "status": "published",
+                "created_at": main.utc_timestamp(datetime.now(timezone.utc) - timedelta(days=2)),
+            }],
+            "chapters": [],
+            "notifications": [],
+            "first_chapter_reminders": [],
+            "story_inactivity_reminders": [],
+            "story_schedules": [],
+            "story_schedule_reminders": [],
+        }
+        self.originals = (
+            main.supabase_admin, push.schedule_notifications,
+            os.environ.get("REMINDERS_CRON_SECRET"),
+        )
+        main.supabase_admin = self.database
+        push.schedule_notifications = lambda rows: None
+        os.environ["REMINDERS_CRON_SECRET"] = "clave-de-prueba"
+        self.client = TestClient(main.app)
+
+    def tearDown(self):
+        main.supabase_admin, push.schedule_notifications, secret = self.originals
+        if secret is None:
+            os.environ.pop("REMINDERS_CRON_SECRET", None)
+        else:
+            os.environ["REMINDERS_CRON_SECRET"] = secret
+
+    def run_cron(self, secret="clave-de-prueba"):
+        headers = {"X-Cron-Secret": secret} if secret else {}
+        return self.client.post("/internal/reminders/run", headers=headers)
+
+    def test_the_right_secret_runs_every_reminder(self):
+        response = self.run_cron()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "sent": {"first_chapter": 1, "inactivity": 0, "schedule": 0},
+            "skipped": False,
+        })
+
+    def test_a_wrong_or_missing_secret_is_rejected(self):
+        self.assertEqual(self.run_cron("otra").status_code, 403)
+        self.assertEqual(self.run_cron(None).status_code, 403)
+        self.assertEqual(self.database.tables["notifications"], [])
+
+    def test_without_a_configured_secret_it_is_disabled(self):
+        os.environ.pop("REMINDERS_CRON_SECRET")
+
+        self.assertEqual(self.run_cron().status_code, 503)
+        self.assertEqual(self.database.tables["notifications"], [])
+
+    def test_a_check_already_running_is_skipped(self):
+        with reminders.run_lock:
+            response = self.run_cron()
+
+        self.assertEqual(response.json(), {"sent": None, "skipped": True})
 
 if __name__ == "__main__":
     unittest.main()

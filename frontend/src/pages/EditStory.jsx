@@ -5,6 +5,8 @@ import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
 import TagEditor from "../components/story/TagEditor";
 import ModerationDialog from "../components/moderation/ModerationDialog";
+import WritingScheduleFields from "../components/story/WritingScheduleFields";
+import { DEFAULT_SCHEDULE_HOUR, browserTimeZone } from "../utils/writingSchedule";
 import { genreOptions } from "../utils/genres";
 
 export default function EditStory() {
@@ -30,6 +32,12 @@ export default function EditStory() {
   const [contentWarnings, setContentWarnings] = useState([]);
   const [tags, setTags] = useState([]);
   const [showPausedNotice, setShowPausedNotice] = useState(false);
+  const [schedule, setSchedule] = useState({
+    days: [],
+    hour: DEFAULT_SCHEDULE_HOUR,
+    showPublicly: true,
+  });
+  const [hadSchedule, setHadSchedule] = useState(false);
 
   useEffect(() => {
     if (!coverPreview.startsWith("blob:")) return undefined;
@@ -54,6 +62,22 @@ export default function EditStory() {
         setSensitiveContent(Boolean(story.sensitive_content));
         setContentWarnings(story.content_warnings || []);
         setTags(Array.isArray(story.tags) ? story.tags : []);
+
+        // Si el calendario no carga, el resto del formulario funciona igual.
+        try {
+          const scheduleResponse = await api.get(`/stories/${storyId}/schedule`);
+          const saved = scheduleResponse.data.schedule;
+          if (saved) {
+            setSchedule({
+              days: saved.days || [],
+              hour: saved.hour ?? DEFAULT_SCHEDULE_HOUR,
+              showPublicly: saved.show_publicly ?? true,
+            });
+            setHadSchedule(true);
+          }
+        } catch (scheduleError) {
+          console.error("Error al cargar los días de escritura:", scheduleError);
+        }
       } catch (err) {
         console.error("Error al cargar la historia:", err);
 
@@ -129,6 +153,17 @@ export default function EditStory() {
       content_warnings: sensitiveContent ? contentWarnings : [],
       tags,
     });
+
+      // Sin días elegidos no se guarda nada, salvo que haya que borrar un
+      // calendario anterior.
+      if (schedule.days.length > 0 || hadSchedule) {
+        await api.put(`/stories/${storyId}/schedule`, {
+          days: schedule.days,
+          hour: schedule.hour,
+          timezone: browserTimeZone(),
+          show_publicly: schedule.showPublicly,
+        });
+      }
 
       showToast(status === "published"
         ? "Historia publicada correctamente."
@@ -375,6 +410,8 @@ export default function EditStory() {
           Marca la historia como terminada cuando hayas finalizado todos sus capítulos.
         </p>
       </div>
+
+      <WritingScheduleFields schedule={schedule} onChange={setSchedule} />
 
       <div className="form-group">
         <label htmlFor="coverUrl">

@@ -138,6 +138,13 @@ export function getNotificationContent(notification) {
         text: `Tus lectores siguen esperando el próximo capítulo de ${quoted(data.story_title, "tu historia")} ✨`,
         to: `/stories/${notification.story_id}/create-chapter`,
       };
+    case "story_schedule":
+      return {
+        icon: "📅",
+        actor: "",
+        text: `Hoy toca capítulo de ${quoted(data.story_title, "tu historia")}. ¡Tus lectores te esperan!`,
+        to: `/stories/${notification.story_id}/create-chapter`,
+      };
     case "forum_reply":
       if (data.mention) {
         return {
