@@ -124,6 +124,13 @@ export function getNotificationContent(notification) {
             : `/stories/${notification.story_id}`,
       };
     }
+    case "story_first_chapter":
+      return {
+        icon: "✍️",
+        actor: "",
+        text: `Publica el primer capítulo de ${quoted(data.story_title, "tu libro")}, ¡estamos emocionados por leerte!`,
+        to: `/stories/${notification.story_id}/create-chapter`,
+      };
     case "forum_reply":
       if (data.mention) {
         return {

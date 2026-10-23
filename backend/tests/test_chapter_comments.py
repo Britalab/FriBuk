@@ -65,6 +65,14 @@ class FakeQuery:
         self.filters.append(lambda row: str(row.get(column)) == str(value))
         return self
 
+    def gte(self, column, value):
+        self.filters.append(lambda row: str(row.get(column)) >= str(value))
+        return self
+
+    def lte(self, column, value):
+        self.filters.append(lambda row: str(row.get(column)) <= str(value))
+        return self
+
     def in_(self, column, values):
         allowed = {str(value) for value in values}
         self.filters.append(lambda row: str(row.get(column)) in allowed)

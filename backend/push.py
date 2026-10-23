@@ -213,6 +213,15 @@ def notification_message(row: dict, actor_username: str | None) -> dict:
             ),
         }
 
+    if notification_type == "story_first_chapter":
+        return {
+            "body": (
+                f"Publica el primer capítulo de {quoted(data.get('story_title'), 'tu libro')}, "
+                "¡estamos emocionados por leerte!"
+            ),
+            "url": f"/stories/{story_id}/create-chapter",
+        }
+
     if notification_type == "forum_reply":
         topic = quoted(data.get("topic_title"), "del foro")
         url = f"/forum/{row.get('forum_topic_id')}"

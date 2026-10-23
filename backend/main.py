@@ -7779,3 +7779,15 @@ app.include_router(reading.router)
 import push  # noqa: E402
 
 app.include_router(push.router)
+
+
+
+# ============================================================
+# RECORDATORIOS PARA AUTORES
+# ============================================================
+
+# Aviso para publicar el primer capítulo de una historia: ver reminders.py.
+import reminders  # noqa: E402
+
+app.router.add_event_handler("startup", reminders.start)
+app.router.add_event_handler("shutdown", reminders.stop)
