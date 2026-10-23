@@ -25,7 +25,7 @@ export default function WritingScheduleFields({ schedule, onChange }) {
     <div className="form-group writing-schedule">
       <div className="form-label-row">
         <span className="form-choice-label" id="writing-days-label">
-          Días de escritura
+          ¿Quieres compartir los días de actualización?
         </span>
 
         <span className="form-optional">Opcional</span>
@@ -71,7 +71,7 @@ export default function WritingScheduleFields({ schedule, onChange }) {
           </label>
 
           <span className="form-choice-label" id="writing-days-public-label">
-            ¿Mostrar los días a tus lectores?
+            ¿Mostrarlos en la página de tu historia?
           </span>
 
           <div
