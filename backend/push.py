@@ -222,6 +222,15 @@ def notification_message(row: dict, actor_username: str | None) -> dict:
             "url": f"/stories/{story_id}/create-chapter",
         }
 
+    if notification_type == "story_inactive":
+        return {
+            "body": (
+                "Tus lectores siguen esperando el próximo capítulo de "
+                f"{quoted(data.get('story_title'), 'tu historia')} ✨"
+            ),
+            "url": f"/stories/{story_id}/create-chapter",
+        }
+
     if notification_type == "forum_reply":
         topic = quoted(data.get("topic_title"), "del foro")
         url = f"/forum/{row.get('forum_topic_id')}"

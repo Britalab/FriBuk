@@ -4,6 +4,7 @@ import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
 import TagEditor from "../components/story/TagEditor";
+import ModerationDialog from "../components/moderation/ModerationDialog";
 import { genreOptions } from "../utils/genres";
 
 export default function EditStory() {
@@ -28,6 +29,7 @@ export default function EditStory() {
   const [sensitiveContent, setSensitiveContent] = useState(false);
   const [contentWarnings, setContentWarnings] = useState([]);
   const [tags, setTags] = useState([]);
+  const [showPausedNotice, setShowPausedNotice] = useState(false);
 
   useEffect(() => {
     if (!coverPreview.startsWith("blob:")) return undefined;
@@ -344,9 +346,13 @@ export default function EditStory() {
           id="status"
           className="form-select"
           value={status}
-          onChange={(event) =>
-            setStatus(event.target.value)
-          }
+          onChange={(event) => {
+            // Al pausarla se avisa que dejan de llegar los recordatorios.
+            if (event.target.value === "paused" && status !== "paused") {
+              setShowPausedNotice(true);
+            }
+            setStatus(event.target.value);
+          }}
         >
           <option value="draft">
             Borrador
@@ -439,6 +445,33 @@ export default function EditStory() {
 
     </form>
   </div>
+
+  {showPausedNotice && (
+    <ModerationDialog
+      title="Historia en pausa"
+      onClose={() => setShowPausedNotice(false)}
+    >
+      <div className="moderation-form">
+        <p>
+          Mientras esta historia esté pausada, no te llegarán más
+          notificaciones de recordatorio para publicar capítulos.
+        </p>
+        <p className="moderation-hint">
+          Cuando quieras retomarla, vuelve a marcarla como Publicada.
+          Recuerda guardar los cambios.
+        </p>
+        <div className="moderation-form-actions">
+          <button
+            type="button"
+            className="moderation-button is-primary"
+            onClick={() => setShowPausedNotice(false)}
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    </ModerationDialog>
+  )}
 </main>
   );
 }
