@@ -4,6 +4,8 @@ import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
 import TagEditor from "../components/story/TagEditor";
+import WritingScheduleFields from "../components/story/WritingScheduleFields";
+import { DEFAULT_SCHEDULE_HOUR, browserTimeZone } from "../utils/writingSchedule";
 import { genreOptions } from "../utils/genres";
 
 export default function CreateStory() {
@@ -22,6 +24,11 @@ export default function CreateStory() {
   const [originalAuthor, setOriginalAuthor] = useState("");
   const [sensitiveContent, setSensitiveContent] = useState(false);
   const [contentWarnings, setContentWarnings] = useState([]);
+  const [schedule, setSchedule] = useState({
+    days: [],
+    hour: DEFAULT_SCHEDULE_HOUR,
+    showPublicly: true,
+  });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -104,6 +111,27 @@ export default function CreateStory() {
       });
 
       const createdStory = response.data.story;
+
+      // La historia ya quedó creada: si el calendario falla, se avisa y
+      // se puede elegir después en «Editar historia».
+      if (schedule.days.length > 0) {
+        try {
+          await api.put(`/stories/${createdStory.id}/schedule`, {
+            days: schedule.days,
+            hour: schedule.hour,
+            timezone: browserTimeZone(),
+            show_publicly: schedule.showPublicly,
+          });
+        } catch (scheduleError) {
+          console.error("Error al guardar los días de escritura:", scheduleError);
+          showToast(
+            "Tu historia se publicó, pero no pudimos guardar tus días de escritura. Puedes elegirlos en «Editar historia».",
+            "error"
+          );
+          navigate(`/stories/${createdStory.id}`);
+          return;
+        }
+      }
 
       showToast("Historia publicada correctamente.");
       navigate(`/stories/${createdStory.id}`);
@@ -423,6 +451,22 @@ export default function CreateStory() {
               </p>
 
             </div>
+          </section>
+
+          <section className="story-form-section">
+            <div className="story-form-section-heading">
+              <span className="story-form-icon">◷</span>
+
+              <div>
+                <h2>Calendario</h2>
+                <p>
+                  Organiza tus días para publicar y te recordaremos
+                  cuando toque.
+                </p>
+              </div>
+            </div>
+
+            <WritingScheduleFields schedule={schedule} onChange={setSchedule} />
           </section>
 
           {error && (
