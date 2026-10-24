@@ -88,6 +88,24 @@ class FirstChapterReminderTests(unittest.TestCase):
         self.assertEqual(reminders.send_first_chapter_reminders(NOW + timedelta(hours=1)), 0)
         self.assertEqual(self.reminders_for(story_id), [])
 
+    def test_a_failed_notification_is_retried_in_the_next_check(self):
+        story_id = self.add_story(hours_ago=25)
+        original = main.create_notification
+
+        def reject(*_args, **_kwargs):
+            raise RuntimeError("notifications_type_valid")
+
+        main.create_notification = reject
+        try:
+            with self.assertRaises(RuntimeError):
+                reminders.send_first_chapter_reminders(NOW)
+        finally:
+            main.create_notification = original
+
+        self.assertEqual(self.database.tables["first_chapter_reminders"], [])
+        self.assertEqual(reminders.send_first_chapter_reminders(NOW + timedelta(minutes=15)), 1)
+        self.assertEqual(len(self.reminders_for(story_id)), 1)
+
     def test_recent_stories_wait_a_day(self):
         story_id = self.add_story(hours_ago=23)
 

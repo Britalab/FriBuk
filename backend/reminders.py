@@ -114,12 +114,17 @@ def send_first_chapter_reminders(now: datetime | None = None) -> int:
         except Exception:
             continue
 
-        main.create_notification(
-            story["author_id"],
-            "story_first_chapter",
-            story_id=story_id,
-            data={"story_title": story.get("title")}
-        )
+        try:
+            main.create_notification(
+                story["author_id"],
+                "story_first_chapter",
+                story_id=story_id,
+                data={"story_title": story.get("title")}
+            )
+        except Exception:
+            # Sin aviso no queda marcado: se reintenta en la próxima revisión.
+            db.table("first_chapter_reminders").delete().eq("story_id", story_id).execute()
+            raise
         sent += 1
 
     return sent
@@ -206,12 +211,22 @@ def send_inactivity_reminders(now: datetime | None = None) -> int:
         except Exception:
             continue
 
-        main.create_notification(
-            story["author_id"],
-            "story_inactive",
-            story_id=story_id,
-            data={"story_title": story.get("title"), "days": stage}
-        )
+        try:
+            main.create_notification(
+                story["author_id"],
+                "story_inactive",
+                story_id=story_id,
+                data={"story_title": story.get("title"), "days": stage}
+            )
+        except Exception:
+            (
+                db.table("story_inactivity_reminders").delete()
+                .eq("story_id", story_id)
+                .eq("stage", stage)
+                .eq("last_chapter_at", main.utc_timestamp(last_at))
+                .execute()
+            )
+            raise
         sent += 1
 
     return sent
@@ -308,12 +323,21 @@ def send_schedule_reminders(now: datetime | None = None) -> int:
         except Exception:
             continue
 
-        main.create_notification(
-            story["author_id"],
-            "story_schedule",
-            story_id=story_id,
-            data={"story_title": story.get("title")}
-        )
+        try:
+            main.create_notification(
+                story["author_id"],
+                "story_schedule",
+                story_id=story_id,
+                data={"story_title": story.get("title")}
+            )
+        except Exception:
+            (
+                db.table("story_schedule_reminders").delete()
+                .eq("story_id", story_id)
+                .eq("local_date", local_date)
+                .execute()
+            )
+            raise
         sent += 1
 
     return sent

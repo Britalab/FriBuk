@@ -158,6 +158,25 @@ class ScheduleReminderTests(ScheduleTestCase):
         self.assertEqual(self.send(TUESDAY_7PM + timedelta(minutes=15)), 0)
         self.assertEqual(self.reminders(), [])
 
+    def test_a_failed_notification_is_retried_in_the_next_check(self):
+        # Pasó en producción: la base rechazaba el tipo de notificación y el
+        # día quedaba marcado como avisado sin que llegara nada.
+        original = main.create_notification
+
+        def reject(*_args, **_kwargs):
+            raise RuntimeError("notifications_type_valid")
+
+        main.create_notification = reject
+        try:
+            with self.assertRaises(RuntimeError):
+                self.send()
+        finally:
+            main.create_notification = original
+
+        self.assertEqual(self.database.tables["story_schedule_reminders"], [])
+        self.assertEqual(self.send(TUESDAY_7PM + timedelta(minutes=15)), 1)
+        self.assertEqual(len(self.reminders()), 1)
+
     def test_not_before_the_hour(self):
         self.assertEqual(self.send(TUESDAY_7PM - timedelta(minutes=10)), 0)
 
