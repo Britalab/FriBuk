@@ -21,6 +21,7 @@ class SessionRefreshTestCase(unittest.TestCase):
     def setUp(self):
         self.original_exchange = main.exchange_refresh_token
         self.original_public = main.supabase_public
+        self.original_auth_client = main.new_auth_client
         self.original_is_admin = main.is_admin_user
         self.received = []
         self.client = TestClient(main.app)
@@ -28,6 +29,7 @@ class SessionRefreshTestCase(unittest.TestCase):
     def tearDown(self):
         main.exchange_refresh_token = self.original_exchange
         main.supabase_public = self.original_public
+        main.new_auth_client = self.original_auth_client
         main.is_admin_user = self.original_is_admin
 
     def use_exchange(self, result):
@@ -96,7 +98,14 @@ class SessionRefreshTestCase(unittest.TestCase):
             created_at=None
         )
         session = SimpleNamespace(access_token="acceso", refresh_token="renovacion")
-        main.supabase_public = SimpleNamespace(
+        # Si el login usara supabase_public, la sesión quedaría guardada en
+        # él y al vencer el token fallarían /stories, votos y valoraciones.
+        main.supabase_public = SimpleNamespace(auth=SimpleNamespace(
+            sign_in_with_password=lambda _credentials: self.fail(
+                "El login no debe usar supabase_public"
+            )
+        ))
+        main.new_auth_client = lambda: SimpleNamespace(
             auth=SimpleNamespace(
                 sign_in_with_password=lambda _credentials: SimpleNamespace(
                     user=user, session=session

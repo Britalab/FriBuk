@@ -118,7 +118,15 @@ def get_supabase_user(access_token: str):
 
     client.postgrest.auth(access_token)
 
-    return client 
+    return client
+
+
+def new_auth_client() -> Client:
+    # Registro e inicio de sesión usan un cliente propio: al recibir la
+    # sesión, la librería la guarda en el cliente y sus consultas pasan a
+    # llevar el token de esa persona. Si fuera supabase_public, cuando ese
+    # token vence fallan /stories, votos y valoraciones para todos.
+    return create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
@@ -1602,7 +1610,7 @@ def create_user(user: UserCreate):
 
     try:
 
-        response = supabase_public.auth.sign_up({
+        response = new_auth_client().auth.sign_up({
             "email": user.email,
             "password": user.password,
             "options": {
@@ -1726,7 +1734,7 @@ def login(user: LoginRequest):
 
     try:
 
-        response = supabase_public.auth.sign_in_with_password({
+        response = new_auth_client().auth.sign_in_with_password({
             "email": user.email,
             "password": user.password
         })
