@@ -1,6 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import api from "../api/client";
+import { closeShownNotifications, isNotificationTag } from "../utils/appBadge";
 import { useNotifications } from "./useNotifications";
+
+const closeShownNotification = (notification) =>
+  closeShownNotifications((tag) => tag === `notificacion-${notification.id}`);
 
 function errorMessage(error, fallback) {
   const detail = error.response?.data?.detail;
@@ -71,6 +75,8 @@ export function useNotificationFeed({ limit = 20 } = {}) {
     async (notification) => {
       if (notification.is_read) return;
 
+      closeShownNotification(notification);
+
       // Se refleja de inmediato; si falla, la próxima carga lo corrige.
       setItems((current) =>
         current.map((item) =>
@@ -95,6 +101,7 @@ export function useNotificationFeed({ limit = 20 } = {}) {
       await api.post("/notifications/read-all");
       setItems((current) => current.map((item) => ({ ...item, is_read: true })));
       setUnreadCount(0);
+      closeShownNotifications(isNotificationTag);
     } catch (requestError) {
       console.error("Error al marcar todas como leídas:", requestError);
       setActionError(errorMessage(requestError, "No pudimos marcar las notificaciones como leídas."));
@@ -109,6 +116,7 @@ export function useNotificationFeed({ limit = 20 } = {}) {
         const response = await api.delete(`/notifications/${notification.id}`);
         setItems((current) => current.filter((item) => item.id !== notification.id));
         setUnreadCount(response.data.unread_count);
+        closeShownNotification(notification);
       } catch (requestError) {
         console.error("Error al descartar la notificación:", requestError);
         setActionError(errorMessage(requestError, "No pudimos descartar la notificación."));

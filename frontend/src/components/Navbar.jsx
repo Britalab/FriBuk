@@ -1,10 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import NotificationBell from "./NotificationBell";
 import { useMessagesSummary } from "../hooks/useMessagesSummary";
 import { useNotifications } from "../hooks/useNotifications";
-import { updateAppBadge } from "../utils/appBadge";
+import {
+  closeShownNotifications,
+  isMessageTag,
+  isNotificationTag,
+  updateAppBadge,
+} from "../utils/appBadge";
 import { formatUnreadCount, rememberMessagesReturnPath } from "../utils/messages";
 
 export default function Navbar() {
@@ -17,6 +22,21 @@ export default function Navbar() {
   // notificaciones más mensajes sin leer. Sin sesión o sin pendientes, se quita.
   useEffect(() => {
     updateAppBadge(unreadCount + unreadMessages);
+  }, [unreadCount, unreadMessages]);
+
+  // Al quedar sin pendientes, se quitan los avisos del teléfono que sigan a la
+  // vista (por ejemplo, de mensajes ya leídos). En Android el número del ícono
+  // los cuenta. Solo al bajar a 0: mientras carga, los contadores parten en 0.
+  const previousCounts = useRef({ unreadCount, unreadMessages });
+  useEffect(() => {
+    const previous = previousCounts.current;
+    previousCounts.current = { unreadCount, unreadMessages };
+    if (previous.unreadCount > 0 && unreadCount === 0) {
+      closeShownNotifications(isNotificationTag);
+    }
+    if (previous.unreadMessages > 0 && unreadMessages === 0) {
+      closeShownNotifications(isMessageTag);
+    }
   }, [unreadCount, unreadMessages]);
 
   // Para que "cerrar" en Mensajes vuelva a donde estaba la persona.

@@ -1,5 +1,41 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { updateAppBadge } from "./appBadge";
+import { closeShownNotifications, isNotificationTag, updateAppBadge } from "./appBadge";
+
+describe("closeShownNotifications", () => {
+  afterEach(() => {
+    delete navigator.serviceWorker;
+  });
+
+  function showNotifications(tags) {
+    const shown = tags.map((tag) => ({ tag, close: vi.fn() }));
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: { ready: Promise.resolve({ getNotifications: () => Promise.resolve(shown) }) },
+    });
+    return shown;
+  }
+
+  it("quita solo los avisos que coinciden", async () => {
+    const [notification, message] = showNotifications(["notificacion-1", "mensaje-2"]);
+
+    await closeShownNotifications(isNotificationTag);
+
+    expect(notification.close).toHaveBeenCalled();
+    expect(message.close).not.toHaveBeenCalled();
+  });
+
+  it("sin filtro quita todos", async () => {
+    const shown = showNotifications(["notificacion-1", "mensaje-2", ""]);
+
+    await closeShownNotifications();
+
+    shown.forEach((notification) => expect(notification.close).toHaveBeenCalled());
+  });
+
+  it("no falla sin service worker", async () => {
+    await expect(closeShownNotifications()).resolves.toBeUndefined();
+  });
+});
 
 describe("updateAppBadge", () => {
   afterEach(() => {
