@@ -5,10 +5,14 @@
 #
 #     python -m unittest discover -s tests
 
+import io
 import sys
 import unittest
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
+
+from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -20,6 +24,8 @@ import seo  # noqa: E402
 from test_chapter_comments import FakeDatabase  # noqa: E402
 
 AUTHOR_ID = str(uuid.uuid4())
+SECOND_ID = str(uuid.uuid4())
+DELETED_ID = str(uuid.uuid4())
 STORY_ID = str(uuid.uuid4())
 DRAFT_STORY_ID = str(uuid.uuid4())
 CHAPTER_ONE_ID = str(uuid.uuid4())
@@ -162,6 +168,108 @@ class SeoTestCase(unittest.TestCase):
         # Ni borradores ni capítulos de historias ocultas.
         for hidden in (DRAFT_STORY_ID, DRAFT_CHAPTER_ID, HIDDEN_CHAPTER_ID):
             self.assertNotIn(hidden, body)
+
+
+# ============================================================
+# VISTA PREVIA DE UN PERFIL
+# ============================================================
+
+STORAGE_AVATAR = "https://proyecto.supabase.co/storage/v1/object/public/story-covers/avatars/x/avatar"
+
+
+def webp_avatar() -> bytes:
+    output = io.BytesIO()
+    Image.new("RGB", (512, 512), (120, 40, 60)).save(output, "WEBP")
+    return output.getvalue()
+
+
+class ProfilePreviewTestCase(unittest.TestCase):
+    def setUp(self):
+        self.users = {
+            AUTHOR_ID: {"username": "autora", "avatar_url": f"{STORAGE_AVATAR}?v=1700"},
+            SECOND_ID: {"username": "lectora"},
+            DELETED_ID: {"username": "eliminado_abc123"},
+        }
+        self.database = FakeDatabase()
+        self.database.tables = {
+            "users": [],
+            "user_profiles": [
+                {"user_id": AUTHOR_ID, "display_name": "Ana Autora",
+                 "bio": "Escribo fantasía.", "website_url": None}
+            ],
+            "stories": [
+                {"id": STORY_ID, "author_id": AUTHOR_ID, "status": "published",
+                 "title": "Bajo la última sombra"},
+                {"id": DRAFT_STORY_ID, "author_id": AUTHOR_ID, "status": "draft",
+                 "title": "Secreta"},
+            ],
+        }
+
+        def get_user_by_id(user_id):
+            metadata = self.users.get(user_id)
+            return SimpleNamespace(
+                user=SimpleNamespace(id=user_id, user_metadata=metadata) if metadata else None
+            )
+
+        self.database.auth = SimpleNamespace(admin=SimpleNamespace(get_user_by_id=get_user_by_id))
+        self.originals = (main.supabase_admin, main.SUPABASE_URL, seo.download_avatar)
+        main.supabase_admin = self.database
+        main.SUPABASE_URL = "https://proyecto.supabase.co"
+        self.downloaded = []
+        self.client = TestClient(main.app)
+
+    def tearDown(self):
+        main.supabase_admin, main.SUPABASE_URL, seo.download_avatar = self.originals
+
+    def test_preview_has_name_bio_photo_version_and_public_stories(self):
+        response = self.client.get(f"/seo/users/{AUTHOR_ID}")
+        self.assertEqual(response.status_code, 200, response.text)
+
+        self.assertEqual(response.json(), {
+            "id": AUTHOR_ID,
+            "username": "autora",
+            "display_name": "Ana Autora",
+            "bio": "Escribo fantasía.",
+            "avatar_version": "1700",
+            # Sin los borradores.
+            "stories": [{"id": STORY_ID, "title": "Bajo la última sombra"}],
+        })
+
+    def test_profile_without_photo_or_extra_info(self):
+        body = self.client.get(f"/seo/users/{SECOND_ID}").json()
+
+        self.assertIsNone(body["avatar_version"])
+        self.assertIsNone(body["display_name"])
+        self.assertEqual(body["stories"], [])
+
+    def test_deleted_and_missing_accounts_do_not_exist(self):
+        for user_id in (DELETED_ID, str(uuid.uuid4()), "no-es-un-id"):
+            self.assertEqual(self.client.get(f"/seo/users/{user_id}").status_code, 404, user_id)
+            self.assertEqual(
+                self.client.get(f"/seo/users/{user_id}/avatar.jpg").status_code, 404, user_id
+            )
+
+    def test_photo_is_served_as_a_small_jpeg(self):
+        seo.download_avatar = lambda url: self.downloaded.append(url) or webp_avatar()
+
+        response = self.client.get(f"/seo/users/{AUTHOR_ID}/avatar.jpg?v=1700")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "image/jpeg")
+        self.assertIn("max-age", response.headers["cache-control"])
+        self.assertEqual(Image.open(io.BytesIO(response.content)).size, (300, 300))
+        self.assertEqual(self.downloaded, [f"{STORAGE_AVATAR}?v=1700"])
+
+    def test_a_removed_photo_is_not_served(self):
+        # Moderación deja avatar_url vacío al retirar la foto.
+        self.users[AUTHOR_ID]["avatar_url"] = None
+
+        self.assertEqual(self.client.get(f"/seo/users/{AUTHOR_ID}/avatar.jpg").status_code, 404)
+        self.assertIsNone(self.client.get(f"/seo/users/{AUTHOR_ID}").json()["avatar_version"])
+
+    def test_only_photos_from_our_storage_are_downloaded(self):
+        with self.assertRaises(ValueError):
+            seo.download_avatar("https://otro-sitio.test/foto.webp")
 
 
 if __name__ == "__main__":

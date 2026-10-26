@@ -11,17 +11,27 @@
 # visibles y capítulos publicados. Un borrador responde igual que una
 # historia inexistente.
 
+import hashlib
 import html
 import os
+from urllib.parse import parse_qs, urlparse
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
+
+import images
+from accounts import DELETED_USERNAME_PREFIX
 
 router = APIRouter()
 
 SITE_URL = (os.getenv("SITE_URL") or "https://www.fribuk.com").strip().rstrip("/")
 
 STORY_NOT_FOUND_DETAIL = "Historia no encontrada"
+USER_NOT_FOUND_DETAIL = "Usuario no encontrado"
+AVATAR_DOWNLOAD_TIMEOUT_SECONDS = 5
+# Un día: cada enlace nuevo lleva el ?v= de la foto actual.
+AVATAR_PREVIEW_CACHE_SECONDS = 86400
 # Texto del capítulo que se entrega para lectura sin JavaScript.
 CHAPTER_TEXT_MAX_LENGTH = 20000
 SITEMAP_PAGE_SIZE = 1000
@@ -137,6 +147,95 @@ def get_story_preview(story_id: str, chapter_id: str | None = None):
         }
 
     return preview
+
+
+def get_visible_profile(user_id: str) -> dict:
+    # Datos públicos de un perfil. Una cuenta eliminada no existe para nadie.
+    main = fribuk()
+    profile = main.get_public_profile_data(main.get_public_auth_user(user_id))
+    username = profile.get("username") or ""
+
+    if not username or username.lower().startswith(DELETED_USERNAME_PREFIX):
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND_DETAIL)
+    return profile
+
+
+def avatar_version(avatar_url: str) -> str:
+    # El ?v= de la foto cambia al reemplazarla: así las redes sociales, que
+    # guardan la imagen de cada enlace, no siguen mostrando la anterior.
+    version = parse_qs(urlparse(avatar_url).query).get("v", [""])[0]
+    return version or hashlib.sha1(avatar_url.encode()).hexdigest()[:10]
+
+
+@router.get("/seo/users/{user_id}")
+def get_profile_preview(user_id: str):
+    main = fribuk()
+    profile = get_visible_profile(user_id)
+
+    # Si la información adicional falla, la vista previa sale sin ella.
+    try:
+        info = main.get_user_profile_info(profile["id"])
+    except Exception:
+        info = {}
+
+    stories = (
+        main.supabase_admin
+        .table("stories")
+        .select("id, title")
+        .eq("author_id", profile["id"])
+        .in_("status", list(main.VISIBLE_STORY_STATUSES))
+        .execute()
+    ).data or []
+    avatar_url = profile.get("avatar_url")
+
+    return {
+        "id": profile["id"],
+        "username": profile["username"],
+        "display_name": info.get("display_name") or None,
+        "bio": info.get("bio") or None,
+        # La foto se entrega aparte, en JPEG (ver get_profile_preview_avatar).
+        "avatar_version": avatar_version(avatar_url) if avatar_url else None,
+        "stories": [
+            {"id": str(story["id"]), "title": story.get("title") or ""}
+            for story in stories
+        ]
+    }
+
+
+def download_avatar(avatar_url: str) -> bytes:
+    main = fribuk()
+    storage_prefix = (main.SUPABASE_URL or "").strip().rstrip("/") + "/storage/v1/object/public/"
+    # Solo imágenes guardadas en nuestro Storage.
+    if not avatar_url.startswith(storage_prefix):
+        raise ValueError("La foto no está en el Storage de FriBuk")
+
+    response = httpx.get(avatar_url, timeout=AVATAR_DOWNLOAD_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response.content
+
+
+@router.get("/seo/users/{user_id}/avatar.jpg")
+def get_profile_preview_avatar(user_id: str):
+    # Las fotos de perfil se guardan en WebP, que no todas las redes sociales
+    # muestran al compartir un enlace: aquí se entregan en JPEG pequeño. Se
+    # lee la foto actual, así que una retirada por moderación deja de verse.
+    avatar_url = get_visible_profile(user_id).get("avatar_url")
+    if not avatar_url:
+        raise HTTPException(status_code=404, detail="Este perfil no tiene foto")
+
+    try:
+        data, content_type, _extension = images.optimize_image(
+            download_avatar(avatar_url), images.AVATAR_PREVIEW
+        )
+    except Exception as error:
+        print("No se pudo preparar la foto para la vista previa:", repr(error))
+        raise HTTPException(status_code=404, detail="Este perfil no tiene foto")
+
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={"Cache-Control": f"public, max-age={AVATAR_PREVIEW_CACHE_SECONDS}"}
+    )
 
 
 def fetch_all(table: str, columns: str, apply_filters) -> list[dict]:

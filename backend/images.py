@@ -38,6 +38,9 @@ HOME_BANNER = ImageProfile(2000, 2000, "WEBP", 82)
 # (WhatsApp, Facebook): JPEG es el formato que todas aceptan.
 STORY_COVER = ImageProfile(600, 900, "JPEG", 85)
 FORUM_IMAGE = ImageProfile(1600, 1600, "WEBP", 80)
+# Foto de perfil en la vista previa al compartir un perfil: no se guarda,
+# se arma al pedirla (ver seo.py).
+AVATAR_PREVIEW = ImageProfile(300, 300, "JPEG", 85)
 
 FORMATS = {
     "WEBP": ("image/webp", "webp"),
