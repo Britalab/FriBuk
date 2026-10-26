@@ -4591,8 +4591,72 @@ button {
   background: var(--bg-hover);
 }
 
+/* Eliminar: misma píldora que "Editar", con el rojo de los errores. Va
+   sobre el enlace que cubre la tarjeta. */
+.chapter-delete-button {
+  position: relative;
+  z-index: 1;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: #a34b45;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.chapter-delete-button:hover {
+  border-color: #a34b45;
+  background: var(--bg-hover);
+}
+
+[data-theme="dark"] .chapter-delete-button {
+  color: #e59a94;
+}
+
+[data-theme="dark"] .chapter-delete-button:hover {
+  border-color: #e59a94;
+}
+
+.chapter-delete-text {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.moderation-button.is-danger {
+  border-color: #a34b45;
+  background: #a34b45;
+  color: #fff;
+}
+
+.moderation-button.is-danger:hover:not(:disabled) {
+  border-color: #8a3d38;
+  background: #8a3d38;
+}
+
+[data-theme="dark"] .moderation-button.is-danger {
+  border-color: #e59a94;
+  background: #e59a94;
+  color: #1c1919;
+}
+
 .chapter-link:focus-visible,
-.chapter-edit-link:focus-visible {
+.chapter-edit-link:focus-visible,
+.chapter-delete-button:focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 3px;
 }
@@ -4707,7 +4771,8 @@ button {
   }
 
   .chapter-link,
-  .chapter-edit-link {
+  .chapter-edit-link,
+  .chapter-delete-button {
     padding: 8px 15px;
     font-size: 0.84rem;
   }

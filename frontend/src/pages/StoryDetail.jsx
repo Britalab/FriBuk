@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
@@ -11,6 +11,7 @@ import { formatScheduleDays } from "../utils/writingSchedule";
 import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
 import ReportButton from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
+import ModerationDialog from "../components/moderation/ModerationDialog";
 import AuthorTitle, { FeaturedStoryChip } from "../components/badges/AuthorTitle";
 import "../styles/moderation.css";
 
@@ -25,6 +26,9 @@ export default function StoryDetail() {
   const [chapters, setChapters] = useState([]);
   // Capítulo en borrador que se está publicando desde la lista.
   const [publishingChapterId, setPublishingChapterId] = useState(null);
+  // Capítulo que la autora pidió eliminar (se confirma en una ventana).
+  const [chapterToDelete, setChapterToDelete] = useState(null);
+  const [deletingChapter, setDeletingChapter] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
   const [ratingAverage, setRatingAverage] = useState(null);
   // Punto donde el lector dejó esta historia, si ya la empezó.
@@ -69,6 +73,34 @@ export default function StoryDetail() {
       );
     } finally {
       setPublishingChapterId(null);
+    }
+  };
+
+  // Estable: la ventana vuelve a enfocar su primer botón si cambia.
+  const closeDeleteDialog = useCallback(() => {
+    if (!deletingChapter) setChapterToDelete(null);
+  }, [deletingChapter]);
+
+  // Eliminar no se puede deshacer: siempre pasa por la ventana de confirmación.
+  const handleDeleteChapter = async () => {
+    if (!chapterToDelete || deletingChapter) return;
+
+    setDeletingChapter(true);
+
+    try {
+      await api.delete(`/chapters/${chapterToDelete.id}`);
+      setChapters((current) => current.filter((item) => item.id !== chapterToDelete.id));
+      setChapterToDelete(null);
+      showToast("Capítulo eliminado.");
+    } catch (err) {
+      console.error("Error al eliminar el capítulo:", err);
+      showToast(
+        err.response?.data?.detail ||
+          "No se pudo eliminar el capítulo. Intenta nuevamente.",
+        "error"
+      );
+    } finally {
+      setDeletingChapter(false);
     }
   };
 
@@ -1211,6 +1243,17 @@ export default function StoryDetail() {
                       </Link>
                     )}
 
+                    {isOwner && (
+                      <button
+                        type="button"
+                        className="chapter-delete-button"
+                        onClick={() => setChapterToDelete(chapter)}
+                        aria-label={`Eliminar el capítulo «${chapter.title}»`}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    )}
+
                   </div>
 
                 </article>
@@ -1235,6 +1278,35 @@ export default function StoryDetail() {
         </section>
 
       </div>
+
+      {chapterToDelete && (
+        <ModerationDialog title="¿Eliminar este capítulo?" onClose={closeDeleteDialog}>
+          <div className="moderation-form">
+            <p className="chapter-delete-text">
+              Vas a eliminar <strong>«{chapterToDelete.title}»</strong>. También se
+              borrarán sus comentarios. Esta acción no se puede deshacer.
+            </p>
+            <div className="moderation-form-actions">
+              <button
+                type="button"
+                className="moderation-button"
+                onClick={closeDeleteDialog}
+                disabled={deletingChapter}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="moderation-button is-danger"
+                onClick={handleDeleteChapter}
+                disabled={deletingChapter}
+              >
+                {deletingChapter ? "Eliminando..." : "Eliminar capítulo"}
+              </button>
+            </div>
+          </div>
+        </ModerationDialog>
+      )}
     </main>
   );
 }

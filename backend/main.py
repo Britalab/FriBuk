@@ -3343,6 +3343,10 @@ def delete_chapter(
         if not story.data or story.data[0]["author_id"] != str(current_user.id):
             raise HTTPException(status_code=403, detail="No podés borrar capítulos de otros usuarios")
 
+        # Los avisos de "nuevo capítulo" quedarían apuntando a un capítulo que
+        # ya no existe. Comentarios y progreso de lectura se borran solos.
+        supabase_admin.table("notifications").delete().eq("chapter_id", chapter_id).execute()
+
         supabase_admin.table("chapters").delete().eq("id", chapter_id).execute()
 
         return {"message": "Capítulo eliminado correctamente"}
