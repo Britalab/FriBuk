@@ -172,6 +172,8 @@ class PushTestCase(unittest.TestCase):
             "https://push.example.com/computador", "https://push.example.com/telefono",
         ])
         payload = self.sent[0][1]
+        # El teléfono ya agrega "from FriBuk": el título dice de qué se trata.
+        self.assertEqual(payload["title"], "Comentarios")
         self.assertEqual(payload["body"], "@lectora comentó tu historia «Luna».")
         self.assertEqual(payload["url"], f"/stories/{STORY_ID}")
 
@@ -287,6 +289,21 @@ class PushTestCase(unittest.TestCase):
         for row, body, url in cases:
             message = push.notification_message(row, "may")
             self.assertEqual(message, {"body": body, "url": url})
+
+    def test_every_notification_type_has_its_own_title(self):
+        self.assertEqual(push.notification_title({"type": "story_schedule"}), "Días de escritura")
+        self.assertEqual(
+            push.notification_title({"type": "forum_reply", "data": {"mention": True}}),
+            "Te mencionaron",
+        )
+        self.assertEqual(push.notification_title({"type": "desconocido"}), "Notificación")
+        # Todo tipo que acepta la base de datos (notifications_type_valid).
+        for notification_type in (
+            "follow", "forum_reply", "story_chapter", "story_comment", "story_favorite",
+            "story_rating", "story_vote", "support_status", "story_first_chapter",
+            "story_inactive", "story_schedule",
+        ):
+            self.assertIn(notification_type, push.NOTIFICATION_TITLES)
 
 
 if __name__ == "__main__":

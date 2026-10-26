@@ -124,6 +124,29 @@ def others(actor_count: int) -> str:
     return " y 1 persona más" if extra == 1 else f" y {extra} personas más"
 
 
+# Título del aviso según el tipo. No dice "FriBuk": el teléfono ya muestra
+# de qué app viene ("... · from FriBuk"), y repetirlo no aporta.
+NOTIFICATION_TITLES = {
+    "follow": "Seguidores",
+    "story_comment": "Comentarios",
+    "story_vote": "Recomendaciones",
+    "story_favorite": "Favoritos",
+    "story_rating": "Valoraciones",
+    "story_chapter": "Capítulo nuevo",
+    "story_first_chapter": "Tu primer capítulo",
+    "story_inactive": "Tus lectores te esperan",
+    "story_schedule": "Días de escritura",
+    "forum_reply": "Foro",
+    "support_status": "Soporte",
+}
+
+
+def notification_title(row: dict) -> str:
+    if (row.get("data") or {}).get("mention"):
+        return "Te mencionaron"
+    return NOTIFICATION_TITLES.get(row.get("type"), "Notificación")
+
+
 def notification_message(row: dict, actor_username: str | None) -> dict:
     data = row.get("data") or {}
     actor_count = int(row.get("actor_count") or 1)
@@ -353,7 +376,7 @@ def send_notifications(rows: list[dict]) -> None:
             row, usernames.get(str(row.get("actor_user_id")))
         )
         deliver(devices, {
-            "title": "FriBuk",
+            "title": notification_title(row),
             "body": message["body"],
             "url": message["url"],
             # Misma etiqueta = el aviso agrupado reemplaza al anterior.
