@@ -1159,6 +1159,41 @@ button {
   outline-offset: 3px;
 }
 
+/* QR del perfil (ver ProfileQrButton). El QR va siempre sobre blanco. */
+.profile-qr-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.profile-qr-frame {
+  min-height: 240px;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.profile-qr-frame canvas {
+  width: min(100%, 300px);
+  height: auto;
+  display: block;
+}
+
+.profile-qr-frame canvas[hidden] {
+  display: none;
+}
+
+.profile-qr-state {
+  margin: 0;
+  color: #51202d;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .profile-info-form {
   width: min(100%, 520px);
   display: grid;

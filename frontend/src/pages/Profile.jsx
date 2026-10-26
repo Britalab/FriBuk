@@ -8,6 +8,7 @@ import ReadingListsPanel from "../components/profile/ReadingListsPanel";
 import { MyModerationNotices } from "../components/moderation/ModerationNotices";
 import AuthorTitle, { FeaturedBadges } from "../components/badges/AuthorTitle";
 import AchievementsPanel from "../components/badges/AchievementsPanel";
+import ProfileQrButton from "../components/profile/ProfileQrButton";
 import { emptyCustomization, normalizeCustomization } from "../profile/catalog";
 
 const EMPTY_PROFILE_INFO = { display_name: null, bio: null, website_url: null };
@@ -563,6 +564,14 @@ const handleDeleteStory = async (storyId, storyTitle) => {
             <Link to="/perfil/personalizar" className="profile-header-action">
               <span aria-hidden="true">✦</span> Personalizar mi espacio
             </Link>
+            {user?.id && (
+              <ProfileQrButton
+                userId={user.id}
+                username={username}
+                avatarUrl={avatarUrl}
+                className="profile-header-action"
+              />
+            )}
             <button
               type="button"
               className="profile-header-action"

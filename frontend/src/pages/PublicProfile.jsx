@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import ProfileAbout from "../components/profile/ProfileAbout";
 import ShareButton from "../components/ShareButton";
+import ProfileQrButton from "../components/profile/ProfileQrButton";
 import ProfileSpace, { ProfileEmojis, ProfileStickers } from "../components/profile/ProfileSpace";
 import { ReportMenu } from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
@@ -404,6 +405,14 @@ export default function PublicProfile() {
                 label={isOwnProfile ? "Compartir mi perfil" : "Compartir perfil"}
                 className="public-profile-follow-button is-following public-profile-share-button"
               />
+              {isOwnProfile && (
+                <ProfileQrButton
+                  userId={userId}
+                  username={username}
+                  avatarUrl={pageData.profile.avatar_url}
+                  className="public-profile-follow-button is-following public-profile-share-button"
+                />
+              )}
             </div>
           </div>
         </header>
