@@ -45,7 +45,7 @@ export default function Forum() {
                     up: 0,
                     down: 0,
                   },
-                  heart: 0,
+                  reactions: { heart: 0 },
                 },
               };
             }
@@ -174,7 +174,7 @@ export default function Forum() {
                     </span>
 
                     <span>
-                      ❤️ {interactions.heart || 0}
+                      ❤️ {interactions.reactions?.heart || 0}
                     </span>
                   </div>
                 </div>
