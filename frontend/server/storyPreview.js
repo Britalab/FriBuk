@@ -9,7 +9,7 @@
 // Al cargar, la aplicación reemplaza ese contenido por la página normal.
 // Ante cualquier problema se entrega la página de siempre, sin cambios.
 
-import { inlineToHtml, stripInline } from "../src/utils/richText.js";
+import { lineToHtml, listNumbers, stripInline } from "../src/utils/richText.js";
 
 const SITE_NAME = "FriBuk";
 const DEFAULT_API_URL = "https://api.fribuk.com";
@@ -37,12 +37,12 @@ export function excerpt(text, maxLength = DESCRIPTION_MAX_LENGTH) {
   return `${(!endsOnWord && lastSpace > maxLength / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 }
 
+// Párrafos con su formato: alineación, listas, negrita, cursiva y subrayado.
 function paragraphs(text) {
-  return String(text ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => `<p>${inlineToHtml(line, escapeHtml)}</p>`)
+  const lines = String(text ?? "").split("\n");
+  const numbers = listNumbers(lines);
+  return lines
+    .map((line, index) => (line.trim() ? lineToHtml(line, escapeHtml, numbers[index]) : ""))
     .join("");
 }
 
@@ -115,7 +115,7 @@ export function buildPreview(data, origin) {
   }
 
   const description =
-    excerpt(data.description) ||
+    excerpt(stripInline(data.description)) ||
     `Lee «${storyTitle}»${byline} en ${SITE_NAME}.`;
   const chapters = Array.isArray(data.chapters) ? data.chapters : [];
 
@@ -128,7 +128,7 @@ export function buildPreview(data, origin) {
     structuredData: jsonLd({
       "@context": "https://schema.org",
       ...bookData,
-      ...(data.description ? { description: excerpt(data.description, 500) } : {}),
+      ...(data.description ? { description: excerpt(stripInline(data.description), 500) } : {}),
     }),
     bodyHtml:
       `<main style="${BODY_STYLE}">` +

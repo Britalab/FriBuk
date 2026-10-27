@@ -146,3 +146,18 @@ describe("contenido escrito por usuarios", () => {
     }
   });
 });
+
+describe("formato del texto", () => {
+  it("muestra alineación, listas y subrayado, y resume sin marcas", () => {
+    const preview = buildPreview(
+      { ...STORY, description: "[centro]**Una** __historia__\n[#]uno\n[#]dos" },
+      ORIGIN
+    );
+
+    expect(preview.description).toBe("Una historia 1. uno 2. dos");
+    expect(preview.bodyHtml).toContain(
+      '<p style="text-align:center"><strong>Una</strong> <u>historia</u></p><p>1. uno</p><p>2. dos</p>'
+    );
+    expect(JSON.parse(preview.structuredData).description).toBe("Una historia 1. uno 2. dos");
+  });
+});

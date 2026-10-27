@@ -1280,6 +1280,21 @@ class ChapterCommentsTestCase(unittest.TestCase):
         self.assertEqual(row["paragraph_index"], 0)
         self.assertTrue(row["quote"].startswith("**palabra** palabra"))
 
+    def test_comment_survives_alignment_lists_and_underline(self):
+        comment_id = self.create_comment_id(
+            content="Me gustó", paragraph_index=3, quote=MARIA
+        )
+
+        # Del editor visual: centrado, en una lista y con una palabra subrayada.
+        formatted = "[centro][#]" + MARIA.replace("ventana", "__ventana__")
+        lines = CONTENT.split("\n")
+        lines[3] = formatted
+        self.assertEqual(self.edit_chapter("\n".join(lines)).status_code, 200)
+
+        row = self.stored(comment_id)
+        self.assertFalse(row.get("is_orphaned"))
+        self.assertEqual(row["paragraph_index"], 3)
+
     def test_old_fragment_comments_keep_the_strict_rule(self):
         # Comentario de la versión anterior, sobre una frase suelta.
         paragraph = CONTENT.split("\n")[3]

@@ -4,6 +4,7 @@ import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
 import TagEditor from "../components/story/TagEditor";
+import ChapterTextEditor from "../components/story/ChapterTextEditor";
 import ModerationDialog from "../components/moderation/ModerationDialog";
 import WritingScheduleFields from "../components/story/WritingScheduleFields";
 import { DEFAULT_SCHEDULE_HOUR, browserTimeZone } from "../utils/writingSchedule";
@@ -231,18 +232,24 @@ export default function EditStory() {
       </div>
 
       <div className="form-group">
-        <label htmlFor="description">
-          Descripción
-        </label>
+        <div className="form-label-row">
+          <label htmlFor="description">
+            Descripción
+          </label>
 
-        <textarea
+          <span className="form-counter">
+            {description.length}/1000
+          </span>
+        </div>
+
+        <ChapterTextEditor
           id="description"
+          ariaLabel="Descripción"
           value={description}
-          onChange={(event) =>
-            setDescription(event.target.value)
-          }
+          onChange={setDescription}
           rows={5}
           maxLength={1000}
+          help={false}
         />
       </div>
 

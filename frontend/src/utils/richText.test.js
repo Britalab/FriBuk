@@ -1,25 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { inlineToHtml, parseInline, stripInline, toggleInline } from "./richText";
+import {
+  inlineToHtml,
+  lineToHtml,
+  listNumbers,
+  parseBlock,
+  parseInline,
+  stripInline,
+} from "./richText";
 
-const plain = (text) => ({ text, bold: false, italic: false });
+const plain = (text) => ({ text, bold: false, italic: false, underline: false });
+const marked = (text, format) => ({ ...plain(text), ...format });
 const escape = (value) => value.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 describe("parseInline", () => {
   it("reconoce cursiva, negrita y ambas", () => {
     expect(parseInline("Dijo *nunca* y **jamás**, ***jamás***.")).toEqual([
       plain("Dijo "),
-      { text: "nunca", bold: false, italic: true },
+      marked("nunca", { italic: true }),
       plain(" y "),
-      { text: "jamás", bold: true, italic: false },
+      marked("jamás", { bold: true }),
       plain(", "),
-      { text: "jamás", bold: true, italic: true },
+      marked("jamás", { bold: true, italic: true }),
       plain("."),
     ]);
   });
 
   it("acepta frases con espacios", () => {
     expect(parseInline("**una frase entera**")).toEqual([
-      { text: "una frase entera", bold: true, italic: false },
+      marked("una frase entera", { bold: true }),
     ]);
   });
 
@@ -57,102 +65,55 @@ describe("stripInline e inlineToHtml", () => {
   });
 });
 
-describe("toggleInline", () => {
-  // Pulsa el botón sobre lo que quedó seleccionado tras la pulsación anterior.
-  const press = (state, kind) => toggleInline(state.value, state.start, state.end, kind);
-  const selected = (state) => state.value.slice(state.start, state.end);
-
-  it("marca la selección y la deja seleccionada", () => {
-    const result = toggleInline("una palabra clave", 4, 11, "bold");
-
-    expect(result.value).toBe("una **palabra** clave");
-    expect(selected(result)).toBe("**palabra**");
+describe("subrayado", () => {
+  it("se reconoce y puede envolver negrita y cursiva", () => {
+    expect(parseInline("Un __lugar__ y __**otro**__.")).toEqual([
+      plain("Un "),
+      marked("lugar", { underline: true }),
+      plain(" y "),
+      marked("otro", { bold: true, underline: true }),
+      plain("."),
+    ]);
+    expect(inlineToHtml("__**x**__", escape)).toBe("<u><strong>x</strong></u>");
   });
 
-  it("pulsar otra vez quita las marcas en vez de sumarlas", () => {
-    let state = { value: "una palabra clave", start: 4, end: 11 };
-
-    state = press(state, "bold");
-    expect(state.value).toBe("una **palabra** clave");
-
-    state = press(state, "bold");
-    expect(state.value).toBe("una palabra clave");
-    expect(selected(state)).toBe("palabra");
-
-    // Y lo mismo todas las veces que se repita.
-    for (let times = 0; times < 4; times += 1) state = press(state, "italic");
-    expect(state.value).toBe("una palabra clave");
+  it("deja tal cual los guiones bajos que no son marcas", () => {
+    for (const text of ["nombre__de__variable", "__ espacios __", "____", "un_guion_bajo"]) {
+      expect(parseInline(text)).toEqual([plain(text)]);
+    }
   });
 
-  it("da igual si se seleccionó la palabra o la palabra con sus marcas", () => {
-    expect(toggleInline("una **palabra** clave", 6, 13, "bold").value).toBe(
-      "una palabra clave"
-    );
-    expect(toggleInline("una **palabra** clave", 4, 15, "bold").value).toBe(
-      "una palabra clave"
-    );
-    expect(toggleInline("una *palabra* clave", 4, 13, "italic").value).toBe(
-      "una palabra clave"
-    );
+  it("el separador invisible no se muestra", () => {
+    expect(parseInline("**uno**\u2060*dos*")).toEqual([
+      marked("uno", { bold: true }),
+      marked("dos", { italic: true }),
+    ]);
+  });
+});
+
+describe("alineación y listas", () => {
+  it("lee la alineación y la lista al inicio de la línea", () => {
+    expect(parseBlock("[centro]Título")).toEqual({ align: "center", list: null, text: "Título" });
+    expect(parseBlock("[justificado][#]Uno")).toEqual({ align: "justify", list: "ordered", text: "Uno" });
+    expect(parseBlock("[•]Pan")).toEqual({ align: "left", list: "bullet", text: "Pan" });
+    // Una línea normal, aunque tenga corchetes, no cambia.
+    expect(parseBlock("[Nota] texto")).toEqual({ align: "left", list: null, text: "[Nota] texto" });
   });
 
-  it("negrita y cursiva se combinan y se quitan por separado", () => {
-    let state = { value: "palabra", start: 0, end: 7 };
-
-    state = press(state, "bold");
-    state = press(state, "italic");
-    expect(state.value).toBe("***palabra***");
-
-    state = press(state, "bold");
-    expect(state.value).toBe("*palabra*");
-
-    state = press(state, "italic");
-    expect(state.value).toBe("palabra");
+  it("numera las listas seguidas y empieza de nuevo tras otro párrafo", () => {
+    expect(listNumbers(["[#]a", "[#]b", "texto", "[#]c", "[•]d"])).toEqual([1, 2, null, 1, null]);
   });
 
-  it("no incluye los espacios de los extremos dentro de la marca", () => {
-    expect(toggleInline("una palabra clave", 3, 12, "italic").value).toBe(
-      "una *palabra* clave"
+  it("sin marcas para los resúmenes, conservando viñetas y números", () => {
+    expect(stripInline("[centro]**Hola**\n[#]uno\n[#]__dos__\n[•]tres")).toBe(
+      "Hola\n1. uno\n2. dos\n• tres"
     );
   });
 
-  it("sin selección deja las marcas con el cursor en medio", () => {
-    const result = toggleInline("hola ", 5, 5, "bold");
-
-    expect(result.value).toBe("hola ****");
-    expect([result.start, result.end]).toEqual([7, 7]);
-  });
-
-  it("sin selección, pulsar otra vez borra las marcas vacías", () => {
-    let state = { value: "hola ", start: 5, end: 5 };
-
-    state = press(state, "bold");
-    state = press(state, "bold");
-    expect(state).toEqual({ value: "hola ", start: 5, end: 5 });
-
-    // Negrita y luego cursiva: tres asteriscos por lado; se quitan de a una.
-    state = press(press(state, "bold"), "italic");
-    expect(state.value).toBe("hola ******");
-    expect(state.start).toBe(8);
-
-    state = press(state, "bold");
-    expect(state.value).toBe("hola **");
-    state = press(state, "italic");
-    expect(state.value).toBe("hola ");
-  });
-
-  it("marca cada párrafo por separado, y los desmarca juntos", () => {
-    const text = "primero\n\nsegundo";
-    const marked = toggleInline(text, 0, text.length, "italic");
-
-    expect(marked.value).toBe("*primero*\n\n*segundo*");
-    expect(press(marked, "italic").value).toBe(text);
-  });
-
-  it("no toca un separador de escena", () => {
-    expect(toggleInline("***", 0, 3, "bold").value).toBe("***");
-    expect(toggleInline("uno\n***\ndos", 0, 11, "bold").value).toBe(
-      "**uno**\n***\n**dos**"
+  it("escribe el párrafo con su alineación y su número", () => {
+    expect(lineToHtml("[derecha][#]*Fin*", escape, 3)).toBe(
+      '<p style="text-align:right">3. <em>Fin</em></p>'
     );
+    expect(lineToHtml("<b>", escape)).toBe("<p>&lt;b&gt;</p>");
   });
 });

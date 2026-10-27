@@ -201,6 +201,7 @@ export default function CreateChapter() {
 
               <ChapterTextEditor
                 id="chapterContent"
+                ariaLabel="Texto del capítulo"
                 value={content}
                 onChange={setContent}
                 placeholder="Comienza a escribir tu capítulo..."

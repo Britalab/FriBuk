@@ -12,6 +12,7 @@ import { RemoveButton } from "../components/moderation/AdminModerationButtons";
 import AuthorTitle, { FeaturedBadges, FeaturedStoryChip } from "../components/badges/AuthorTitle";
 import { PublicAchievements } from "../components/badges/AchievementsPanel";
 import "../styles/reading-lists.css";
+import { stripInline } from "../utils/richText";
 import "../styles/moderation.css";
 
 function StoryCover({ story }) {
@@ -35,7 +36,9 @@ function StoryCard({ story, favorite = false }) {
         <p className="public-profile-story-genre">{story.genre || "Sin género"}</p>
         <h3>{story.title}</h3>
         <FeaturedStoryChip story={story} />
-        {story.description && <p className="public-profile-story-description">{story.description}</p>}
+        {story.description && (
+          <p className="public-profile-story-description">{stripInline(story.description)}</p>
+        )}
         <div className="public-profile-story-meta">
           <span>{story.chapter_count || 0} capítulos</span>
           {story.author_username && <span>Por {story.author_username}</span>}

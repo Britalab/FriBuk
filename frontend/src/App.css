@@ -6290,96 +6290,186 @@ button {
   min-height: 48px;
 }
 
-/* Cuadro de texto del capítulo, con negrita, cursiva y vista previa. */
-.chapter-text-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+/* Editor visual de capítulos y descripciones (RichTextEditor), con el
+   mismo aspecto que los demás campos. */
+.rich-text-editor {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-main);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-.chapter-text-tool {
-  width: 40px;
-  height: 40px;
+.rich-text-editor:hover {
+  border-color: var(--orange-soft);
+}
+
+.rich-text-editor:focus-within {
+  border-color: var(--burgundy);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 3px rgba(114, 47, 63, 0.10);
+}
+
+.rich-text-editor.is-loading {
+  min-height: 160px;
+  padding: 14px 15px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* La barra queda a la vista, bajo el menú, al bajar por un capítulo largo. */
+.rich-text-toolbar {
+  position: sticky;
+  top: 77px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 11px 11px 0 0;
+  background: var(--bg-card);
+}
+
+.rich-text-group {
+  display: flex;
+  gap: 2px;
+}
+
+.rich-text-group + .rich-text-group {
+  margin-left: 4px;
+  padding-left: 6px;
+  border-left: 1px solid var(--border);
+}
+
+.rich-text-tool {
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-card);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
   color: var(--text-main);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.05rem;
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.chapter-text-tool:hover:not(:disabled) {
-  border-color: var(--orange-soft);
+.rich-text-tool:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--burgundy);
 }
 
-.chapter-text-tool:disabled {
-  opacity: 0.45;
+.rich-text-tool.is-active {
+  border-color: var(--orange-soft);
+  background: var(--bg-soft);
+  color: var(--burgundy);
+}
+
+.rich-text-tool:disabled {
+  opacity: 0.35;
   cursor: default;
 }
 
-.chapter-text-preview-toggle {
-  min-height: 40px;
-  margin-left: auto;
-  padding: 0 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-card);
-  color: var(--burgundy);
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.chapter-text-preview-toggle:hover,
-.chapter-text-preview-toggle[aria-pressed="true"] {
-  border-color: var(--burgundy);
-  background: var(--bg-hover);
-}
-
-.chapter-text-tool:focus-visible,
-.chapter-text-preview-toggle:focus-visible {
+.rich-text-tool:focus-visible {
   outline: 2px solid var(--orange);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
-/* Se ve como el capítulo publicado. */
-.chapter-text-preview {
-  min-height: 300px;
-  padding: 20px 22px;
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  background: var(--bg-card);
+/* El texto se ve como el capítulo publicado. */
+.rich-text-content {
+  padding: 16px 18px;
   color: var(--text-main);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.08rem;
-  line-height: 1.9;
+  font-size: 1.05rem;
+  line-height: 1.8;
   overflow-wrap: anywhere;
+  outline: none;
 }
 
-/* Mismo espaciado entre párrafos que el lector. */
-.chapter-text-preview p {
-  margin: 0 0 1.7em;
+.rich-text-content p {
+  margin: 0 0 0.9em;
 }
 
-.chapter-text-preview p:last-child {
+.rich-text-content > :last-child,
+.rich-text-content li:last-child > p {
   margin-bottom: 0;
 }
 
-.chapter-text-preview-empty {
-  color: var(--text-secondary);
-  font-family: inherit;
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 0 0 0.9em;
+  padding-left: 1.8em;
+}
+
+.rich-text-content li > p {
+  margin-bottom: 0.3em;
+}
+
+.rich-text-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--placeholder);
+  pointer-events: none;
 }
 
 .chapter-text-editor .form-help {
   margin-top: 8px;
+}
+
+/* En el celular el menú cambia de alto: la barra va en su lugar. */
+@media (max-width: 560px) {
+  .rich-text-toolbar {
+    position: static;
+  }
+
+  .rich-text-tool {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* Listas al leer: cada punto es un párrafo (los comentarios se anclan a
+   párrafos), con la viñeta o el número al costado. */
+.rich-list-item {
+  position: relative;
+  padding-left: 1.8em;
+}
+
+.rich-list-item::before {
+  position: absolute;
+  left: 0;
+  width: 1.4em;
+  text-align: right;
+}
+
+.rich-list-item.is-bullet::before {
+  content: "•";
+}
+
+.rich-list-item.is-ordered::before {
+  content: attr(data-number);
+}
+
+/* Los puntos de una misma lista van más juntos que los párrafos. */
+.reader-text p.rich-list-item:has(+ p.rich-list-item) {
+  margin-bottom: 0.5em;
+}
+
+.rich-paragraph {
+  margin: 0 0 0.7em;
+}
+
+.rich-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.rich-paragraph.rich-list-item:has(+ .rich-list-item) {
+  margin-bottom: 0.25em;
 }
 
 .form-group textarea {

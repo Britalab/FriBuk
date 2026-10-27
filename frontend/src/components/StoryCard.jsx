@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
 import AuthorTitle, { FeaturedStoryChip } from "./badges/AuthorTitle";
+import { stripInline } from "../utils/richText";
 
 // Etiquetas que caben en la tarjeta sin recargarla.
 const CARD_TAG_LIMIT = 3;
@@ -60,7 +61,8 @@ export default function StoryCard({ story }) {
         </div>
 
         <p className="story-description">
-          {story.description ||
+          {/* Sin formato: en la tarjeta va un resumen. */}
+          {stripInline(story.description) ||
             "Esta historia todavía no tiene una descripción."}
         </p>
 

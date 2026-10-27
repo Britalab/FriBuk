@@ -12,6 +12,7 @@ import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
 import ReportButton from "../components/moderation/ReportButton";
 import { RemoveButton } from "../components/moderation/AdminModerationButtons";
 import ModerationDialog from "../components/moderation/ModerationDialog";
+import FormattedBlocks from "../components/reader/FormattedBlocks";
 import AuthorTitle, { FeaturedStoryChip } from "../components/badges/AuthorTitle";
 import "../styles/moderation.css";
 
@@ -790,10 +791,16 @@ export default function StoryDetail() {
 
             <div className="story-detail-description-block">
 
-              <p className="story-detail-description">
-                {story.description ||
-                  "Esta historia todavía no tiene una descripción."}
-              </p>
+              {story.description ? (
+                <FormattedBlocks
+                  text={story.description}
+                  className="story-detail-description"
+                />
+              ) : (
+                <p className="story-detail-description">
+                  Esta historia todavía no tiene una descripción.
+                </p>
+              )}
 
             </div>
 

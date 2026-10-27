@@ -4,6 +4,7 @@ import api from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import ReadingListForm from "../components/profile/ReadingListForm";
+import { stripInline } from "../utils/richText";
 import "../styles/reading-lists.css";
 
 function emptyPageData(listId) {
@@ -237,7 +238,9 @@ export default function ReadingListDetail() {
                     <p className="public-profile-story-genre">{story.genre || "Sin género"}</p>
                     <h3>{story.title}</h3>
                     {story.description && (
-                      <p className="public-profile-story-description">{story.description}</p>
+                      <p className="public-profile-story-description">
+                        {stripInline(story.description)}
+                      </p>
                     )}
                     <div className="public-profile-story-meta">
                       <span>{story.chapter_count || 0} capítulos</span>

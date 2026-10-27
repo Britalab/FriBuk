@@ -4,6 +4,7 @@ import api from "../api/client";
 import { useToast } from "../hooks/useToast";
 import ContentWarningFields from "../components/story/ContentWarningFields";
 import TagEditor from "../components/story/TagEditor";
+import ChapterTextEditor from "../components/story/ChapterTextEditor";
 import WritingScheduleFields from "../components/story/WritingScheduleFields";
 import { DEFAULT_SCHEDULE_HOUR, browserTimeZone } from "../utils/writingSchedule";
 import { genreOptions } from "../utils/genres";
@@ -316,15 +317,15 @@ export default function CreateStory() {
                 </span>
               </div>
 
-              <textarea
+              <ChapterTextEditor
                 id="description"
+                ariaLabel="Descripción"
                 value={description}
-                onChange={(event) =>
-                  setDescription(event.target.value)
-                }
+                onChange={setDescription}
                 placeholder="Cuéntales a los lectores de qué trata tu historia..."
                 rows={6}
                 maxLength={1000}
+                help={false}
               />
             </div>
 

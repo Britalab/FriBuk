@@ -9,6 +9,7 @@ import useReadingTime from "../hooks/useReadingTime";
 import useHideOnScroll from "../hooks/useHideOnScroll";
 import { anchorMatchesText, paragraphAnchor } from "../utils/textAnchors";
 import ReaderParagraph from "../components/reader/ReaderParagraph";
+import { listNumbers } from "../utils/richText";
 import ChapterGeneralComments from "../components/reader/ChapterGeneralComments";
 import ChapterCommentsPanel from "../components/reader/ChapterCommentsPanel";
 import ChapterSwitcher from "../components/reader/ChapterSwitcher";
@@ -158,6 +159,8 @@ export default function ChapterReader() {
     () => (chapter?.content ? chapter.content.split("\n") : []),
     [chapter]
   );
+  // Número de cada punto de las listas numeradas.
+  const paragraphNumbers = useMemo(() => listNumbers(paragraphs), [paragraphs]);
 
   const {
     repliesByParent,
@@ -633,6 +636,7 @@ export default function ChapterReader() {
                 key={index}
                 index={index}
                 text={paragraph}
+                number={paragraphNumbers[index]}
                 count={countByParagraph.get(index) || 0}
                 isActive={index === activeIndex}
                 onOpen={openParagraph}

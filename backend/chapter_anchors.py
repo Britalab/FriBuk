@@ -224,15 +224,24 @@ SAME_PLACE_SIMILARITY = 0.7
 MOVED_SIMILARITY = 0.85
 MOVED_SIMILARITY_MARGIN = 0.1
 
-# Marcas de negrita y cursiva: *así*, **así** o ***así*** (las mismas reglas
-# que frontend/src/utils/richText.js).
+# Marcas de formato, con las mismas reglas que frontend/src/utils/richText.js:
+# negrita y cursiva (*así*, **así**, ***así***), subrayado (__así__), y al
+# inicio del párrafo la alineación ([centro]...) y la lista ([•] o [#]).
 INLINE_MARKS = re.compile(r"(\*{1,3})(?=[^\s*])([^*\n]*?[^\s*])\1(?!\*)")
+UNDERLINE_MARKS = re.compile(r"(?<!\w)__(?=[^\s_])([^\n]*?[^\s_])__(?!\w)")
+BLOCK_MARKS = re.compile(r"^(?:\[(?:centro|derecha|justificado)\])?(?:\[(?:•|#)\])?")
+# Separador invisible entre dos formatos que se tocan.
+WORD_JOINER = "\u2060"
 
 
 def comparable_text(text: str | None) -> str:
     # El texto sin marcas de formato y con los espacios unificados: lo que
-    # de verdad dice el párrafo.
-    return " ".join(INLINE_MARKS.sub(r"\2", text or "").split())
+    # de verdad dice el párrafo. Centrar un párrafo o subrayar una palabra no
+    # lo convierte en otro: sus comentarios siguen en él.
+    text = BLOCK_MARKS.sub("", text or "")
+    text = INLINE_MARKS.sub(r"\2", UNDERLINE_MARKS.sub(r"\1", text))
+    # El separador se quita al final: antes, separa marcas que se tocan.
+    return " ".join(text.replace(WORD_JOINER, "").split())
 
 
 def is_paragraph_anchor(anchor: dict) -> bool:
