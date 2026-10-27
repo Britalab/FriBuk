@@ -71,6 +71,17 @@ class SeoTestCase(unittest.TestCase):
                     "chapter_number": 1, "title": "Oculto", "content": "Secreto.",
                     "status": "published"
                 }
+            ],
+            "writing_tips": [
+                {
+                    "id": str(uuid.uuid4()), "slug": "como-crear-tension",
+                    "status": "published", "published_at": "2026-10-27",
+                    "updated_at": "2026-10-28T09:00:00+00:00"
+                },
+                {
+                    "id": str(uuid.uuid4()), "slug": "consejo-en-borrador",
+                    "status": "draft", "updated_at": "2026-10-28T09:00:00+00:00"
+                }
             ]
         }
         self.original = main.supabase_admin
@@ -164,6 +175,13 @@ class SeoTestCase(unittest.TestCase):
             body
         )
         self.assertIn(f"/chapters/{CHAPTER_ONE_ID}</loc></url>", body)
+        self.assertIn("<loc>https://www.fribuk.com/consejos</loc>", body)
+        self.assertIn(
+            "<loc>https://www.fribuk.com/consejos/como-crear-tension</loc>"
+            "<lastmod>2026-10-28</lastmod>",
+            body
+        )
+        self.assertNotIn("consejo-en-borrador", body)
 
         # Ni borradores ni capítulos de historias ocultas.
         for hidden in (DRAFT_STORY_ID, DRAFT_CHAPTER_ID, HIDDEN_CHAPTER_ID):

@@ -237,6 +237,7 @@ button {
 /* Los tres botones de navegación comparten forma y tamaño. */
 .navbar-authors,
 .navbar-forum,
+.navbar-tips,
 .navbar-create-story {
   display: inline-flex;
   align-items: center;
@@ -264,7 +265,8 @@ button {
 }
 
 .navbar-authors:hover,
-.navbar-forum:hover {
+.navbar-forum:hover,
+.navbar-tips:hover {
   border-color: var(--orange-soft);
   background: var(--bg-hover);
   color: var(--burgundy-dark);
@@ -410,6 +412,13 @@ button {
   outline-offset: 2px;
 }
 
+/* Círculo de "Consejos" (📏): solo en pantallas angostas, donde reemplaza
+   al botón con texto. */
+.navbar-tips-circle {
+  display: none;
+  text-decoration: none;
+}
+
 /* Responsive */
 /* ========================================
    RESPONSIVE
@@ -432,6 +441,14 @@ button {
   .navbar-link {
     padding: 8px 9px;
     font-size: 0.85rem;
+  }
+
+  .navbar-tips {
+    display: none;
+  }
+
+  .navbar-tips-circle {
+    display: flex;
   }
 
   .navbar-authors,

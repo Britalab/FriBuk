@@ -90,6 +90,10 @@ export default function Navbar() {
               Foro 💬
             </Link>
 
+            <Link to="/consejos" className="navbar-tips">
+              Consejos 📏
+            </Link>
+
             {user && (
               <Link
                 to="/create-story"
@@ -120,6 +124,16 @@ export default function Navbar() {
           >
             {darkMode ? "☀️" : "🌙"}
           </button>
+
+          {/* En el celular, "Consejos" pasa a un círculo junto al tema. */}
+          <Link
+            to="/consejos"
+            className="theme-toggle navbar-tips-circle"
+            aria-label="Consejos para escribir"
+            title="Consejos para escribir"
+          >
+            📏
+          </Link>
 
           {user ? (
             <>

@@ -8,6 +8,9 @@ import StoryCard from "../components/StoryCard";
 import UserSearchResult from "../components/UserSearchResult";
 import { useUserSearch } from "../hooks/useUserSearch";
 import SiteFooter from "../components/SiteFooter";
+import TiaFribuk from "../components/tips/TiaFribuk";
+import { TIPS_AUTHOR, tipNumber } from "../data/consejos";
+import "../styles/writing-tips.css";
 import {
   fandomList,
   popularTags,
@@ -44,6 +47,7 @@ export default function Feed() {
   const [loadError, setLoadError] = useState("");
   const [sortBy, setSortBy] = useState("recommended");
   const [forumTopics, setForumTopics] = useState([]);
+  const [tips, setTips] = useState([]);
 
   // Búsqueda
   const [search, setSearch] = useState("");
@@ -114,6 +118,21 @@ export default function Feed() {
       )
       .catch((error) => {
         console.error("Error al cargar temas del foro:", error);
+      });
+  }, []);
+
+  // Consejos de tía FriBuk para la sección del inicio (todos los
+  // publicados). Si falla o no hay ninguno, la sección no se muestra.
+  useEffect(() => {
+    api
+      .get("/tips")
+      .then((response) =>
+        setTips(
+          (response.data.tips || []).filter((tip) => tip.status === "published")
+        )
+      )
+      .catch((error) => {
+        console.error("Error al cargar los consejos:", error);
       });
   }, []);
 
@@ -777,6 +796,45 @@ export default function Feed() {
             )}
           </div>
         </section>
+
+        {/* Consejos para escribir */}
+        {tips.length > 0 && (
+          <section className="feed-highlight">
+            <div className="section-heading">
+              <div>
+                <h2>Consejos para escribir</h2>
+
+                <p>
+                  Ideas con un poco de sarcasmo y mucha experiencia,
+                  de {TIPS_AUTHOR}.
+                </p>
+              </div>
+
+              <Link to="/consejos" className="user-strip-more">
+                Ver todos →
+              </Link>
+            </div>
+
+            <div className="home-tips">
+              {tips.map((tip) => (
+                <Link
+                  key={tip.id}
+                  to={`/consejos/${tip.slug}`}
+                  className="home-tip-card"
+                >
+                  <TiaFribuk pose={tip.pose} />
+
+                  <span className="home-tip-info">
+                    <span className="home-tip-number">
+                      Consejo {tipNumber(tip.position)}
+                    </span>
+                    <span className="home-tip-title">{tip.title}</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
       </div>
 

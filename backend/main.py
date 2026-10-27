@@ -7803,6 +7803,11 @@ import schedules  # noqa: E402
 
 app.include_router(schedules.router)
 
+# Consejos para escribir de tía FriBuk (/consejos): ver tips.py.
+import tips  # noqa: E402
+
+app.include_router(tips.router)
+
 # Avisos para publicar el primer capítulo, por inactividad y en los días de
 # escritura: ver reminders.py.
 import reminders  # noqa: E402

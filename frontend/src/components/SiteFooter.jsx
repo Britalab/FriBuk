@@ -21,6 +21,7 @@ const FOOTER_COLUMNS = [
     title: "Ayuda",
     links: [
       { to: "/preguntas-frecuentes", label: "Preguntas frecuentes" },
+      { to: "/consejos", label: "Consejos para escribir" },
       { to: "/support", label: "Centro de ayuda" },
       { to: "/instalar", label: "Instalar la app" }
     ]

@@ -11,5 +11,7 @@ Disallow: /login
 Disallow: /register
 Disallow: /recuperar
 Disallow: /restablecer
+Disallow: /consejos/nuevo
+Disallow: /consejos/editar/
 
 Sitemap: https://www.fribuk.com/sitemap.xml

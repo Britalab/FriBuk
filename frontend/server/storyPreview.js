@@ -12,8 +12,8 @@
 import { lineToHtml, listNumbers, stripInline } from "../src/utils/richText.js";
 
 const SITE_NAME = "FriBuk";
-const DEFAULT_API_URL = "https://api.fribuk.com";
-const API_TIMEOUT_MS = 4000;
+export const DEFAULT_API_URL = "https://api.fribuk.com";
+export const API_TIMEOUT_MS = 4000;
 const DESCRIPTION_MAX_LENGTH = 180;
 
 export function escapeHtml(value) {
@@ -38,7 +38,7 @@ export function excerpt(text, maxLength = DESCRIPTION_MAX_LENGTH) {
 }
 
 // Párrafos con su formato: alineación, listas, negrita, cursiva y subrayado.
-function paragraphs(text) {
+export function paragraphs(text) {
   const lines = String(text ?? "").split("\n");
   const numbers = listNumbers(lines);
   return lines

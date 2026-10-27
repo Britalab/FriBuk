@@ -45,6 +45,9 @@ import Copyright from "./pages/Copyright";
 import Privacy from "./pages/Privacy";
 import Moderation from "./pages/Moderation";
 import Faq from "./pages/Faq";
+import WritingTips from "./pages/WritingTips";
+import WritingTip from "./pages/WritingTip";
+import WritingTipEditor from "./pages/WritingTipEditor";
 import Install from "./pages/Install";
 import MentionRedirect from "./pages/MentionRedirect";
 
@@ -215,6 +218,11 @@ function App() {
           <Route path="/privacidad" element={<Privacy />} />
           <Route path="/moderacion" element={<Moderation />} />
           <Route path="/preguntas-frecuentes" element={<Faq />} />
+          <Route path="/consejos" element={<WritingTips />} />
+          <Route path="/consejos/:slug" element={<WritingTip />} />
+          {/* Solo la cuenta admin: el backend lo exige al guardar. */}
+          <Route path="/consejos/nuevo" element={<WritingTipEditor />} />
+          <Route path="/consejos/editar/:slug" element={<WritingTipEditor />} />
           <Route path="/instalar" element={<Install />} />
           <Route path="/u/:username" element={<MentionRedirect />} />
 

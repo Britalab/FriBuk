@@ -1,0 +1,802 @@
+/* =========================================
+   CONSEJOS PARA ESCRIBIR (/consejos)
+   ========================================= */
+
+.writing-tips-page {
+  /* Papel de tía FriBuk: el mismo en modo claro y oscuro (ver TiaFribuk). */
+  --tia-paper: #f4ecdf;
+  --tia-paper-edge: rgba(114, 47, 63, 0.22);
+
+  min-height: calc(100vh - 72px);
+  padding: 44px 20px 0;
+  background: var(--bg-main);
+}
+
+.writing-tips-page .home-footer {
+  margin-top: 56px;
+}
+
+/* ---------- Tía FriBuk ---------- */
+
+.tia-fribuk {
+  --tia-size: 64px;
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--tia-paper-edge);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.55), transparent 60%),
+    var(--tia-paper);
+}
+
+.tia-fribuk img {
+  display: block;
+}
+
+/* Círculo: se ve de los hombros hacia arriba. */
+.tia-fribuk.is-avatar {
+  width: var(--tia-size);
+  height: var(--tia-size);
+  border-radius: 50%;
+}
+
+/* Se acerca al rostro: las poses traen el cuerpo entero o medio cuerpo. */
+.tia-fribuk.is-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0;
+  transform: scale(1.55);
+  transform-origin: 50% 12%;
+}
+
+/* De cuerpo entero la cabeza queda más arriba y más chica. */
+.tia-fribuk.is-avatar img[src$="completa.webp"] {
+  transform: scale(2.6);
+  transform-origin: 50% 4%;
+}
+
+/* Recuadro: la pose entera, apoyada en el borde inferior. */
+.tia-fribuk.is-figure {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 22px;
+  box-shadow: 0 14px 34px rgba(40, 30, 25, 0.10);
+}
+
+.tia-fribuk.is-figure img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* ---------- Encabezado del índice ---------- */
+
+.writing-tips-header {
+  width: min(880px, 100%);
+  margin: 0 auto 36px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  align-items: center;
+  gap: 36px;
+}
+
+.writing-tips-kicker {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--burgundy);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.writing-tips-header h1 {
+  margin: 0 0 14px;
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.15;
+  letter-spacing: -0.8px;
+}
+
+.writing-tips-tagline {
+  margin: 0 0 14px;
+  color: var(--burgundy);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.writing-tips-header p:not(.writing-tips-tagline) {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.writing-tips-hero {
+  width: 260px;
+  height: 320px;
+  padding-top: 12px;
+}
+
+/* ---------- Tarjetas ---------- */
+
+.writing-tips-list {
+  width: min(880px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.writing-tip-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 20px;
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg-card);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.writing-tip-card:hover {
+  border-color: var(--orange-soft);
+  box-shadow: 0 12px 30px rgba(40, 30, 25, 0.08);
+  transform: translateY(-2px);
+}
+
+.writing-tip-card:focus-visible,
+.writing-tip-mini:focus-visible,
+.writing-tip-back:focus-visible,
+.writing-tips-cta:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.writing-tip-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.writing-tip-side .tia-fribuk {
+  --tia-size: 72px;
+}
+
+.writing-tip-number {
+  color: var(--orange);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.writing-tip-content h2 {
+  margin: 2px 0 8px;
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.writing-tip-content p {
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.writing-tip-more {
+  color: var(--burgundy);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+/* ---------- Invitación a escribir ---------- */
+
+.writing-tips-footer {
+  width: min(880px, 100%);
+  margin: 32px auto 0;
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid var(--orange-soft);
+  border-radius: 20px;
+  background: var(--bg-soft);
+}
+
+.writing-tips-footer-avatar {
+  --tia-size: 112px;
+}
+
+.writing-tips-footer h2 {
+  margin: 0 0 8px;
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+}
+
+.writing-tips-quote {
+  margin: 0 0 16px;
+  color: var(--burgundy);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.08rem;
+  font-style: italic;
+  line-height: 1.55;
+}
+
+.writing-tips-quote cite {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-style: normal;
+}
+
+.writing-tips-footer.is-compact {
+  width: auto;
+  margin-top: 40px;
+  padding: 22px;
+}
+
+.writing-tips-footer.is-compact .writing-tips-footer-avatar {
+  --tia-size: 92px;
+}
+
+.writing-tips-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: var(--burgundy);
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.writing-tips-cta:hover {
+  background: var(--burgundy-dark);
+}
+
+[data-theme="dark"] .writing-tips-cta {
+  color: #1c1919;
+}
+
+/* ---------- Artículo ---------- */
+
+.writing-tip-article {
+  width: min(780px, 100%);
+  margin: 0 auto;
+  padding: 40px 44px 44px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--bg-card);
+  box-shadow: 0 16px 45px rgba(40, 30, 25, 0.06);
+}
+
+.writing-tip-back {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: var(--burgundy);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.writing-tip-back:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.writing-tip-article-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 8px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.writing-tip-article-header h1 {
+  margin: 0 0 14px;
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1.2;
+  letter-spacing: -0.6px;
+}
+
+.writing-tip-figure {
+  width: 150px;
+  height: 180px;
+  padding-top: 8px;
+}
+
+.writing-tip-byline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.writing-tip-byline strong {
+  color: var(--text-main);
+}
+
+.writing-tip-byline-avatar {
+  --tia-size: 34px;
+}
+
+.writing-tip-section {
+  margin-top: 28px;
+}
+
+.writing-tip-section h2 {
+  margin: 0 0 12px;
+  color: var(--burgundy);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  line-height: 1.35;
+}
+
+/* Se lee como un capítulo: misma letra y espaciado. */
+.writing-tip-text {
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.1rem;
+  line-height: 1.85;
+}
+
+.writing-tip-text .rich-paragraph {
+  margin-bottom: 1em;
+}
+
+.writing-tip-text .rich-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.writing-tip-text .rich-list-item::before {
+  color: var(--burgundy);
+}
+
+/* ---------- Más consejos ---------- */
+
+.writing-tip-more-list {
+  width: min(780px, 100%);
+  margin: 36px auto 0;
+}
+
+.writing-tip-more-list h2 {
+  margin: 0 0 14px;
+  color: var(--text-main);
+  font-size: 1.1rem;
+}
+
+.writing-tip-more-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.writing-tip-mini {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.writing-tip-mini .tia-fribuk {
+  --tia-size: 46px;
+}
+
+.writing-tip-mini:hover {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+/* ---------- Sección del inicio (Feed) ---------- */
+
+/* En computador, dos filas de cinco; en pantallas angostas, una fila que
+   se desliza de lado para no alargar el inicio. */
+.home-tips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-tip-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  text-align: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-tip-card .tia-fribuk {
+  --tia-size: 58px;
+}
+
+.home-tip-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--orange);
+  box-shadow: 0 8px 22px rgba(41, 37, 37, 0.08);
+}
+
+.home-tip-card:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.home-tip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-tip-number {
+  color: var(--orange);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-tip-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+@media (max-width: 1000px) {
+  .home-tips {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    /* Margen para que la tarjeta no se recorte al levantarse. */
+    padding: 4px 2px 10px;
+  }
+
+  .home-tip-card {
+    flex: 0 0 170px;
+    scroll-snap-align: start;
+  }
+}
+
+/* ---------- Pantallas medianas y celular ---------- */
+
+@media (max-width: 760px) {
+  .writing-tips-header {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    text-align: center;
+  }
+
+  .writing-tips-hero {
+    order: -1;
+    justify-self: center;
+    width: 190px;
+    height: 230px;
+  }
+
+  .writing-tip-more-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .writing-tips-page {
+    padding: 24px 14px 0;
+  }
+
+  .writing-tip-card {
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: 14px;
+    padding: 18px 16px;
+  }
+
+  .writing-tip-side .tia-fribuk {
+    --tia-size: 56px;
+  }
+
+  .writing-tip-article {
+    padding: 26px 20px 28px;
+    border-radius: 18px;
+  }
+
+  .writing-tip-article-header {
+    grid-template-columns: minmax(0, 1fr) 84px;
+    gap: 14px;
+  }
+
+  .writing-tip-figure {
+    width: 84px;
+    height: 104px;
+    border-radius: 16px;
+  }
+
+  .writing-tips-footer {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .writing-tip-card {
+    transition: none;
+  }
+
+  .writing-tip-card:hover {
+    transform: none;
+  }
+}
+
+/* ---------- Estados de carga ---------- */
+
+.writing-tips-state {
+  width: min(780px, 100%);
+  margin: 24px auto;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* ---------- Edición (solo la cuenta admin) ---------- */
+
+.writing-tips-admin-new {
+  margin-top: 18px;
+}
+
+.writing-tip-card-wrap {
+  position: relative;
+}
+
+.writing-tip-edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--burgundy);
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.writing-tip-card-wrap .writing-tip-edit {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
+.writing-tip-edit:hover {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.writing-tip-edit:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.writing-tip-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.writing-tip-toolbar .writing-tip-back {
+  margin-bottom: 0;
+}
+
+.writing-tip-draft {
+  display: inline-block;
+  margin: 0 0 6px 8px;
+  padding: 2px 9px;
+  border: 1px dashed var(--orange);
+  border-radius: 999px;
+  color: var(--orange);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.writing-tip-content > .writing-tip-draft {
+  margin-left: 0;
+}
+
+/* Editor de un consejo */
+
+.writing-tip-slug-field {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-main);
+  overflow: hidden;
+}
+
+.writing-tip-slug-field span {
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 14px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.form-group .writing-tip-slug-field input {
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding-left: 2px;
+}
+
+.writing-tip-warning {
+  color: #a34b45;
+}
+
+.form-counter.is-over {
+  color: #a34b45;
+  font-weight: 700;
+}
+
+.form-label-text {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.writing-tip-poses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 10px;
+}
+
+.writing-tip-pose {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.writing-tip-pose .tia-fribuk.is-figure {
+  width: 72px;
+  height: 88px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.writing-tip-pose:hover {
+  border-color: var(--orange-soft);
+}
+
+.writing-tip-pose.is-selected {
+  border-color: var(--burgundy);
+  background: var(--bg-soft);
+}
+
+.writing-tip-pose:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.writing-tip-position input {
+  max-width: 120px;
+}
+
+.writing-tip-section-editor {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-main);
+}
+
+.writing-tip-section-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--burgundy);
+}
+
+.writing-tip-section-bar div {
+  display: flex;
+  gap: 6px;
+}
+
+.writing-tip-section-bar button,
+.writing-tip-add-section {
+  min-height: 34px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--burgundy);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.writing-tip-section-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.writing-tip-section-bar button:hover:not(:disabled),
+.writing-tip-add-section:hover {
+  border-color: var(--orange-soft);
+  background: var(--bg-hover);
+}
+
+.writing-tip-add-section {
+  width: 100%;
+  margin-top: 16px;
+  min-height: 44px;
+  border-style: dashed;
+}
+
+.writing-tip-delete {
+  margin-right: auto;
+  color: #a34b45;
+}
+
+[data-theme="dark"] .writing-tip-delete,
+[data-theme="dark"] .writing-tip-warning,
+[data-theme="dark"] .form-counter.is-over {
+  color: #e59a94;
+}

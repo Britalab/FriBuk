@@ -38,7 +38,8 @@ SITEMAP_PAGE_SIZE = 1000
 SITEMAP_MAX_URLS = 5000
 # Páginas públicas que no dependen de la base de datos.
 SITEMAP_STATIC_PATHS = (
-    "/", "/autores", "/forum", "/preguntas-frecuentes", "/terminos", "/comunidad", "/contenido",
+    "/", "/autores", "/forum", "/consejos", "/preguntas-frecuentes", "/terminos", "/comunidad",
+    "/contenido",
     "/derechos-autor", "/privacidad", "/moderacion"
 )
 
@@ -294,6 +295,18 @@ def get_sitemap():
         entries.append(sitemap_entry(
             f"/stories/{chapter['story_id']}/chapters/{chapter['id']}",
             chapter.get("updated_at") or chapter.get("created_at")
+        ))
+
+    # Consejos para escribir publicados (ver tips.py).
+    tips = fetch_all(
+        "writing_tips", "slug, status, updated_at, published_at",
+        lambda query: query.eq("status", "published")
+    )
+
+    for tip in tips:
+        entries.append(sitemap_entry(
+            f"/consejos/{tip['slug']}",
+            tip.get("updated_at") or tip.get("published_at")
         ))
 
     body = (
