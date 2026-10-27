@@ -82,8 +82,20 @@ export default function Navbar() {
           {/* Navegación principal */}
           <div className="navbar-links">
 
+            {/* En el celular van cuatro botones en una fila: textos cortos. */}
+            {user && (
+              <Link
+                to="/create-story"
+                className="navbar-create-story"
+              >
+                <span className="navbar-label-long">Crear historia ✏️</span>
+                <span className="navbar-label-short">Crear ✏️</span>
+              </Link>
+            )}
+
             <Link to="/autores" className="navbar-authors">
-              Buscar autores
+              <span className="navbar-label-long">Buscar autores</span>
+              <span className="navbar-label-short">Autores</span>
             </Link>
 
             <Link to="/forum" className="navbar-forum">
@@ -93,15 +105,6 @@ export default function Navbar() {
             <Link to="/consejos" className="navbar-tips">
               Consejos 📏
             </Link>
-
-            {user && (
-              <Link
-                to="/create-story"
-                className="navbar-create-story"
-              >
-                Crear historia ✏️
-              </Link>
-            )}
 
           </div>
         {/* Usuario */}
@@ -124,16 +127,6 @@ export default function Navbar() {
           >
             {darkMode ? "☀️" : "🌙"}
           </button>
-
-          {/* En el celular, "Consejos" pasa a un círculo junto al tema. */}
-          <Link
-            to="/consejos"
-            className="theme-toggle navbar-tips-circle"
-            aria-label="Consejos para escribir"
-            title="Consejos para escribir"
-          >
-            📏
-          </Link>
 
           {user ? (
             <>

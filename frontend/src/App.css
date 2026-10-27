@@ -355,6 +355,7 @@ button {
 .navbar-button {
   border: none;
   padding: 9px 14px;
+  white-space: nowrap;
 
   background: transparent;
   color: var(--burgundy);
@@ -412,11 +413,9 @@ button {
   outline-offset: 2px;
 }
 
-/* Círculo de "Consejos" (📏): solo en pantallas angostas, donde reemplaza
-   al botón con texto. */
-.navbar-tips-circle {
+/* Textos cortos de los botones, solo en el celular. */
+.navbar-label-short {
   display: none;
-  text-decoration: none;
 }
 
 /* Responsive */
@@ -424,45 +423,15 @@ button {
    RESPONSIVE
    ======================================== */
 
-@media (max-width: 760px) {
-  .navbar-container {
-    padding: 0 18px;
-    gap: 12px;
-  }
-
-  .navbar-logo-text {
-    display: none;
-  }
-
-  .navbar-links {
-    gap: 2px;
-  }
-
-  .navbar-link {
-    padding: 8px 9px;
-    font-size: 0.85rem;
-  }
-
-  .navbar-tips {
-    display: none;
-  }
-
-  .navbar-tips-circle {
-    display: flex;
-  }
-
-  .navbar-authors,
-  .navbar-forum,
-  .navbar-create-story {
-    min-height: 36px;
-    padding: 7px 9px;
-    font-size: 0.78rem;
-  }
-
+/* Con sesión, en una sola fila no cabe todo bajo ~1250 px: primero se
+   quita el saludo y luego "Mi perfil" queda solo como círculo. */
+@media (max-width: 1280px) {
   .navbar-greeting {
     display: none;
   }
+}
 
+@media (max-width: 1100px) {
   .navbar-profile {
     width: 36px;
     height: 36px;
@@ -475,13 +444,9 @@ button {
   .navbar-profile-label {
     display: none;
   }
-
-  .navbar-register {
-    padding: 9px 12px;
-  }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 1024px) {
   /* Dos filas: logo + acciones de usuario arriba, navegación abajo. */
   .navbar-container {
     flex-wrap: wrap;
@@ -492,6 +457,10 @@ button {
 
   .navbar-logo {
     order: 0;
+  }
+
+  .navbar-logo-text {
+    display: none;
   }
 
   .navbar-logo-image {
@@ -541,12 +510,24 @@ button {
 
   .navbar-authors,
   .navbar-forum,
+  .navbar-tips,
   .navbar-create-story {
     flex: 1 1 0;
     min-width: 0;
     min-height: 34px;
     padding: 6px;
     font-size: 0.76rem;
+  }
+}
+
+/* En el celular caben cuatro botones por fila solo con textos cortos. */
+@media (max-width: 560px) {
+  .navbar-label-long {
+    display: none;
+  }
+
+  .navbar-label-short {
+    display: inline;
   }
 }
 
