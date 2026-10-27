@@ -10,6 +10,7 @@ import InstallBanner from "./components/InstallBanner";
 import InstallButton from "./components/InstallButton";
 import PushNavigation from "./components/PushNavigation";
 import MetaPixel from "./components/MetaPixel";
+import ScrollToTop from "./components/ScrollToTop";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/Login";
@@ -66,6 +67,7 @@ function App() {
         <InstallBanner />
         <PushNavigation />
         <MetaPixel />
+        <ScrollToTop />
 
         <Routes>
           <Route path="/" element={<Feed />} />
