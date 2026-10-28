@@ -71,9 +71,12 @@
   gap: 24px;
 }
 
+/* minmax(0, 1fr): la fila de categorías que se desliza en el celular no debe
+   ensanchar los pasos más allá de la pantalla. */
 .customize-options {
   min-width: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
