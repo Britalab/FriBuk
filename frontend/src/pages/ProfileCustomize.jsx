@@ -117,7 +117,7 @@ function Preview({ customization, user, profileInfo }) {
 
 export default function ProfileCustomize() {
   const { user } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, dismissToast } = useToast();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(emptyCustomization);
   const [draft, setDraft] = useState(emptyCustomization);
@@ -251,7 +251,18 @@ export default function ProfileCustomize() {
       setSaved(stored);
       setDraft(stored);
       setNotice("");
-      showToast("Tu espacio se guardó correctamente.");
+      let toastId;
+      toastId = showToast(
+        <>
+          <span className="app-toast-small">Tu espacio se guardó correctamente.</span>
+          <span className="app-toast-line">
+            Haz click en{" "}
+            <Link to={`/usuario/${user?.id}`} onClick={() => dismissToast(toastId)}>
+              ver mi perfil público
+            </Link>
+          </span>
+        </>
+      );
     } catch (requestError) {
       console.error("Error al guardar la personalización:", requestError);
       const detail = requestError.response?.data?.detail;

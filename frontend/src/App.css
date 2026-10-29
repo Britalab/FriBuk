@@ -8362,6 +8362,23 @@ button {
   line-height: 1.45;
 }
 
+.app-toast-small {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.app-toast-line {
+  display: block;
+}
+
+.app-toast p a {
+  color: var(--burgundy);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .app-toast-close {
   width: 28px;
   height: 28px;
