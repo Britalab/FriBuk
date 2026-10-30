@@ -3570,12 +3570,6 @@ button {
   font-size: 0.9rem;
 }
 
-.story-count {
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
 /* Tipografía del inicio: Merriweather en los encabezados e Inter en la
    interfaz. Las fuentes las carga Feed.jsx. */
 .feed-page {

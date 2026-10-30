@@ -682,13 +682,6 @@ export default function Feed() {
                 Descubre nuevas historias y conoce a sus autores.
               </p>
             </div>
-
-            <span className="story-count">
-              {filteredStories.length}{" "}
-              {filteredStories.length === 1
-                ? "historia"
-                : "historias"}
-            </span>
           </div>
 
           {loadError ? (
