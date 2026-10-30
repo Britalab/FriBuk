@@ -8870,6 +8870,17 @@ button {
   font-weight: 500;
 }
 
+/* Votos y corazones del tema, separados entre sí. */
+.forum-topic-interactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 6px;
+  color: #8a817a;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 /* Tema fijado por la administración: va primero en la lista. */
 .forum-topic-card.is-pinned {
   border-color: #d96a32;

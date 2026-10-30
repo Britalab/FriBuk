@@ -114,8 +114,21 @@ export default function Feed() {
     api
       .get("/forum/topics")
       .then((response) =>
-        setForumTopics(response.data.slice(0, HIGHLIGHT_LIMIT))
+        // Contadores de votos y corazones de cada tema; si fallan,
+        // el tema se muestra con ceros.
+        Promise.all(
+          response.data.slice(0, HIGHLIGHT_LIMIT).map((topic) =>
+            api
+              .get(`/forum/topics/${topic.id}/interactions`)
+              .then((interactions) => ({
+                ...topic,
+                interactions: interactions.data,
+              }))
+              .catch(() => topic)
+          )
+        )
       )
+      .then(setForumTopics)
       .catch((error) => {
         console.error("Error al cargar temas del foro:", error);
       });
@@ -778,6 +791,14 @@ export default function Feed() {
                     <span className="forum-topic-user">
                       @{topic.username || "Usuario"}
                     </span>
+
+                    <div className="forum-topic-interactions">
+                      <span>👍 {topic.interactions?.votes?.up || 0}</span>
+                      <span>👎 {topic.interactions?.votes?.down || 0}</span>
+                      <span>
+                        ❤️ {topic.interactions?.reactions?.heart || 0}
+                      </span>
+                    </div>
                   </div>
 
                   <span className="forum-topic-arrow">
