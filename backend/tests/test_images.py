@@ -82,6 +82,46 @@ class OptimizeImageTests(unittest.TestCase):
         self.assertEqual(result.size, (200, 400))
         self.assertNotIn(0x0112, result.getexif())
 
+    def test_huge_jpeg_photo_is_opened_reduced(self):
+        # 8000×6000 = 48 megapíxeles, como el modo de alta resolución de
+        # un celular: se abre reducida en lugar de rechazarse.
+        original = encode(Image.new("RGB", (8000, 6000), "orange"), "JPEG")
+
+        data, _content_type, _extension = images.optimize_image(
+            original, images.FORUM_IMAGE
+        )
+
+        self.assertEqual(decode(data).size, (1600, 1200))
+
+    def test_reduced_jpeg_keeps_enough_size_after_rotation(self):
+        # Acostada y marcada para girar: el lado corto pasa a ser el ancho.
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        original = encode(
+            Image.new("RGB", (8000, 6000), "green"), "JPEG", exif=exif
+        )
+
+        data, _content_type, _extension = images.optimize_image(
+            original, images.STORY_COVER
+        )
+
+        self.assertEqual(decode(data).size, (600, 800))
+
+    def test_huge_png_is_rejected_as_too_large(self):
+        original = encode(Image.new("L", (6000, 5000)), "PNG")
+
+        with self.assertRaises(images.ImageTooLarge):
+            images.optimize_image(original, images.AVATAR)
+
+    def test_transparent_image_has_lower_limit(self):
+        # 4000×4000 = 16 megapíxeles: pasa sin transparencia, no con ella.
+        opaque = encode(Image.new("RGB", (4000, 4000), "white"), "PNG")
+        transparent = encode(Image.new("RGBA", (4000, 4000)), "PNG")
+
+        images.optimize_image(opaque, images.AVATAR)
+        with self.assertRaises(images.ImageTooLarge):
+            images.optimize_image(transparent, images.AVATAR)
+
     def test_broken_file_is_rejected(self):
         broken = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 

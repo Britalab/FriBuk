@@ -126,7 +126,14 @@ def new_auth_client() -> Client:
     # sesión, la librería la guarda en el cliente y sus consultas pasan a
     # llevar el token de esa persona. Si fuera supabase_public, cuando ese
     # token vence fallan /stories, votos y valoraciones para todos.
-    return create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+    # Sin renovación automática: si no, cada cliente deja un temporizador
+    # que renueva el token cada hora para siempre y nunca se libera
+    # (Render reinició por memoria el 29-10).
+    return create_client(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+        options=SyncClientOptions(auto_refresh_token=False, persist_session=False)
+    )
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security)
@@ -789,6 +796,11 @@ def read_validated_image(file: UploadFile, allowed_types: tuple) -> tuple[bytes,
     return file_bytes, extension
 
 
+IMAGE_TOO_LARGE_DETAIL = (
+    "La imagen es demasiado grande. Prueba con una de menor resolución."
+)
+
+
 def read_optimized_image(
     file: UploadFile, allowed_types: tuple, profile: images.ImageProfile
 ) -> tuple[bytes, str, str]:
@@ -796,6 +808,8 @@ def read_optimized_image(
     file_bytes, _extension = read_validated_image(file, allowed_types)
     try:
         return images.optimize_image(file_bytes, profile)
+    except images.ImageTooLarge:
+        raise HTTPException(status_code=400, detail=IMAGE_TOO_LARGE_DETAIL)
     except images.InvalidImage:
         raise HTTPException(
             status_code=400,
@@ -3723,6 +3737,8 @@ def upload_forum_image(
         image_data, content_type, extension = images.optimize_image(
             image_data, images.FORUM_IMAGE
         )
+    except images.ImageTooLarge:
+        raise HTTPException(status_code=400, detail=IMAGE_TOO_LARGE_DETAIL)
     except images.InvalidImage:
         raise HTTPException(
             status_code=400,

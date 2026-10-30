@@ -12,11 +12,19 @@
 from io import BytesIO
 from typing import NamedTuple
 
-from PIL import Image, ImageOps
+from PIL import ExifTags, Image, ImageOps
 
-# Una imagen de 5 MB comprimida puede ocupar mucho más al abrirse: se
-# rechazan las que tendrían más píxeles que una foto de 50 megapíxeles.
-Image.MAX_IMAGE_PIXELS = 50_000_000
+# Una imagen de 5 MB comprimida puede ocupar mucho más al abrirse (unos 3
+# bytes por píxel). Las fotos JPG se abren ya reducidas, así que una de
+# 48 o 200 megapíxeles pasa; lo que siga superando este límite se rechaza.
+MAX_DECODED_PIXELS = 25_000_000
+# Con transparencia, Pillow copia la imagen completa al achicarla para
+# mezclar bien los bordes: se permite la mitad.
+MAX_DECODED_PIXELS_WITH_ALPHA = 12_000_000
+PREMULTIPLIED_MODES = ("RGBA", "LA")
+# Pillow solo rechaza por encima del doble de su límite: el control lo hace
+# optimize_image con MAX_DECODED_PIXELS, después de reducir los JPG.
+Image.MAX_IMAGE_PIXELS = None
 
 # Cada archivo nuevo tiene una dirección nueva (o un ?v= que cambia al
 # reemplazarlo), así que el navegador puede guardarlo un año sin volver a
@@ -52,19 +60,47 @@ class InvalidImage(ValueError):
     pass
 
 
+class ImageTooLarge(InvalidImage):
+    pass
+
+
+def stored_box(image: Image.Image, profile: ImageProfile) -> tuple[int, int]:
+    # Tamaño máximo medido sobre la imagen tal como viene en el archivo: una
+    # foto con orientación 5 a 8 está guardada acostada, y su ancho final
+    # es el alto guardado.
+    if image.getexif().get(ExifTags.Base.Orientation) in (5, 6, 7, 8):
+        return profile.max_height, profile.max_width
+    return profile.max_width, profile.max_height
+
+
 def optimize_image(data: bytes, profile: ImageProfile) -> tuple[bytes, str, str]:
     # Devuelve (contenido, tipo, extensión) de la imagen ya achicada.
     try:
         with Image.open(BytesIO(data)) as original:
-            original.load()
+            if original.format == "JPEG":
+                # Se decodifica a 1/2, 1/4 u 1/8 sin bajar del tamaño final;
+                # thumbnail termina de achicarla con buena calidad. El EXIF
+                # de un JPG se lee sin decodificar la imagen.
+                original.draft(original.mode, stored_box(original, profile))
+            width, height = original.size
+            max_pixels = (
+                MAX_DECODED_PIXELS_WITH_ALPHA
+                if original.mode in PREMULTIPLIED_MODES
+                else MAX_DECODED_PIXELS
+            )
+            if width * height > max_pixels:
+                raise ImageTooLarge("La imagen tiene demasiados píxeles")
+            # Primero se achica y después se gira: así nunca hay dos copias
+            # de la imagen completa en memoria. thumbnail solo achica: una
+            # imagen más chica que el límite queda igual.
+            original.thumbnail(
+                stored_box(original, profile), Image.Resampling.LANCZOS
+            )
             # Las fotos del celular guardan la orientación aparte: se aplica
             # antes de perder los metadatos para que no queden giradas.
             image = ImageOps.exif_transpose(original)
     except (OSError, Image.DecompressionBombError, SyntaxError) as error:
         raise InvalidImage("No se pudo leer la imagen") from error
-
-    # thumbnail solo achica: una imagen más chica que el límite queda igual.
-    image.thumbnail((profile.max_width, profile.max_height), Image.Resampling.LANCZOS)
 
     has_alpha = image.mode in ("RGBA", "LA", "PA") or (
         image.mode == "P" and "transparency" in image.info
