@@ -5,6 +5,7 @@ import InstallButton from "../components/InstallButton";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/useToast";
 import StoryCard from "../components/StoryCard";
+import ExploreStories from "../components/ExploreStories";
 import UserSearchResult from "../components/UserSearchResult";
 import { useUserSearch } from "../hooks/useUserSearch";
 import SiteFooter from "../components/SiteFooter";
@@ -33,6 +34,16 @@ const TITLE_TEXT = TITLE_PARTS.map((part) => part.text).join("");
 // Cantidad de elementos en las secciones destacadas del inicio.
 const HIGHLIGHT_LIMIT = 4;
 
+// Copia revuelta al azar (Fisher-Yates) para la fila "Explora historias".
+function shuffle(items) {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const other = Math.floor(Math.random() * (index + 1));
+    [result[index], result[other]] = [result[other], result[index]];
+  }
+  return result;
+}
+
 export default function Feed() {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -43,6 +54,8 @@ export default function Feed() {
   const [continueReading, setContinueReading] = useState([]);
   const userId = user?.id;
   const [stories, setStories] = useState([]);
+  // Mismas historias en orden al azar; se revuelven una vez por visita.
+  const [shuffledStories, setShuffledStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [sortBy, setSortBy] = useState("recommended");
@@ -89,9 +102,11 @@ export default function Feed() {
     try {
       const response = await api.get("/stories");
       setStories(response.data);
+      setShuffledStories(shuffle(response.data));
     } catch (error) {
       console.error("Error al cargar historias:", error);
       setStories([]);
+      setShuffledStories([]);
       // Sin respuesta del servidor es un problema de conexión; con respuesta,
       // el error es nuestro y no de la persona.
       setLoadError(
@@ -254,7 +269,7 @@ export default function Feed() {
   };
 
   // Filtrar historias
-  const filteredStories = stories.filter((story) => {
+  const matchesFilters = (story) => {
     const matchesGenre =
       selectedGenre === "Todas" ||
       story.genre?.toLowerCase() === selectedGenre.toLowerCase();
@@ -266,7 +281,11 @@ export default function Feed() {
       storyHasTag(story, selectedTag) &&
       storyHasFandom(story, selectedFandom)
     );
-  });
+  };
+
+  const filteredStories = stories.filter(matchesFilters);
+  // La fila "Explora historias" respeta los mismos filtros.
+  const exploreStories = shuffledStories.filter(matchesFilters);
 
   // Tropos más usados y fandoms disponibles, calculados sobre todas las
   // historias publicadas.
@@ -650,6 +669,8 @@ export default function Feed() {
             <option value="read">Más leídas</option>
           </select>
         </section>
+
+        {!loadError && <ExploreStories stories={exploreStories} />}
 
         {/* Historias */}
         <section className="stories-section">

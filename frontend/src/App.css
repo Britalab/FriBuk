@@ -3223,6 +3223,169 @@ button {
 }
 
 /* ========================================
+   EXPLORA HISTORIAS
+   ======================================== */
+
+.explore-stories {
+  margin-bottom: 44px;
+}
+
+.explore-stories h2 {
+  margin: 0 0 14px;
+  color: var(--burgundy-dark);
+  font-family: Merriweather, Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.3px;
+}
+
+.explore-stories-row {
+  position: relative;
+}
+
+/* Fila que se desliza de lado con el dedo o con las flechas. */
+.explore-stories-list {
+  display: flex;
+  gap: 16px;
+  padding: 4px 2px 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+
+.explore-story {
+  flex: 0 0 140px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-main);
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+
+.explore-story-cover {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--burgundy);
+  box-shadow: 0 4px 12px rgba(81, 32, 45, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.explore-story-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.explore-story-cover .explore-story-logo {
+  width: 60%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.explore-story:hover .explore-story-cover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(81, 32, 45, 0.18);
+}
+
+.explore-story:focus-visible {
+  outline: none;
+}
+
+.explore-story:focus-visible .explore-story-cover {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+/* Título en dos líneas como máximo. */
+.explore-story-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.explore-story-author {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explore-story-genre {
+  overflow: hidden;
+  color: var(--orange);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Flechas solo en pantallas con mouse; en el celular se desliza. */
+.explore-stories-arrow {
+  position: absolute;
+  top: calc(140px * 1.5 / 2 - 18px);
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  display: none;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--burgundy);
+  font-size: 1.4rem;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(81, 32, 45, 0.15);
+  cursor: pointer;
+}
+
+.explore-stories-arrow.is-prev {
+  left: -14px;
+}
+
+.explore-stories-arrow.is-next {
+  right: -14px;
+}
+
+.explore-stories-arrow:hover,
+.explore-stories-arrow:focus-visible {
+  border-color: var(--orange-soft);
+  color: var(--orange);
+}
+
+@media (hover: hover) and (min-width: 769px) {
+  .explore-stories-arrow {
+    display: grid;
+  }
+}
+
+@media (max-width: 768px) {
+  .explore-story {
+    flex-basis: 112px;
+  }
+
+  .explore-stories-list {
+    gap: 12px;
+  }
+}
+
+/* ========================================
    BUSCADOR
    ======================================== */
 
