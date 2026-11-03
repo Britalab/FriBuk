@@ -131,3 +131,19 @@ class OptimizeImageTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CoverThumbTests(unittest.TestCase):
+    def test_ruta_de_la_miniatura(self):
+        self.assertEqual(images.cover_thumb_path("u1/abc.jpg"), "u1/abc-thumb.jpg")
+        self.assertEqual(images.cover_thumb_path("u1/abc.png?v=3"), "u1/abc-thumb.jpg")
+        self.assertEqual(images.cover_thumb_path("u1/sin-extension"), "u1/sin-extension-thumb.jpg")
+        self.assertEqual(images.cover_thumb_path("u.1/abc"), "u.1/abc-thumb.jpg")
+
+    def test_la_miniatura_es_chica(self):
+        source = BytesIO()
+        Image.new("RGB", (1200, 1800), (120, 40, 60)).save(source, "PNG")
+        data, content_type, _ = images.optimize_image(source.getvalue(), images.STORY_COVER_THUMB)
+        with Image.open(BytesIO(data)) as thumb:
+            self.assertEqual(thumb.size, (320, 480))
+        self.assertEqual(content_type, "image/jpeg")

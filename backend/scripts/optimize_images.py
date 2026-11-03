@@ -56,6 +56,8 @@ def profile_for(bucket: str, path: str):
         return images.PROFILE_BANNER
     if folder == "site":
         return images.HOME_BANNER
+    if path.endswith("-thumb.jpg"):
+        return images.STORY_COVER_THUMB
     return images.STORY_COVER
 
 

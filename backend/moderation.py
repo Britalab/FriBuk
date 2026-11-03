@@ -26,6 +26,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 import admin_alerts
+import images
 
 router = APIRouter()
 security = HTTPBearer()
@@ -419,6 +420,20 @@ def quarantine_image(bucket: str, path: str | None, case_id: str) -> dict:
         return {"bucket": bucket, "original_path": path}
 
 
+def remove_cover_thumb(cover_path: str | None) -> None:
+    # La miniatura de una portada retirada se borra para que su dirección
+    # deje de funcionar. Si se restaura, el sitio muestra la portada
+    # completa en su lugar.
+    if not cover_path:
+        return
+    try:
+        db().storage.from_(STORY_COVER_BUCKET).remove(
+            [images.cover_thumb_path(cover_path)]
+        )
+    except Exception as error:
+        print("No se pudo borrar la miniatura de la portada retirada:", repr(error))
+
+
 def release_image(snapshot: dict) -> bool:
     bucket = snapshot.get("bucket")
     evidence_path = snapshot.get("evidence_path")
@@ -502,6 +517,7 @@ def hide_content(case: dict, snapshot: dict) -> dict:
 
     path = storage_path_from_url(snapshot.get("image_url"), STORY_COVER_BUCKET)
     moved = quarantine_image(STORY_COVER_BUCKET, path, case_id)
+    remove_cover_thumb(path)
     (
         db()
         .table("stories")

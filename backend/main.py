@@ -2284,6 +2284,20 @@ def upload_cover(
             )
         )
 
+        # Miniatura para las tarjetas. Si falla, el sitio muestra la portada
+        # completa, así que no impide guardar la historia.
+        try:
+            thumb_bytes, thumb_type, _ = images.optimize_image(
+                file_bytes, images.STORY_COVER_THUMB
+            )
+            supabase_admin.storage.from_("story-covers").upload(
+                images.cover_thumb_path(file_name),
+                thumb_bytes,
+                image_upload_options(thumb_type)
+            )
+        except Exception as thumb_error:
+            print("No se pudo crear la miniatura de la portada:", repr(thumb_error))
+
         # Obtener URL pública
         public_url = (
             supabase_admin

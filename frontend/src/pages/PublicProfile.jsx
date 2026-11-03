@@ -14,11 +14,12 @@ import { PublicAchievements } from "../components/badges/AchievementsPanel";
 import "../styles/reading-lists.css";
 import { stripInline } from "../utils/richText";
 import "../styles/moderation.css";
+import CoverImage from "../components/CoverImage";
 
 function StoryCover({ story }) {
   return (
     <div className="public-profile-story-cover">
-      <img
+      <CoverImage
         src={story.cover_url || "/logo-fribuk.jpg"}
         alt={story.cover_url ? `Portada de ${story.title}` : "FriBuk"}
       />

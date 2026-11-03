@@ -6,6 +6,7 @@ import { useToast } from "../hooks/useToast";
 import ReadingListForm from "../components/profile/ReadingListForm";
 import { stripInline } from "../utils/richText";
 import "../styles/reading-lists.css";
+import CoverImage from "../components/CoverImage";
 
 function emptyPageData(listId) {
   return { listId, loading: true, error: "", list: null, stories: [] };
@@ -229,7 +230,7 @@ export default function ReadingListDetail() {
               {stories.map((story) => (
                 <article className="public-profile-story-card" key={story.id}>
                   <div className="public-profile-story-cover">
-                    <img
+                    <CoverImage
                       src={story.cover_url || "/logo-fribuk.jpg"}
                       alt={story.cover_url ? `Portada de ${story.title}` : "FriBuk"}
                     />

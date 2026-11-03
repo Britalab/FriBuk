@@ -45,6 +45,9 @@ HOME_BANNER = ImageProfile(2000, 2000, "WEBP", 82)
 # Las portadas también se usan como vista previa al compartir un enlace
 # (WhatsApp, Facebook): JPEG es el formato que todas aceptan.
 STORY_COVER = ImageProfile(600, 900, "JPEG", 85)
+# Miniatura de la portada para las tarjetas del inicio y las listas, que la
+# muestran a unos 155 px de ancho: pesa unas 4 veces menos que la portada.
+STORY_COVER_THUMB = ImageProfile(320, 480, "JPEG", 80)
 FORUM_IMAGE = ImageProfile(1600, 1600, "WEBP", 80)
 # Foto de perfil en la vista previa al compartir un perfil: no se guarda,
 # se arma al pedirla (ver seo.py).
@@ -125,3 +128,14 @@ def optimize_image(data: bytes, profile: ImageProfile) -> tuple[bytes, str, str]
 
     content_type, extension = FORMATS[profile.format]
     return output.getvalue(), content_type, extension
+
+
+def cover_thumb_path(cover_path: str) -> str:
+    # «<cuenta>/<id>.jpg» -> «<cuenta>/<id>-thumb.jpg». El sitio arma la
+    # misma dirección a partir de la portada (ver coverThumbUrl en el
+    # frontend), así que no hace falta guardarla en la base de datos.
+    path = cover_path.split("?", 1)[0]
+    name_start = path.rfind("/") + 1
+    dot = path.rfind(".")
+    stem = path[:dot] if dot > name_start else path
+    return f"{stem}-thumb.jpg"

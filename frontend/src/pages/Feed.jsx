@@ -20,6 +20,7 @@ import {
   storyMatchesSearch,
 } from "../utils/storySearch";
 import { GENRES } from "../utils/genres";
+import CoverImage from "../components/CoverImage";
 
 const FEED_FONTS_URL =
   "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap";
@@ -461,7 +462,7 @@ export default function Feed() {
                     to={`/stories/${item.story_id}/chapters/${item.chapter_id}`}
                     className="continue-reading-card"
                   >
-                    <img src={item.cover_url || "/logo-fribuk.jpg"} alt="" />
+                    <CoverImage src={item.cover_url || "/logo-fribuk.jpg"} alt="" />
 
                     <span className="continue-reading-info">
                       <strong>{item.story_title}</strong>

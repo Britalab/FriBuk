@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { feedFilterLink, storyFandom, storyTags } from "../utils/storySearch";
 import AuthorTitle, { FeaturedStoryChip } from "./badges/AuthorTitle";
 import { stripInline } from "../utils/richText";
+import CoverImage from "./CoverImage";
 
 // Etiquetas que caben en la tarjeta sin recargarla.
 const CARD_TAG_LIMIT = 3;
@@ -16,7 +17,7 @@ export default function StoryCard({ story }) {
       {/* Portada */}
       <div className="story-cover">
         {story.cover_url ? (
-          <img
+          <CoverImage
             src={story.cover_url}
             alt={`Portada de ${story.title}`}
             className="story-cover-image"

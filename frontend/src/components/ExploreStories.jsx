@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Link } from "react-router-dom";
+import CoverImage from "./CoverImage";
 
 // Fila horizontal de portadas del inicio. Las historias llegan ya
 // revueltas y filtradas desde el Feed; toda la tarjeta lleva a la historia.
@@ -41,10 +42,9 @@ export default function ExploreStories({ stories }) {
             >
               <span className="explore-story-cover">
                 {story.cover_url ? (
-                  <img
+                  <CoverImage
                     src={story.cover_url}
                     alt={`Portada de ${story.title}`}
-                    loading="lazy"
                   />
                 ) : (
                   <img

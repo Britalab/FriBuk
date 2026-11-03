@@ -10,6 +10,7 @@ import AuthorTitle, { FeaturedBadges } from "../components/badges/AuthorTitle";
 import AchievementsPanel from "../components/badges/AchievementsPanel";
 import ProfileQrButton from "../components/profile/ProfileQrButton";
 import { emptyCustomization, normalizeCustomization } from "../profile/catalog";
+import CoverImage from "../components/CoverImage";
 
 const EMPTY_PROFILE_INFO = { display_name: null, bio: null, website_url: null };
 
@@ -46,7 +47,7 @@ function StoryCover({ story }) {
   return (
     <div className="profile-story-cover">
       {story.cover_url ? (
-        <img src={story.cover_url} alt={`Portada de ${story.title}`} />
+        <CoverImage src={story.cover_url} alt={`Portada de ${story.title}`} />
       ) : (
         <img src="/logo-fribuk.jpg" alt="FriBuk" />
       )}

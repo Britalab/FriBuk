@@ -961,7 +961,12 @@ class ModerationTestCase(unittest.TestCase):
         self.assertEqual(uploaded.status_code, 200, uploaded.text)
         cover_url = uploaded.json()["url"]
         self.database.tables["stories"][0]["cover_url"] = cover_url
-        cover_path = self.database.storage.paths("story-covers")[0]
+        # Al subir la portada también se guarda su miniatura.
+        cover_path, thumb_path = sorted(
+            self.database.storage.paths("story-covers"),
+            key=lambda path: path.endswith("-thumb.jpg")
+        )
+        self.assertEqual(thumb_path, cover_path.rsplit(".", 1)[0] + "-thumb.jpg")
 
         self.assertEqual(self.report(REPORTER_IDS[0], "story_cover", STORY_ID).status_code, 200)
         removed = self.remove(
@@ -971,6 +976,8 @@ class ModerationTestCase(unittest.TestCase):
 
         self.assertIsNone(self.database.tables["stories"][0]["cover_url"])
         self.assertNotIn(cover_path, self.database.storage.paths("story-covers"))
+        # La miniatura se borra: su dirección deja de mostrar la imagen.
+        self.assertNotIn(thumb_path, self.database.storage.paths("story-covers"))
         self.assertEqual(self.database.tables["stories"][0]["title"], "Mi historia")
 
         notice = self.client.get(
