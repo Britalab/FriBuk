@@ -396,7 +396,8 @@ export default function Feed() {
             </h1>
 
             <p className="feed-intro">
-              Explora historias creadas por personas que tienen algo que contar.
+              Una comunidad de historias en español, creadas por personas que
+              tienen algo que contar.
               ¡Quizás la próxima gran historia sea la tuya!
             </p>
           </div>
