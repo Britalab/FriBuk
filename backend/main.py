@@ -1,3 +1,4 @@
+import memory_limits  # noqa: F401  (debe ir primero)
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -841,6 +842,32 @@ def root():
 # HISTORIAS
 # ============================================================
 
+STORY_ROWS_PAGE_SIZE = 1000
+
+
+def fetch_story_rows(table: str, columns: str, story_ids: list[str], order_by: tuple) -> list[dict]:
+    # Todas las filas de una tabla para varias historias, de a 1000 (el
+    # máximo que entrega Supabase por consulta), en un orden fijo para que
+    # las páginas no se pisen.
+    if not story_ids:
+        return []
+
+    rows = []
+    offset = 0
+    while True:
+        query = supabase_public.table(table).select(columns).in_("story_id", story_ids)
+        for column in order_by:
+            query = query.order(column)
+        page = (
+            query.range(offset, offset + STORY_ROWS_PAGE_SIZE - 1).execute().data
+            or []
+        )
+        rows.extend(page)
+        if len(page) < STORY_ROWS_PAGE_SIZE:
+            return rows
+        offset += STORY_ROWS_PAGE_SIZE
+
+
 @app.get("/stories")
 def get_stories():
 
@@ -871,6 +898,24 @@ def get_stories():
             for user in users_response.data
         }
 
+    # Corazones y valoraciones de todas las historias en pocas consultas,
+    # no dos por historia: el inicio pide esta lista en cada visita y, con
+    # muchas a la vez, las consultas sueltas hacían crecer la memoria.
+    story_ids = [str(story["id"]) for story in stories]
+    votes_by_story: dict[str, int] = {}
+    for vote in fetch_story_rows("votes", "id, story_id", story_ids, ("id",)):
+        key = str(vote["story_id"])
+        votes_by_story[key] = votes_by_story.get(key, 0) + 1
+
+    ratings_by_story: dict[str, list[float]] = {}
+    for rating in fetch_story_rows(
+        "ratings", "story_id, user_id, plot, spelling", story_ids,
+        ("story_id", "user_id")
+    ):
+        ratings_by_story.setdefault(str(rating["story_id"]), []).append(
+            (rating["plot"] + rating["spelling"]) / 2
+        )
+
     for story in stories:
         story["author_username"] = usernames_by_id.get(
             str(story.get("author_id")),
@@ -879,45 +924,14 @@ def get_stories():
         story["tags"] = tags_by_story.get(str(story["id"]), [])
 
         # ❤️ Cantidad de personas que pulsaron "Recomendar"
-        votes_response = (
-            supabase_public
-            .table("votes")
-            .select("id", count="exact")
-            .eq("story_id", story["id"])
-            .execute()
-        )
-
-        recommendation_count = votes_response.count or 0
-
-        story["recommendation_count"] = recommendation_count
+        story["recommendation_count"] = votes_by_story.get(str(story["id"]), 0)
 
         # ⭐ Valoraciones de trama y ortografía
-        ratings_response = (
-            supabase_public
-            .table("ratings")
-            .select("plot, spelling")
-            .eq("story_id", story["id"])
-            .execute()
+        general_ratings = ratings_by_story.get(str(story["id"]), [])
+        story["general_rating"] = (
+            round(sum(general_ratings) / len(general_ratings), 1)
+            if general_ratings else None
         )
-
-        ratings = ratings_response.data
-
-        if ratings:
-
-            general_ratings = [
-                (rating["plot"] + rating["spelling"]) / 2
-                for rating in ratings
-            ]
-
-            story["general_rating"] = round(
-                sum(general_ratings) / len(general_ratings),
-                1
-            )
-
-        else:
-
-            general_ratings = []
-            story["general_rating"] = None
 
         story["rating_count"] = len(general_ratings)
         story["is_featured"] = badges.is_featured_story(general_ratings)
