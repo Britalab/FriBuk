@@ -32,6 +32,7 @@ export const GENRES = [
   "Mitología",
   "Fantasía urbana",
   "Fantasía oscura",
+  "Isekai",
   "Postapocalíptica",
   "Cyberpunk",
   "Steampunk",
