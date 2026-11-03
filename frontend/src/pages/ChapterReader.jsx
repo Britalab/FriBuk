@@ -13,6 +13,7 @@ import { listNumbers } from "../utils/richText";
 import ChapterGeneralComments from "../components/reader/ChapterGeneralComments";
 import ChapterCommentsPanel from "../components/reader/ChapterCommentsPanel";
 import ChapterSwitcher from "../components/reader/ChapterSwitcher";
+import ReaderCommentHint from "../components/reader/ReaderCommentHint";
 import ShareButton from "../components/ShareButton";
 import { MAX_CHAPTER_QUOTE_LENGTH } from "../components/reader/chapterReactions";
 import "../styles/chapter-comments.css";
@@ -623,6 +624,12 @@ export default function ChapterReader() {
 
         {/* Texto */}
         <div className="reader-text-area">
+          {commentsEnabled && (
+            <ReaderCommentHint
+              key={chapterId}
+              dismissed={panel?.mode === "paragraph"}
+            />
+          )}
           <div
             className="reader-text"
             ref={textRef}
