@@ -11,6 +11,7 @@ import AchievementsPanel from "../components/badges/AchievementsPanel";
 import ProfileQrButton from "../components/profile/ProfileQrButton";
 import { emptyCustomization, normalizeCustomization } from "../profile/catalog";
 import CoverImage from "../components/CoverImage";
+import BannerImage from "../components/profile/BannerImage";
 
 const EMPTY_PROFILE_INFO = { display_name: null, bio: null, website_url: null };
 
@@ -440,7 +441,7 @@ const handleDeleteStory = async (storyId, storyTitle) => {
 
         <header className={`profile-header${bannerUrl ? " has-banner" : ""}`}>
           <div className="profile-banner">
-            {bannerUrl && <img src={bannerUrl} alt="" />}
+            {bannerUrl && <BannerImage src={bannerUrl} />}
             <div className="profile-banner-actions">
               <label className={`profile-banner-action${bannerAction ? " is-loading" : ""}`}>
                 <input

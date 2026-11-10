@@ -22,6 +22,7 @@ import {
   isAmbient,
   normalizeCustomization,
 } from "../profile/catalog";
+import BannerImage from "../components/profile/BannerImage";
 import "../styles/profile-customize.css";
 
 function normalizeSearch(value) {
@@ -46,7 +47,7 @@ function Preview({ customization, user, profileInfo }) {
         <ProfileStickers customization={customization} />
         {user?.banner_url && (
           <div className="public-profile-banner">
-            <img src={user.banner_url} alt="" />
+            <BannerImage src={user.banner_url} />
           </div>
         )}
         <div className="public-profile-avatar">

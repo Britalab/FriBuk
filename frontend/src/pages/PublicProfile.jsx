@@ -15,6 +15,7 @@ import "../styles/reading-lists.css";
 import { stripInline } from "../utils/richText";
 import "../styles/moderation.css";
 import CoverImage from "../components/CoverImage";
+import BannerImage from "../components/profile/BannerImage";
 
 function StoryCover({ story }) {
   return (
@@ -285,7 +286,7 @@ export default function PublicProfile() {
           <ProfileStickers customization={customization} />
           {bannerUrl && (
             <div className="public-profile-banner">
-              <img src={bannerUrl} alt="" />
+              <BannerImage src={bannerUrl} />
             </div>
           )}
           <div className="public-profile-avatar">

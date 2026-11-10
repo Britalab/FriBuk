@@ -749,11 +749,36 @@ button {
   border-bottom: 0;
 }
 
-.profile-banner img {
+.profile-banner .banner-image {
+  aspect-ratio: 4 / 1;
+}
+
+/* Banner completo: la imagen entera al centro y, detrás, una copia
+   difuminada que rellena los costados (ver BannerImage). */
+.banner-image {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-soft);
+}
+
+.banner-image img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 1;
+  height: 100%;
+}
+
+.banner-image-backdrop {
   object-fit: cover;
+  filter: blur(22px) saturate(1.1);
+  opacity: 0.85;
+  transform: scale(1.15);
+}
+
+.banner-image-main {
+  object-fit: contain;
 }
 
 .profile-banner-actions {
@@ -1890,7 +1915,7 @@ button {
     border-radius: 17px 17px 0 0;
   }
 
-  .profile-banner img {
+  .profile-banner .banner-image {
     aspect-ratio: 3 / 1;
   }
 
@@ -2020,11 +2045,8 @@ button {
   background: var(--bg-soft);
 }
 
-.public-profile-banner img {
-  display: block;
-  width: 100%;
+.public-profile-banner .banner-image {
   aspect-ratio: var(--banner-ratio) / 1;
-  object-fit: cover;
 }
 
 .public-profile-header.has-banner .public-profile-avatar {
